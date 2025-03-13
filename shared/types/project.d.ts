@@ -18,7 +18,7 @@ export interface Project {
 
 /**
  * Represents a project in the database.
- * - `name`: The name of the project. 
+ * - `name`: The name of the project.
  * - `files`: The ObjectIds of all files in the project.
  * - `collaborators`: The ObjectIds of all users that are collaborators on the project.
  * - `_id`: Unique identifier for the project, provided by MongoDB.

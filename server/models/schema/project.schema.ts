@@ -25,7 +25,7 @@ const projectSchema: Schema = new Schema(
           ref: 'User',
         },
         role: String,
-      }
+      },
     ],
     files: [{ type: Schema.Types.ObjectId, ref: 'ProjectFile' }],
   },

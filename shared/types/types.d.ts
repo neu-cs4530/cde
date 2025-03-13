@@ -1,6 +1,6 @@
 export * from './answer';
 export * from './chat';
-export * from './collaborator.';
+export * from './collaborator';
 export * from './comment';
 export * from './game';
 export * from './message';
