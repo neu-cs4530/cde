@@ -4,13 +4,13 @@ import { Collaborator, PopulatedCollaborator } from './collaborator';
 
 /**
  * Represents a collaborative project.
- * - `name`: The name of the project. 
+ * - `name`: The name of the project.
  * - `creator`: The username of the project creator.
  * - `collaborators`: The collaborators on the project.
  * - `files`: The files in the project.
  */
 export interface Project {
-  name: string; 
+  name: string;
   creator: string;
   collaborators: Collaborator[];
   files: ProjectFile[];

@@ -18,13 +18,15 @@ const projectSchema: Schema = new Schema(
     creator: {
       type: String,
     },
-    collaborators: [{
-      userId: { 
-        type: Schema.Types.ObjectId, 
-        ref: 'User', 
-      },
-      role: String,
-    }], 
+    collaborators: [
+      {
+        userId: {
+          type: Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        role: String,
+      }
+    ],
     files: [{ type: Schema.Types.ObjectId, ref: 'ProjectFile' }],
   },
   { collection: 'Project' },

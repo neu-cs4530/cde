@@ -3,9 +3,9 @@ import { ObjectId } from 'mongodb';
 /**
  * Type representing a project file's type. Accounts for first-class supported
  * filetypes.
- * - `PYTHON`: .py file 
- * - `JAVA`: .java file 
- * - `JAVASCRIPT`: .js file 
+ * - `PYTHON`: .py file
+ * - `JAVA`: .java file
+ * - `JAVASCRIPT`: .js file
  * - `OTHER`: any other file extension
  */
 export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER';
