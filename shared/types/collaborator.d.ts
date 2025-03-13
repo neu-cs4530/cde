@@ -14,7 +14,7 @@ export type CollaboratorRole = 'OWNER' | 'EDITOR' | 'VIEWER';
  * - `password`: The user's password.
  * - `dateJoined`: The date when the user registered.
  * - `biography`: A short description or bio of the user (optional).
- * - `role`: The collaborator's role
+ * - `role`: The user's role as a project collaborator.
  */
 export interface Collaborator extends User {
   role: CollaboratorRole;
