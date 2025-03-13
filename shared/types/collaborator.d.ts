@@ -9,13 +9,11 @@ import { User } from './user.d.ts';
 export type CollaboratorRole = 'OWNER' | 'EDITOR' | 'VIEWER';
 
 /**
- * Represents a project collaborator, including user data and role.
- * - `username`: The unique username of the user.
- * - `password`: The user's password.
- * - `dateJoined`: The date when the user registered.
- * - `biography`: A short description or bio of the user (optional).
+ * Represents a project collaborator.
+ * - `_id`: The ObjectId of the associated user.
  * - `role`: The user's role as a project collaborator.
  */
-export interface Collaborator extends User {
+export interface Collaborator {
+  _id: ObjectId;
   role: CollaboratorRole;
 }
