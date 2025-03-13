@@ -10,10 +10,18 @@ export type CollaboratorRole = 'OWNER' | 'EDITOR' | 'VIEWER';
 
 /**
  * Represents a project collaborator.
- * - `_id`: The ObjectId of the associated user.
+ * - `userId`: The ObjectId of the associated user.
  * - `role`: The user's role as a project collaborator.
  */
 export interface Collaborator {
-  _id: ObjectId;
+  userId: ObjectId;
   role: CollaboratorRole;
+}
+
+/**
+ * Represents a fully populated collaborator from the database.
+ * - `user`: A populated `User` object.
+ */
+export interface PopulatedCollaborator extends Omit<Collaborator, '_id'> {
+  user: User;
 }
