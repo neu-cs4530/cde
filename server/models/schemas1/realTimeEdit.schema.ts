@@ -1,0 +1,6 @@
+// edit_id (Primary Key, UUID)
+// file_id (Foreign Key → Files.file_id)
+// user_id (Foreign Key → Users.user_id)
+// edit_action (Enum: insert/delete/update)
+// content_delta (JSON, stores changes)
+// timestamp (Timestamp)

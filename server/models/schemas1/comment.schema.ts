@@ -1,0 +1,7 @@
+// comment_id (Primary Key, UUID)
+// file_id (Foreign Key → Files.file_id)
+// user_id (Foreign Key → Users.user_id)
+// content (Text, Markdown-supported)
+// created_at (Timestamp)
+// updated_at (Timestamp, Nullable)
+// parent_comment_id (Foreign Key → Comments.comment_id, Nullable for threaded replies)

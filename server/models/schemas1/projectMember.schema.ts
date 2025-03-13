@@ -1,0 +1,6 @@
+// membership_id (Primary Key, UUID)
+// project_id (Foreign Key → Projects.project_id)
+// user_id (Foreign Key → Users.user_id)
+// role (Enum: owner/editor/viewer)
+// invited_at (Timestamp)
+// accepted_at (Timestamp, Nullable)

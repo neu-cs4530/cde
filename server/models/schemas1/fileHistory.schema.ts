@@ -1,0 +1,5 @@
+// history_id (Primary Key, UUID)
+// file_id (Foreign Key → Files.file_id)
+// user_id (Foreign Key → Users.user_id)
+// timestamp (Timestamp)
+// content_snapshot (Text)

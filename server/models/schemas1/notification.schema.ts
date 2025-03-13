@@ -1,0 +1,6 @@
+// notification_id (Primary Key, UUID)
+// user_id (Foreign Key → Users.user_id)
+// type (Enum: mention/comment_reply/role_change/project_invite)
+// message (Text)
+// read (Boolean)
+// created_at (Timestamp)
