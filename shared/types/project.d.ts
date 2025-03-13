@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
-import { ProjectFile, DatabaseProjectFile } from './projectFile.d.ts';
-import { Collaborator, PopulatedCollaborator } from './collaborator.d.ts';
+import { ProjectFile, DatabaseProjectFile } from './projectFile';
+import { Collaborator, PopulatedCollaborator } from './collaborator';
 
 /**
  * Represents a collaborative project.

@@ -1,4 +1,4 @@
-import { User } from './user.d.ts';
+import { User } from './user';
 
 /**
  * Type representing a collaborator's role in a project.
@@ -22,6 +22,6 @@ export interface Collaborator {
  * Represents a fully populated collaborator from the database.
  * - `user`: A populated `User` object.
  */
-export interface PopulatedCollaborator extends Omit<Collaborator, '_id'> {
+export interface PopulatedCollaborator extends Omit<Collaborator, 'userId'> {
   user: User;
 }
