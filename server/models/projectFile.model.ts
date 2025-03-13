@@ -6,7 +6,7 @@ import { DatabaseProjectFile } from '../types/types';
  * Mongoose model for `ProjectFile` collection.
  *
  * This model is created using the `ProjectFile` interface and the `projectFileSchema`,
- * representing the `ProjectFile` collection in the MongoDB database, and provides an interface 
+ * representing the `ProjectFile` collection in the MongoDB database, and provides an interface
  * for interacting with the stored project files.
  *
  * @type {Model<DatabaseProjectFile>}

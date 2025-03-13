@@ -19,7 +19,7 @@ const projectFileSchema: Schema = new Schema(
     },
     contents: {
       type: String,
-    }
+    },
   },
   { collection: 'ProjectFile' },
 );

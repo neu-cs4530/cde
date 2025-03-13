@@ -13,14 +13,17 @@ import { Schema } from 'mongoose';
 const projectSchema: Schema = new Schema(
   {
     name: {
-      type: String
+      type: String,
     },
     creator: {
-      type: String
+      type: String,
     },
     collaborators: [{
-      userId: { type: Schema.Types.ObjectId, ref: 'User' },
-      role: String
+      userId: { 
+        type: Schema.Types.ObjectId, 
+        ref: 'User', 
+      },
+      role: String,
     }], 
     files: [{ type: Schema.Types.ObjectId, ref: 'ProjectFile' }],
   },
