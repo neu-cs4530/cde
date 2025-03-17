@@ -1,8 +1,0 @@
-// project_id (Primary Key, UUID)
-// name (String)
-// description (Text)
-// owner_id (Foreign Key → Users.user_id)
-// created_at (Timestamp)
-// updated_at (Timestamp)
-// visibility (Enum: public/private)
-// language (Enum: Python/JavaScript/Java)

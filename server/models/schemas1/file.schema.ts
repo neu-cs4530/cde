@@ -1,7 +1,0 @@
-// file_id (Primary Key, UUID)
-// project_id (Foreign Key → Projects.project_id)
-// name (String)
-// content (Text, stores the latest version)
-// language (Enum: Python/JavaScript/Java/JSON)
-// created_at (Timestamp)
-// updated_at (Timestamp)

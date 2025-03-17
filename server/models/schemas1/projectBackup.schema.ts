@@ -1,5 +1,0 @@
-// backup_id (Primary Key, UUID)
-// project_id (Foreign Key → Projects.project_id)
-// owner_id (Foreign Key → Users.user_id)
-// backup_data (JSON, compressed)
-// created_at (Timestamp)
