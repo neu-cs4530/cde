@@ -18,14 +18,18 @@ export interface Project {
 
 /**
  * Represents a project in the database.
+ * - `_id`: Unique identifier for the project, provided by MongoDB.
  * - `name`: The name of the project.
  * - `files`: The ObjectIds of all files in the project.
  * - `collaborators`: The ObjectIds of all users that are collaborators on the project.
- * - `_id`: Unique identifier for the project, provided by MongoDB.
+ * - `createdAt`: Timestamp for when the project was created (set by Mongoose).
+ * - `updatedAt`: Timestamp for when the project was last updated (set by Mongoose).
  */
 export interface DatabaseProject extends Omit<Project, 'files'> {
   _id: ObjectId;
   files: ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { ProjectFileComment, DatabaseProjectFileComment } from './projectFileComment';
 
 /**
  * Type representing a project file's type. Accounts for first-class supported
@@ -20,6 +21,7 @@ export interface ProjectFile {
   name: string;
   fileType: ProjectFileType;
   contents: string;
+  comments: ProjectFileComment[];
 }
 
 /**
@@ -29,6 +31,7 @@ export interface ProjectFile {
  * - `fileType`: The file's type.
  * - `contents`: The contents of the file as a string.
  */
-export interface DatabaseProjectFile extends ProjectFile {
+export interface DatabaseProjectFile extends Omit<ProjectFile, 'comments'> {
   _id: ObjectId;
+  comments: DatabaseProjectFileComment[];
 }

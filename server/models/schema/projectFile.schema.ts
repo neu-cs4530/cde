@@ -7,6 +7,8 @@ import { Schema } from 'mongoose';
  * - `name`: The file's name, including any extension.
  * - `fileType`: The file's type, being one of PYTHON, JAVA, JAVASCRIPT, or OTHER.
  * - `contents`: The contents of the file as a string.
+ * - `comments`: An array of references to `ProjectFileComment` documents that are
+ *   comments on the file.
  */
 const projectFileSchema: Schema = new Schema(
   {
@@ -20,6 +22,7 @@ const projectFileSchema: Schema = new Schema(
     contents: {
       type: String,
     },
+    comments: [{ type: Schema.Types.ObjectId, ref: 'ProjectFileComment' }],
   },
   { collection: 'ProjectFile' },
 );

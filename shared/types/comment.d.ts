@@ -14,6 +14,17 @@ export interface Comment {
 }
 
 /**
+ *  Represents a comment on a project file.
+ * - `text`: The content of the comment.
+ * - `commentBy`: The author of the comment.
+ * - `commentDateTime`: The timestamp when the comment was made.
+ * - `lineNumber`: The line number the comment is on.
+ */
+export interface ProjectFileComment extends Comment {
+  lineNumber: number;
+}
+
+/**
  * Represents a comment stored in the database.
  * - `_id`: Unique identifier for the comment.
  * - `text`: The content of the comment.
@@ -21,6 +32,18 @@ export interface Comment {
  * - `commentDateTime`: The timestamp when the comment was made.
  */
 export interface DatabaseComment extends Comment {
+  _id: ObjectId;
+}
+
+/**
+ * Represents a project file comment in the database.
+ * - `_id`: Unique identifier for the comment.
+ * - `text`: The content of the comment.
+ * - `commentBy`: The author of the comment.
+ * - `commentDateTime`: The timestamp when the comment was made.
+ * - `lineNumber`: The line number the comment is on.
+ */
+export interface DatabaseProjectFileComment extends ProjectFileComment {
   _id: ObjectId;
 }
 
@@ -39,7 +62,25 @@ export interface AddCommentRequest extends Request {
 }
 
 /**
+ * Interface extending the request body for adding a comment to a project file.
+ * - `id`: The unique identifier of the project file being commented on.
+ * - `comment`: The project file comment object being added.
+ */
+export interface AddProjectFileCommentRequest extends Request {
+  body: {
+    id: string;
+    comment: ProjectFileComment;
+  };
+}
+
+/**
  * Type representing possible responses for a Comment-related operation.
+ * - Either a `DatabaseComment` object or an error message.
+ */
+export type CommentResponse = DatabaseComment | { error: string };
+
+/**
+ * Type representing possible responses for a ProjectFileComment-related operation.
  * - Either a `DatabaseComment` object or an error message.
  */
 export type CommentResponse = DatabaseComment | { error: string };
