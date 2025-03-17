@@ -19,7 +19,7 @@ const Header = () => {
       <div className='title'>Fake Stack Overflow</div>
       <input
         id='searchBar'
-        placeholder='Search ...'
+        placeholder='Search Questions...'
         type='text'
         value={val}
         onChange={handleInputChange}
