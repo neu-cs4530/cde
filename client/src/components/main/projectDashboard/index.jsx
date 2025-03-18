@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
 import './index.css';
+import { 
+  FiSearch, 
+  FiPlus, 
+  FiX, 
+  FiFile, 
+  FiStar 
+} from 'react-icons/fi';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
@@ -37,7 +44,7 @@ const ProjectDashboard = () => {
       {/* Header */}
       <header className="project-header">
         <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div className="project-logo">P</div>
+          <div className="project-logo">FSO</div>
           <span style={{ fontSize: '1.25rem', color: '#1f2937' }}>Projects</span>
           
           {/* Search Bar */}
@@ -47,10 +54,7 @@ const ProjectDashboard = () => {
               placeholder="Search projects" 
               className="search-input"
             />
-            <svg className="search-icon" style={{ position: 'absolute', left: '0.75rem', top: '0.625rem', width: '1.25rem', height: '1.25rem', color: '#6b7280' }} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
+            <FiSearch style={{ position: 'absolute', left: '0.75rem', top: '0.625rem', width: '1.25rem', height: '1.25rem', color: '#6b7280' }} />
           </div>
           
           <div style={{ marginLeft: '1rem' }}>
@@ -59,26 +63,20 @@ const ProjectDashboard = () => {
               onClick={() => setShowAddForm(true)}
               style={{ background: 'none', border: 'none', padding: '0.5rem', borderRadius: '9999px', cursor: 'pointer' }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
+              <FiPlus size={20} />
             </button>
           </div>
         </div>
       </header>
       
-{/* project */}
+      {/* Project modal */}
       {showAddForm && (
         <div className="modal-overlay">
           <div className="modal-content">
             <div className="modal-header">
               <h3 className="modal-title">Add New Project</h3>
               <button onClick={() => setShowAddForm(false)} className="modal-close">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
+                <FiX size={20} />
               </button>
             </div>
             <div className="form-group">
@@ -142,13 +140,7 @@ const ProjectDashboard = () => {
               {projects.filter(p => p.starred).map(project => (
                 <div key={project.id} className="project-card">
                   <div className="card-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#2563eb' }}>
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                      <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
+                    <FiFile size={40} style={{ color: '#2563eb' }} />
                   </div>
                   <div className="card-content">
                     <h3 className="card-title">{project.name}</h3>
@@ -182,10 +174,7 @@ const ProjectDashboard = () => {
               onClick={() => setShowAddForm(true)} 
               className="add-button"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="add-button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-              </svg>
+              <FiPlus className="add-button-icon" />
               New Project
             </button>
           </div>
@@ -219,20 +208,16 @@ const ProjectDashboard = () => {
                   <tr key={project.id} className="table-row">
                     <td className="row-icon">
                       <button onClick={() => toggleStar(project.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill={project.starred ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: project.starred ? '#f59e0b' : '#d1d5db' }}>
-                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                        </svg>
+                        <FiStar 
+                          size={20} 
+                          fill={project.starred ? 'currentColor' : 'none'} 
+                          style={{ color: project.starred ? '#f59e0b' : '#d1d5db' }} 
+                        />
                       </button>
                     </td>
                     <td style={{ padding: '1rem 0.75rem' }}>
                       <div className="row-title">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#2563eb', marginRight: '0.75rem' }}>
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                          <polyline points="14 2 14 8 20 8"></polyline>
-                          <line x1="16" y1="13" x2="8" y2="13"></line>
-                          <line x1="16" y1="17" x2="8" y2="17"></line>
-                          <polyline points="10 9 9 9 8 9"></polyline>
-                        </svg>
+                        <FiFile size={20} style={{ color: '#2563eb', marginRight: '0.75rem' }} />
                         <span>{project.name}</span>
                       </div>
                     </td>
@@ -244,10 +229,7 @@ const ProjectDashboard = () => {
                         onClick={() => removeProject(project.id)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem', color: '#9ca3af' }}
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="18" y1="6" x2="6" y2="18"></line>
-                          <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
+                        <FiX size={20} />
                       </button>
                     </td>
                   </tr>
@@ -257,13 +239,7 @@ const ProjectDashboard = () => {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#2563eb' }}>
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <line x1="16" y1="13" x2="8" y2="13"></line>
-                  <line x1="16" y1="17" x2="8" y2="17"></line>
-                  <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
+                <FiFile size={32} style={{ color: '#2563eb' }} />
               </div>
               <h3 className="empty-title">No projects yet</h3>
               <p className="empty-text">Add your first project to get started</p>
