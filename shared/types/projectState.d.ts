@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { ProjectFile, DatabaseProjectFile } from './projectFile';
+import { ProjectFile, PopulatedDatabaseProjectFile } from './projectFile';
 
 /**
  * Represents the saved state of a project's files.
@@ -28,5 +28,5 @@ export interface DatabaseProjectState extends Omit<ProjectState, 'project' | 'fi
  * - `files`: An array of populated `DatabaseProjectFile` objects.
  */
 export interface PopulatedDatabaseProjectState extends Omit<DatabaseProjectState, 'files'> {
-  files: DatabaseProjectFile[];
+  files: PopulatedDatabaseProjectFile[];
 }
