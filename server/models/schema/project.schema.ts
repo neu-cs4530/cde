@@ -8,7 +8,7 @@ import { Schema } from 'mongoose';
  * - `creator`: The username of the project creator.
  * - `collaborators`: An array of references to `User` documents that are project collaborators,
  *   as well as their role.
- * - `currentState`: A reference to a `ProjectState` document that represents the current state 
+ * - `currentState`: A reference to a `ProjectState` document that represents the current state
  *   of the project's files.
  * - `savedStates`: An array of references to `ProjectState` documents associated with the project.
  */

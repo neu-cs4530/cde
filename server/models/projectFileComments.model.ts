@@ -13,6 +13,6 @@ import { DatabaseProjectFileComment } from '../types/types';
  * @type {Model<DatabaseProjectFileComment>}
  */
 const ProjectFileCommentModel: Model<DatabaseProjectFileComment> =
-mongoose.model<DatabaseProjectFileComment>('ProjectFileComment', projectFileCommentSchema);
+  mongoose.model<DatabaseProjectFileComment>('ProjectFileComment', projectFileCommentSchema);
 
 export default ProjectFileCommentModel;
