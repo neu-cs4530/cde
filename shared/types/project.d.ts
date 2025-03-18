@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { ProjectFile, DatabaseProjectFile } from './projectFile';
+import { ProjectState, PopulatedDatabaseProjectState } from './projectState';
 import { Collaborator, PopulatedCollaborator } from './collaborator';
 
 /**
@@ -7,37 +7,42 @@ import { Collaborator, PopulatedCollaborator } from './collaborator';
  * - `name`: The name of the project.
  * - `creator`: The username of the project creator.
  * - `collaborators`: The collaborators on the project.
- * - `files`: The files in the project.
+ * - `currentState`: The current state of the files in the project.
+ * - `savedStates`: All saved states of the files in the project.
  */
 export interface Project {
   name: string;
   creator: string;
   collaborators: Collaborator[];
-  files: ProjectFile[];
+  currentState: ProjectState;
+  savedStates: ProjectState[];
 }
 
 /**
  * Represents a project in the database.
  * - `_id`: Unique identifier for the project, provided by MongoDB.
  * - `name`: The name of the project.
- * - `files`: The ObjectIds of all files in the project.
  * - `collaborators`: The ObjectIds of all users that are collaborators on the project.
+ * - `currentState`: The ObjectId of the corresponding current project state.
+ * - `savedStates`: The ObjectIds of all saved states of the files in the project.
  * - `createdAt`: Timestamp for when the project was created (set by Mongoose).
- * - `updatedAt`: Timestamp for when the project was last updated (set by Mongoose).
  */
-export interface DatabaseProject extends Omit<Project, 'files'> {
+export interface DatabaseProject extends Omit<Project, 'currentState' | 'savedStates'> {
   _id: ObjectId;
-  files: ObjectId[];
+  currentState: ObjectId;
+  savedStates: ObjectId[];
   createdAt: Date;
-  updatedAt: Date;
 }
 
 /**
  * Represents a fully populated project from the database.
  * - `collaborators`: An array of populated `PopulatedCollaborator` objects.
- * - `files`: An array of populated `DatabaseProjectFile` objects.
+ * - `currentState`: A populated `DatabaseProjectState` object.
+ * - `savedStates`: An array of populated `DatabaseProjectState` objects.
  */
-export interface PopulatedDatabaseProject extends Omit<DatabaseProject, 'collaborators' | 'files'> {
+export interface PopulatedDatabaseProject
+extends Omit<DatabaseProject, 'collaborators' | 'currentState' | 'savedStates'> {
   collaborators: PopulatedCollaborator[];
-  files: DatabaseProjectFile[];
+  currentState: PopulatedDatabaseProjectState;
+  savedStates: PopulatedDatabaseProjectState[];
 }

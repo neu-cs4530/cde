@@ -6,6 +6,7 @@ export * from './game';
 export * from './message';
 export * from './project';
 export * from './projectFile';
+export * from './projectState';
 export * from './question';
 export * from './socket';
 export * from './tag';

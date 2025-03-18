@@ -8,7 +8,9 @@ import { Schema } from 'mongoose';
  * - `creator`: The username of the project creator.
  * - `collaborators`: An array of references to `User` documents that are project collaborators,
  *   as well as their role.
- * - `files`: An array of references to `ProjectFile` documents associated with the project.
+ * - `currentState`: A reference to a `ProjectState` document that represents the current state 
+ *   of the project's files.
+ * - `savedStates`: An array of references to `ProjectState` documents associated with the project.
  */
 const projectSchema: Schema = new Schema(
   {
@@ -27,7 +29,11 @@ const projectSchema: Schema = new Schema(
         role: String,
       },
     ],
-    files: [{ type: Schema.Types.ObjectId, ref: 'ProjectFile' }],
+    currentState: {
+      type: Schema.Types.ObjectId,
+      ref: 'ProjectState',
+    },
+    savedStates: [{ type: Schema.Types.ObjectId, ref: 'ProjectState' }],
   },
   { collection: 'Project' },
 );

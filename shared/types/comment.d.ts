@@ -81,6 +81,6 @@ export type CommentResponse = DatabaseComment | { error: string };
 
 /**
  * Type representing possible responses for a ProjectFileComment-related operation.
- * - Either a `DatabaseComment` object or an error message.
+ * - Either a `DatabaseProjectFileComment` object or an error message.
  */
-export type CommentResponse = DatabaseComment | { error: string };
+export type ProjectFileCommentResponse = DatabaseProjectFileComment | { error: string };
