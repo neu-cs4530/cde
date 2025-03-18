@@ -3,15 +3,15 @@ describe('Invite Service', () => {
     it('should pass with valid invite input', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail with invalid email format', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if role is not among allowed values', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if invited user ID is missing', () => {
       // TODO: Implement test
     });
@@ -39,16 +39,16 @@ describe('Permissions Service', () => {
     it('should pass with valid permission assignment input', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if permission type is not allowed', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if user ID is invalid', () => {
       // TODO: Implement test
     });
   });
-  
+
   it('should revoke access from a user', async () => {
     // TODO: Implement test
   });
