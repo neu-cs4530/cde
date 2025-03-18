@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb';
-import { ProjectFileComment, DatabaseProjectFileComment } from './projectFileComment';
+import { ProjectFileComment, DatabaseProjectFileComment } from './comment';
 
 /**
  * Type representing a project file's type. Accounts for first-class supported

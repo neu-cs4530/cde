@@ -41,7 +41,7 @@ export interface DatabaseProject extends Omit<Project, 'currentState' | 'savedSt
  * - `savedStates`: An array of populated `DatabaseProjectState` objects.
  */
 export interface PopulatedDatabaseProject
-extends Omit<DatabaseProject, 'collaborators' | 'currentState' | 'savedStates'> {
+  extends Omit<DatabaseProject, 'collaborators' | 'currentState' | 'savedStates'> {
   collaborators: PopulatedCollaborator[];
   currentState: PopulatedDatabaseProjectState;
   savedStates: PopulatedDatabaseProjectState[];
