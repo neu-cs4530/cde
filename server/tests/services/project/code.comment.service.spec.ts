@@ -3,15 +3,15 @@ describe('Comment Service', () => {
     it('should pass with valid comment input', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if comment text is missing', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if comment exceeds allowed length', () => {
       // TODO: Implement test
     });
-  
+
     it('should fail if comment author is not defined', () => {
       // TODO: Implement test
     });
