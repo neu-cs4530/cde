@@ -42,7 +42,6 @@ export interface DatabaseProjectFile extends Omit<ProjectFile, 'comments'> {
  * Represents a fully populated project file from the database.
  * - `comments`: An array of populated `DatabaseProjectFileComment` objects.
  */
-export interface PopulatedDatabaseProjectFile
-  extends Omit<DatabaseProjectFile, 'comments'> {
+export interface PopulatedDatabaseProjectFile extends Omit<DatabaseProjectFile, 'comments'> {
   comments: DatabaseProjectFileComment[];
 }
