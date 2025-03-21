@@ -1,7 +1,4 @@
-import { 
-  PopulatedDatabaseQuestion,
-  PopulatedDatabaseProjectState 
-} from '../types/types';
+import { PopulatedDatabaseQuestion, PopulatedDatabaseProjectState } from '../types/types';
 import { getMostRecentAnswerTime } from '../services/answer.service';
 
 /**
@@ -93,7 +90,6 @@ export const sortQuestionsByMostViews = (
  */
 export const sortProjectStatesByNewest = (
   psList: PopulatedDatabaseProjectState[],
-): PopulatedDatabaseProjectState[] => {
+): PopulatedDatabaseProjectState[] =>
   // TODO: complete function
-  return [];
-};
+  [];
