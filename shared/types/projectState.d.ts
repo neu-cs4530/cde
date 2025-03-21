@@ -30,3 +30,9 @@ export interface DatabaseProjectState extends Omit<ProjectState, 'project' | 'fi
 export interface PopulatedDatabaseProjectState extends Omit<DatabaseProjectState, 'files'> {
   files: PopulatedDatabaseProjectFile[];
 }
+
+/**
+ * A type representing the possible responses for a ProjectState operation.
+ * - Either a `DatabaseProjectState` object or an error message.
+ */
+export type ProjectStateResponse = DatabaseProjectState | { error: string };
