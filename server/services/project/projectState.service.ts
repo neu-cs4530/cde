@@ -53,7 +53,7 @@ import {
    * Filters files in a project state by a search string.
    * @param {PopulatedDatabaseProjectState} state - The project state being searched.
    * @param {string} search - The string the user is searching for.
-   * @returns {PopulatedDatabaseProjectState} - Resolves with the found project file object or an error messge.
+   * @returns {ProjectFile} - Returns the found project file object or an error messge.
    */
   export const filterProjectStateFilesBySearch = (
     state: PopulatedDatabaseProjectState,
