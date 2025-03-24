@@ -45,3 +45,9 @@ export interface DatabaseProjectFile extends Omit<ProjectFile, 'comments'> {
 export interface PopulatedDatabaseProjectFile extends Omit<DatabaseProjectFile, 'comments'> {
   comments: DatabaseProjectFileComment[];
 }
+
+/**
+ * A type representing the possible responses for a ProjectFile operation.
+ * - Either a `DatabaseProjectFile` object or an error message.
+ */
+export type ProjectFileResponse = DatabaseProjectFile | { error: string };

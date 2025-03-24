@@ -46,3 +46,9 @@ export interface PopulatedDatabaseProject
   currentState: PopulatedDatabaseProjectState;
   savedStates: PopulatedDatabaseProjectState[];
 }
+
+/**
+ * A type representing the possible responses for a Project operation.
+ * - Either a `DatabaseProject` object or an error message.
+ */
+export type ProjectResponse = DatabaseProject | { error: string };

@@ -1,4 +1,4 @@
-import { PopulatedDatabaseQuestion } from '../types/types';
+import { PopulatedDatabaseQuestion, PopulatedDatabaseProjectState } from '../types/types';
 import { getMostRecentAnswerTime } from '../services/answer.service';
 
 /**
@@ -82,3 +82,14 @@ export const sortQuestionsByMostViews = (
   qlist: PopulatedDatabaseQuestion[],
 ): PopulatedDatabaseQuestion[] =>
   sortQuestionsByNewest(qlist).sort((a, b) => b.views.length - a.views.length);
+
+/**
+ * Sorts a list of project states by newest first.
+ * @param {PopulatedDatabaseProjectState[]} psList - Unsorted list of project states.
+ * @returns {PopulatedDatabaseProjectState[]} - Returns the sorted list of project states by newest first.
+ */
+export const sortProjectStatesByNewest = (
+  psList: PopulatedDatabaseProjectState[],
+): PopulatedDatabaseProjectState[] =>
+  // TODO: complete function
+  [];
