@@ -1,60 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './index.css';
 import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { getUserByUsername } from '../../../services/userService';
+import { getUsers } from '../../../services/userService';
+
+import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [searchUsername, setSearchUsername] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState([]);
-  const [searchError, setSearchError] = useState('');
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+
+  const { val: searchUsername, handleInputChange } = useUserSearch(setFilteredUsers);
+
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
     language: 'javascript',
     sharedUsers: [],
   });
-
-  // searching for users
-  const handleUserSearch = async () => {
-    try {
-      // reset
-      setSearchError('');
-      setUserSearchResults([]);
-      if (!searchUsername.trim()) {
-        setSearchError('Please enter a username');
-        return;
-      }
-      // getUserByUsername can search by partial username
-      const user = await getUserByUsername(searchUsername);
-      // Check if user is valid
-      if (user) {
-        // user added to search results
-        setUserSearchResults([user]);
-      } else {
-        setSearchError('No user found');
-      }
-      setSearchUsername('');
-    } catch (error) {
-      setSearchError('Error searching for user');
-      setUserSearchResults([]);
+  useEffect(() => {
+    if (showAddForm && allUsers.length === 0) {
+      getUsers()
+        .then(data => {
+          setAllUsers(data);
+          setFilteredUsers(data);
+        })
+        // eslint-disable-next-line no-console
+        .catch(err => console.error('Failed to load users', err));
     }
-  };
+  }, [showAddForm, allUsers.length]);
 
-  // add a shared user with permissions
+  // Filter users by username as input changes
+  useEffect(() => {
+    setFilteredUsers(
+      allUsers.filter(user => user.username.toLowerCase().includes(searchUsername.toLowerCase())),
+    );
+  }, [searchUsername, allUsers]);
+
   const handleAddSharedUser = user => {
-    // is user already added?
-    const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
-    if (!isUserAlreadyAdded) {
+    const alreadyAdded = newProject.sharedUsers.some(u => u.id === user.id);
+    if (!alreadyAdded) {
       setNewProject({
         ...newProject,
         sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
       });
-      // Clear search results after adding
-      setUserSearchResults([]);
-      setSearchUsername('');
+      setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
     }
   };
 
@@ -145,7 +137,13 @@ const ProjectDashboard = () => {
       {/* Project modal */}
       {showAddForm && (
         <div className='modal-overlay'>
-          <div className='modal-content' style={{ maxWidth: '36rem' }}>
+          <div
+            className='modal-content'
+            style={{
+              maxWidth: '36rem',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+            }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
               <button onClick={() => setShowAddForm(false)} className='modal-close'>
@@ -180,26 +178,19 @@ const ProjectDashboard = () => {
             {/* User Search and Share */}
             <div className='form-group'>
               <label className='form-label'>Share Project</label>
-              <div className='flex items-center'>
-                <input
-                  type='text'
-                  value={searchUsername}
-                  onChange={e => setSearchUsername(e.target.value)}
-                  className='form-input flex-grow'
-                  placeholder='Search username to share'
-                />
-                <button onClick={handleUserSearch} className='btn btn-primary ml-2'>
-                  <FiSearch size={16} />
-                </button>
-              </div>
-              {searchError && <p className='text-red-500 text-sm mt-1'>{searchError}</p>}
+              <input
+                type='text'
+                value={searchUsername}
+                onChange={handleInputChange}
+                className='form-input'
+                placeholder='Search username to share'
+              />
             </div>
 
-            {/* User Search Results */}
-            {userSearchResults.length > 0 && (
+            {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
               <div className='form-group'>
                 <label className='form-label'>User Search Results</label>
-                {userSearchResults.map(user => (
+                {filteredUsers.map(user => (
                   <div key={user.id} className='flex items-center justify-between mb-2'>
                     <div className='flex items-center'>
                       <FiUser className='mr-2' />
