@@ -176,9 +176,9 @@ const ProjectDashboard = () => {
                 value={newProject.language}
                 onChange={e => setNewProject({ ...newProject, language: e.target.value })}
                 className='form-input'>
-                <option value='form-input-javascript'>JavaScript</option>
-                <option value='form-input-python'>Python</option>
-                <option value='form-input-java'>Java</option>
+                <option value='javascript'>JavaScript</option>
+                <option value='python'>Python</option>
+                <option value='java'>Java</option>
               </select>
             </div>
             {/* User Search and Share */}
@@ -278,15 +278,7 @@ const ProjectDashboard = () => {
               {projects
                 .filter(p => p.starred)
                 .map(project => (
-                  <div key={project.id} className='project-card'>
-                    <div className='card-icon'>
-                      <FiFile size={40} style={{ color: '#2563eb' }} />
-                    </div>
-                    <div className='card-content'>
-                      <h3 className='card-title'>{project.name}</h3>
-                      <p className='card-subtitle'>{project.lastEdited}</p>
-                    </div>
-                  </div>
+                  <ProjectCard key={project.id} project={project} />
                 ))}
             </div>
           ) : (
