@@ -25,7 +25,7 @@ const ProjectDashboard = () => {
       getUsers()
         .then(data => {
           setAllUsers(data);
-          setFilteredUsers(data); // set default filtered list too
+          setFilteredUsers(data);
         })
         // eslint-disable-next-line no-console
         .catch(err => console.error('Failed to load users', err));
@@ -141,9 +141,8 @@ const ProjectDashboard = () => {
             className='modal-content'
             style={{
               maxWidth: '36rem',
-              maxHeight: '80vh', // <-- limits height to 80% of the viewport
-              overflowY: 'auto', // <-- adds vertical scroll if content overflows
-              paddingRight: '1rem', // optional: avoid cut-off scrollbars
+              maxHeight: '80vh',
+              overflowY: 'auto',
             }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
