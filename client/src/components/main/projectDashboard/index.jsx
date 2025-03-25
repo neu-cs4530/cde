@@ -173,9 +173,9 @@ const ProjectDashboard = () => {
                 value={newProject.language}
                 onChange={e => setNewProject({ ...newProject, language: e.target.value })}
                 className='form-input'>
-                <option value='javascript'>JavaScript</option>
-                <option value='python'>Python</option>
-                <option value='java'>Java</option>
+                <option value='form-input-javascript'>JavaScript</option>
+                <option value='form-input-python'>Python</option>
+                <option value='form-input-java'>Java</option>
               </select>
             </div>
             {/* User Search and Share */}
