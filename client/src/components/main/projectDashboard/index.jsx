@@ -20,16 +20,13 @@ const ProjectDashboard = () => {
   // searching for users
   const handleUserSearch = async () => {
     try {
-      // Reset previous error and results
+      // reset
       setSearchError('');
       setUserSearchResults([]);
-
-      // Validate search input
       if (!searchUsername.trim()) {
         setSearchError('Please enter a username');
         return;
       }
-
       // getUserByUsername can search by partial username
       const user = await getUserByUsername(searchUsername);
       // Check if user is valid
@@ -41,7 +38,6 @@ const ProjectDashboard = () => {
       }
       setSearchUsername('');
     } catch (error) {
-      // Handle potential errors
       setSearchError('Error searching for user');
       setUserSearchResults([]);
     }
