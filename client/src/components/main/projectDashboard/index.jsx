@@ -9,6 +9,7 @@ const ProjectDashboard = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [searchUsername, setSearchUsername] = useState('');
   const [userSearchResults, setUserSearchResults] = useState([]);
+  const [searchError, setSearchError] = useState('');
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
@@ -19,24 +20,46 @@ const ProjectDashboard = () => {
   // searching for users
   const handleUserSearch = async () => {
     try {
+      // Reset previous error and results
+      setSearchError('');
+      setUserSearchResults([]);
+
+      // Validate search input
+      if (!searchUsername.trim()) {
+        setSearchError('Please enter a username');
+        return;
+      }
+
       // getUserByUsername can search by partial username
       const user = await getUserByUsername(searchUsername);
-      // user added to search results
-      setUserSearchResults([...userSearchResults, user]);
+      // Check if user is valid
+      if (user) {
+        // user added to search results
+        setUserSearchResults([user]);
+      } else {
+        setSearchError('No user found');
+      }
       setSearchUsername('');
     } catch (error) {
-      console.error('Error searching for user:', error);
+      // Handle potential errors
+      setSearchError('Error searching for user');
+      setUserSearchResults([]);
     }
   };
+
   // add a shared user with permissions
-  const addSharedUser = user => {
+  const handleAddSharedUser = user => {
     // is user already added?
     const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
+
     if (!isUserAlreadyAdded) {
       setNewProject({
         ...newProject,
         sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
       });
+      // Clear search results after adding
+      setUserSearchResults([]);
+      setSearchUsername('');
     }
   };
 
@@ -174,7 +197,27 @@ const ProjectDashboard = () => {
                   <FiSearch size={16} />
                 </button>
               </div>
+              {searchError && <p className='text-red-500 text-sm mt-1'>{searchError}</p>}
             </div>
+
+            {/* User Search Results */}
+            {userSearchResults.length > 0 && (
+              <div className='form-group'>
+                <label className='form-label'>User Search Results</label>
+                {userSearchResults.map(user => (
+                  <div key={user.id} className='flex items-center justify-between mb-2'>
+                    <div className='flex items-center'>
+                      <FiUser className='mr-2' />
+                      <span>{user.username}</span>
+                    </div>
+                    <button onClick={() => handleAddSharedUser(user)} className='btn btn-primary'>
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Shared Users List */}
             {newProject.sharedUsers.length > 0 && (
               <div className='form-group'>
