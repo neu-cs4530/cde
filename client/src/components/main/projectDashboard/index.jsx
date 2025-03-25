@@ -78,11 +78,12 @@ const ProjectDashboard = () => {
         lastEdited: 'Just now',
         starred: false,
         type: 'doc',
-        language: newProject.language,
-        sharedUsers: newProject.sharedUsers,
+        language: newProject.language || 'javascript',
+        sharedUsers: newProject.sharedUsers || [],
       };
       setProjects([project, ...projects]);
       setNewProject({
+        id: Date.now(),
         name: '',
         type: 'doc',
         language: 'javascript',
@@ -92,10 +93,12 @@ const ProjectDashboard = () => {
     }
   };
 
+  // star or unstar a project
   const toggleStar = id => {
     setProjects(projects.map(p => (p.id === id ? { ...p, starred: !p.starred } : p)));
   };
 
+  // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
   const removeProject = id => {
     setProjects(projects.filter(p => p.id !== id));
   };
