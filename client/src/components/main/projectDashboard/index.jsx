@@ -1,13 +1,80 @@
 import React, { useState } from 'react';
 import './index.css';
-import { FiSearch, FiPlus, FiX, FiFile, FiStar } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { getUserByUsername } from '../../../services/userService';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newProject, setNewProject] = useState({ name: '', type: 'doc' });
+  const [searchUsername, setSearchUsername] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [searchError, setSearchError] = useState('');
+  const [newProject, setNewProject] = useState({
+    name: '',
+    type: 'doc',
+    language: 'javascript',
+    sharedUsers: [],
+  });
 
+  // searching for users
+  const handleUserSearch = async () => {
+    try {
+      // reset
+      setSearchError('');
+      setUserSearchResults([]);
+      if (!searchUsername.trim()) {
+        setSearchError('Please enter a username');
+        return;
+      }
+      // getUserByUsername can search by partial username
+      const user = await getUserByUsername(searchUsername);
+      // Check if user is valid
+      if (user) {
+        // user added to search results
+        setUserSearchResults([user]);
+      } else {
+        setSearchError('No user found');
+      }
+      setSearchUsername('');
+    } catch (error) {
+      setSearchError('Error searching for user');
+      setUserSearchResults([]);
+    }
+  };
+
+  // add a shared user with permissions
+  const handleAddSharedUser = user => {
+    // is user already added?
+    const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
+    if (!isUserAlreadyAdded) {
+      setNewProject({
+        ...newProject,
+        sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
+      });
+      // Clear search results after adding
+      setUserSearchResults([]);
+      setSearchUsername('');
+    }
+  };
+
+  // update user permissions
+  const updateUserPermissions = (userId, permissions) => {
+    setNewProject({
+      ...newProject,
+      sharedUsers: newProject.sharedUsers.map(user =>
+        user.id === userId ? { ...user, permissions } : user,
+      ),
+    });
+  };
+
+  // remove a shared user
+  const removeSharedUser = userId => {
+    setNewProject({
+      ...newProject,
+      sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
+    });
+  };
   const addProject = () => {
     if (newProject.name.trim()) {
       const project = {
@@ -16,9 +83,16 @@ const ProjectDashboard = () => {
         lastEdited: 'Just now',
         starred: false,
         type: 'doc',
+        language: newProject.language,
+        sharedUsers: newProject.sharedUsers,
       };
       setProjects([project, ...projects]);
-      setNewProject({ name: '', type: 'doc' });
+      setNewProject({
+        name: '',
+        type: 'doc',
+        language: 'javascript',
+        sharedUsers: [],
+      });
       setShowAddForm(false);
     }
   };
@@ -71,13 +145,15 @@ const ProjectDashboard = () => {
       {/* Project modal */}
       {showAddForm && (
         <div className='modal-overlay'>
-          <div className='modal-content'>
+          <div className='modal-content' style={{ maxWidth: '36rem' }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
               <button onClick={() => setShowAddForm(false)} className='modal-close'>
                 <FiX size={20} />
               </button>
             </div>
+
+            {/* Project Name Input */}
             <div className='form-group'>
               <label className='form-label'>Project Name</label>
               <input
@@ -88,6 +164,81 @@ const ProjectDashboard = () => {
                 placeholder='Enter project name'
               />
             </div>
+
+            {/* Language Selection */}
+            <div className='form-group'>
+              <label className='form-label'>Project Language</label>
+              <select
+                value={newProject.language}
+                onChange={e => setNewProject({ ...newProject, language: e.target.value })}
+                className='form-input'>
+                <option value='javascript'>JavaScript</option>
+                <option value='python'>Python</option>
+                <option value='java'>Java</option>
+              </select>
+            </div>
+            {/* User Search and Share */}
+            <div className='form-group'>
+              <label className='form-label'>Share Project</label>
+              <div className='flex items-center'>
+                <input
+                  type='text'
+                  value={searchUsername}
+                  onChange={e => setSearchUsername(e.target.value)}
+                  className='form-input flex-grow'
+                  placeholder='Search username to share'
+                />
+                <button onClick={handleUserSearch} className='btn btn-primary ml-2'>
+                  <FiSearch size={16} />
+                </button>
+              </div>
+              {searchError && <p className='text-red-500 text-sm mt-1'>{searchError}</p>}
+            </div>
+
+            {/* User Search Results */}
+            {userSearchResults.length > 0 && (
+              <div className='form-group'>
+                <label className='form-label'>User Search Results</label>
+                {userSearchResults.map(user => (
+                  <div key={user.id} className='flex items-center justify-between mb-2'>
+                    <div className='flex items-center'>
+                      <FiUser className='mr-2' />
+                      <span>{user.username}</span>
+                    </div>
+                    <button onClick={() => handleAddSharedUser(user)} className='btn btn-primary'>
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Shared Users List */}
+            {newProject.sharedUsers.length > 0 && (
+              <div className='form-group'>
+                <label className='form-label'>Shared Users</label>
+                {newProject.sharedUsers.map(user => (
+                  <div key={user.id} className='flex items-center justify-between mb-2'>
+                    <div className='flex items-center'>
+                      <FiUser className='mr-2' />
+                      <span>{user.username}</span>
+                    </div>
+                    <div className='flex items-center'>
+                      <select
+                        value={user.permissions}
+                        onChange={e => updateUserPermissions(user.id, e.target.value)}
+                        className='form-input mr-2'>
+                        <option value='viewer'>Viewer</option>
+                        <option value='editor'>Editor</option>
+                      </select>
+                      <button onClick={() => removeSharedUser(user.id)} className='text-red-500'>
+                        <FiX />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className='form-footer'>
               <button onClick={() => setShowAddForm(false)} className='btn btn-cancel'>
                 Cancel
