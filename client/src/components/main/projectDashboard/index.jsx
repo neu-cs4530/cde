@@ -21,16 +21,16 @@ const ProjectDashboard = () => {
     try {
       // getUserByUsername can search by partial username
       const user = await getUserByUsername(searchUsername);
-      // Add user to search results
+      // user added to search results
       setUserSearchResults([...userSearchResults, user]);
       setSearchUsername('');
     } catch (error) {
       console.error('Error searching for user:', error);
     }
   };
-  // Function to add a shared user with permissions
+  // add a shared user with permissions
   const addSharedUser = user => {
-    // Check if user is already added
+    // is user already added?
     const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
     if (!isUserAlreadyAdded) {
       setNewProject({
@@ -40,7 +40,7 @@ const ProjectDashboard = () => {
     }
   };
 
-  // Function to update user permissions
+  // update user permissions
   const updateUserPermissions = (userId, permissions) => {
     setNewProject({
       ...newProject,
@@ -50,7 +50,7 @@ const ProjectDashboard = () => {
     });
   };
 
-  // Function to remove a shared user
+  // remove a shared user
   const removeSharedUser = userId => {
     setNewProject({
       ...newProject,
