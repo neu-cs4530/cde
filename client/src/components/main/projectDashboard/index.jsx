@@ -19,6 +19,7 @@ const ProjectDashboard = () => {
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
+    currentState: 'draft', // should all new projects have current/initial state being a draft?
     language: 'javascript',
     sharedUsers: [],
   });
