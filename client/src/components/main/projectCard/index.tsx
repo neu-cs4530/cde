@@ -9,14 +9,16 @@ import { getMetaData } from '../../../tool';
  * @param project: The project object to display.
  */
 const ProjectCard = ({ project }: { project: DatabaseProject }) => (
-    <div className='project'>
-        <div className='project-header'>
-            <div className='project-name'>{project.name}</div>
-            <div className='project-creation'>{getMetaData(project.createdAt)}</div>
-            <div className='project-curr-state'>{project.currentState.toString()}</div>
-            <div className='project-collaborators'>Collaborators: {project.collaborators?.map(id => id.toString()).join(', ')}</div>
-        </div>
+  <div className='project'>
+    <div className='project-header'>
+      <div className='project-name'>{project.name}</div>
+      <div className='project-creation'>{getMetaData(project.createdAt)}</div>
+      <div className='project-curr-state'>{project.currentState.toString()}</div>
+      <div className='project-collaborators'>
+        Collaborators: {project.collaborators?.map(id => id.toString()).join(', ')}
+      </div>
     </div>
+  </div>
 );
 
 export default ProjectCard;
