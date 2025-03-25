@@ -47,7 +47,6 @@ const ProjectDashboard = () => {
   const handleAddSharedUser = user => {
     // is user already added?
     const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
-
     if (!isUserAlreadyAdded) {
       setNewProject({
         ...newProject,
