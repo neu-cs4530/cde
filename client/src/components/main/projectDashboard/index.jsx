@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import './index.css';
 import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import { DatabaseProject } from '../../../types/types'; 
+import ProjectCard from '../projectCard';
 
 import useUserSearch from '../../../hooks/useUserSearch';
 
