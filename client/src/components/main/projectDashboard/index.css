@@ -360,3 +360,16 @@
     height: 1rem;
     margin-right: 0.25rem;
   }
+  .modal-content {
+    scroll-behavior: smooth;
+  }
+  
+  .modal-content::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .modal-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+  }
+  
