@@ -1,13 +1,62 @@
 import React, { useState } from 'react';
 import './index.css';
 import { FiSearch, FiPlus, FiX, FiFile, FiStar } from 'react-icons/fi';
+import { getUserByUsername } from '../../../services/userService';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newProject, setNewProject] = useState({ name: '', type: 'doc' });
+  const [searchUsername, setSearchUsername] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [newProject, setNewProject] = useState({
+    name: '',
+    type: 'doc',
+    language: 'javascript',
+    sharedUsers: [],
+  });
 
+  // searching for users
+  const handleUserSearch = async () => {
+    try {
+      // getUserByUsername can search by partial username
+      const user = await getUserByUsername(searchUsername);
+      // Add user to search results
+      setUserSearchResults([...userSearchResults, user]);
+      setSearchUsername('');
+    } catch (error) {
+      console.error('Error searching for user:', error);
+    }
+  };
+  // Function to add a shared user with permissions
+  const addSharedUser = user => {
+    // Check if user is already added
+    const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
+    if (!isUserAlreadyAdded) {
+      setNewProject({
+        ...newProject,
+        sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
+      });
+    }
+  };
+
+  // Function to update user permissions
+  const updateUserPermissions = (userId, permissions) => {
+    setNewProject({
+      ...newProject,
+      sharedUsers: newProject.sharedUsers.map(user =>
+        user.id === userId ? { ...user, permissions } : user,
+      ),
+    });
+  };
+
+  // Function to remove a shared user
+  const removeSharedUser = userId => {
+    setNewProject({
+      ...newProject,
+      sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
+    });
+  };
   const addProject = () => {
     if (newProject.name.trim()) {
       const project = {
@@ -16,9 +65,16 @@ const ProjectDashboard = () => {
         lastEdited: 'Just now',
         starred: false,
         type: 'doc',
+        language: newProject.language,
+        sharedUsers: newProject.sharedUsers,
       };
       setProjects([project, ...projects]);
-      setNewProject({ name: '', type: 'doc' });
+      setNewProject({
+        name: '',
+        type: 'doc',
+        language: 'javascript',
+        sharedUsers: [],
+      });
       setShowAddForm(false);
     }
   };
