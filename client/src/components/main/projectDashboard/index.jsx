@@ -99,8 +99,8 @@ const ProjectDashboard = () => {
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
-  const removeProject = id => {
-    setProjects(projects.filter(p => p.id !== id));
+  const trashProject = id => {
+    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
   };
 
   return (
@@ -391,7 +391,7 @@ const ProjectDashboard = () => {
                       </td>
                       <td className='row-actions'>
                         <button
-                          onClick={() => removeProject(project.id)}
+                          onClick={() => trashProject(project.id)}
                           style={{
                             background: 'none',
                             border: 'none',
