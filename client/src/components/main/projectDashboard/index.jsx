@@ -20,6 +20,16 @@ const ProjectDashboard = () => {
     language: 'javascript',
     sharedUsers: [],
   });
+  const closeAndResetForm = () => {
+    setNewProject({
+      name: '',
+      type: 'doc',
+      language: 'javascript',
+      sharedUsers: [],
+    });
+    setSearchUsername('');
+    setShowAddForm(false);
+  };
   const handleInputChange = e => {
     const inputValue = e.target.value;
     setSearchUsername(inputValue);
@@ -160,7 +170,7 @@ const ProjectDashboard = () => {
             }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
-              <button onClick={() => setShowAddForm(false)} className='modal-close'>
+              <button onClick={closeAndResetForm} className='modal-close'>
                 <FiX size={20} />
               </button>
             </div>
@@ -245,7 +255,7 @@ const ProjectDashboard = () => {
               </div>
             )}
             <div className='form-footer'>
-              <button onClick={() => setShowAddForm(false)} className='btn btn-cancel'>
+              <button onClick={closeAndResetForm} className='btn btn-cancel'>
                 Cancel
               </button>
               <button
