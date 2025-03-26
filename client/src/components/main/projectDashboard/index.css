@@ -210,12 +210,16 @@
   }
   
   .modal-content {
-    background-color: white;
+    background-color: white; /* make sure this stays! */
     border-radius: 0.5rem;
     padding: 1.5rem;
     width: 100%;
-    max-width: 28rem;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 36rem; /* bump this from 28rem for more space */
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 
+                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    z-index: 100; /* ensure it layers above */
   }
   
   .modal-header {

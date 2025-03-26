@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import './index.css';
-import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import ProjectCard from '../projectCard';
 
 // import useUserSearch from '../../../hooks/useUserSearch';
 
@@ -17,8 +18,11 @@ const ProjectDashboard = () => {
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
+    currentState: 'draft', // should all new projects have current/initial state being a draft?
     language: 'javascript',
     sharedUsers: [],
+    starred: false,
+    inTrash: false,
   });
   const closeAndResetForm = () => {
     setNewProject({
@@ -96,14 +100,19 @@ const ProjectDashboard = () => {
       const project = {
         id: Date.now(),
         name: newProject.name,
+        createdAt: new Date(),
+        currentState: 'draft',
+        collaborators: [],
         lastEdited: 'Just now',
         starred: false,
+        inTrash: false,
         type: 'doc',
-        language: newProject.language,
-        sharedUsers: newProject.sharedUsers,
+        language: newProject.language || 'javascript',
+        sharedUsers: newProject.sharedUsers || [],
       };
       setProjects([project, ...projects]);
       setNewProject({
+        id: Date.now(),
         name: '',
         type: 'doc',
         language: 'javascript',
@@ -113,12 +122,14 @@ const ProjectDashboard = () => {
     }
   };
 
+  // star or unstar a project
   const toggleStar = id => {
     setProjects(projects.map(p => (p.id === id ? { ...p, starred: !p.starred } : p)));
   };
 
-  const removeProject = id => {
-    setProjects(projects.filter(p => p.id !== id));
+  // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
+  const trashProject = id => {
+    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
   };
 
   return (
@@ -167,11 +178,13 @@ const ProjectDashboard = () => {
               maxWidth: '36rem',
               maxHeight: '80vh',
               overflowY: 'auto',
+              backgroundColor: '#ffffff',
+              zIndex: 100,
             }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
               <button onClick={closeAndResetForm} className='modal-close'>
-                <FiX size={20} />
+                <FiTrash2 size={20} />
               </button>
             </div>
 
@@ -247,7 +260,7 @@ const ProjectDashboard = () => {
                         <option value='editor'>Editor</option>
                       </select>
                       <button onClick={() => removeSharedUser(user.id)} className='text-red-500'>
-                        <FiX />
+                        <FiTrash2 />
                       </button>
                     </div>
                   </div>
@@ -296,15 +309,7 @@ const ProjectDashboard = () => {
               {projects
                 .filter(p => p.starred)
                 .map(project => (
-                  <div key={project.id} className='project-card'>
-                    <div className='card-icon'>
-                      <FiFile size={40} style={{ color: '#2563eb' }} />
-                    </div>
-                    <div className='card-content'>
-                      <h3 className='card-title'>{project.name}</h3>
-                      <p className='card-subtitle'>{project.lastEdited}</p>
-                    </div>
-                  </div>
+                  <ProjectCard key={project.id} project={project} />
                 ))}
             </div>
           ) : (
@@ -385,8 +390,8 @@ const ProjectDashboard = () => {
                 {projects
                   .filter(project => {
                     if (activeTab === 'starred') return project.starred;
-                    if (activeTab === 'trash') return false; // No trash implementation yet
-                    return true; // Recent tab shows all
+                    if (activeTab === 'trash') return project.inTrash; // No trash implementation yet
+                    return !project.inTrash; // Recent tab shows all
                   })
                   .map(project => (
                     <tr key={project.id} className='table-row'>
@@ -417,7 +422,7 @@ const ProjectDashboard = () => {
                       </td>
                       <td className='row-actions'>
                         <button
-                          onClick={() => removeProject(project.id)}
+                          onClick={() => trashProject(project.id)}
                           style={{
                             background: 'none',
                             border: 'none',
@@ -425,7 +430,7 @@ const ProjectDashboard = () => {
                             padding: '0.5rem',
                             color: '#9ca3af',
                           }}>
-                          <FiX size={20} />
+                          <FiTrash2 size={20} />
                         </button>
                       </td>
                     </tr>

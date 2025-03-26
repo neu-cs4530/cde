@@ -1,7 +1,11 @@
+import ProjectFileCommentModel from '../../models/projectFileComments.model';
+import ProjectFileModel from '../../models/projectFiles.model';
 import {
   ProjectFileComment,
   ProjectFileCommentResponse,
   DatabaseProjectFileComment,
+  DatabaseProjectFile,
+  ProjectFileResponse,
 } from '../../types/types';
 
 /**
@@ -11,9 +15,19 @@ import {
  */
 export const saveProjectFileComment = async (
   comment: ProjectFileComment,
-): Promise<ProjectFileCommentResponse> =>
-  // TODO: complete function, delete below line
-  Promise.resolve({} as ProjectFileCommentResponse);
+): Promise<ProjectFileCommentResponse> => {
+  try {
+    const result: DatabaseProjectFileComment = await ProjectFileCommentModel.create(comment);
+
+    if (!result) {
+      throw Error('Failed to save file comment');
+    }
+
+    return result;
+  } catch (error) {
+    return { error: `Error occurred when saving file comment: ${error}` };
+  }
+};
 
 /**
  * Deletes a comment on a project file by its ID.
@@ -22,19 +36,46 @@ export const saveProjectFileComment = async (
  */
 export const deleteProjectFileCommentById = async (
   commentId: string,
-): Promise<ProjectFileCommentResponse> =>
-  // TODO: complete function, delete below line
-  Promise.resolve({} as ProjectFileCommentResponse);
+): Promise<ProjectFileCommentResponse> => {
+  try {
+    const deletedProjectFileComment: DatabaseProjectFileComment | null =
+      await ProjectFileCommentModel.findOneAndDelete({
+        _id: commentId,
+      });
+
+    if (!deletedProjectFileComment) {
+      throw Error('Error deleting project file comment');
+    }
+
+    return deletedProjectFileComment;
+  } catch (error) {
+    return { error: `Error occurred when finding project file comment: ${error}` };
+  }
+};
 
 /**
  * Adds an existing comment to a project file.
  * @param {string} fileId - The ID of the comment being added to a project file.
  * @param {DatabaseProjectFileComment} comment - The object containing all of the comment data.
- * @returns {Promise<ProjectFileCommentResponse>} - Resolves with the added project file comment object or an errro message.
+ * @returns {Promise<ProjectFileResponse>} - Resolves with the added project file comment object or an errro message.
  */
 export const addCommentToFile = async (
   fileId: string,
   comment: DatabaseProjectFileComment,
-): Promise<ProjectFileCommentResponse> =>
-  // TODO: complete function, delete below line
-  Promise.resolve({} as ProjectFileCommentResponse);
+): Promise<ProjectFileResponse> => {
+  try {
+    const updatedProjectFile: DatabaseProjectFile | null = await ProjectFileModel.findOneAndUpdate(
+      { _id: fileId },
+      { $push: { comments: comment } },
+      { new: true },
+    );
+
+    if (!updatedProjectFile) {
+      throw Error('Error updating file');
+    }
+
+    return updatedProjectFile;
+  } catch (error) {
+    return { error: `Error occurred when updating file: ${error}` };
+  }
+};
