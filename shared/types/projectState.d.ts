@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { ObjectId } from 'mongodb';
 import { ProjectFile, PopulatedDatabaseProjectFile } from './projectFile';
 
@@ -36,3 +37,20 @@ export interface PopulatedDatabaseProjectState extends Omit<DatabaseProjectState
  * - Either a `DatabaseProjectState` object or an error message.
  */
 export type ProjectStateResponse = DatabaseProjectState | { error: string };
+
+/**
+ * Express request for updating project states, containing project and state IDs,
+ * and the username of the actor.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `stateId`: The ID of the state provided as a route parameter.
+ * - `actor`: The username of the actor submitted in the request (body).
+ */
+export interface ProjectStateRequest extends Request {
+  params: {
+    projectId: string;
+    stateId: string;
+  };
+  body: {
+    actor: string;
+  };
+} 

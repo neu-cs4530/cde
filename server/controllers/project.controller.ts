@@ -1,6 +1,11 @@
 import express, { Response } from 'express';
 // import {
 //   saveProject,
+//   deleteProjectById,
+//   updateProject,
+//   addProjectCollaborator,
+//   TODO removeProjectCollaborator,
+//   
 // } from '../services/project/project.service';
 // import {
 //   saveProjectState,
@@ -22,8 +27,15 @@ import {
   ProjectState,
   ProjectFile,
   ProjectFileComment,
+  CreateProjectRequest,
   ProjectRequest,
-  // TODO: Requests go here
+  UserByUsernameRequest,
+  CollaboratorRequest,
+  ProjectStateRequest,
+  CreateFileRequest,
+  FileRequest,
+  AddFileCommentRequest,
+  FileCommentRequest,
 } from '../types/types';
 
 /**
@@ -55,11 +67,10 @@ const projectController = (socket: FakeSOSocket) => {
     req.body !== undefined &&
     req.body.name !== undefined &&
     req.body.name !== '' &&
-    req.body.creator !== undefined &&
-    req.body.creator !== '' &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
     req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true;
   
-  // TODO: Route functions 
   /**
    * Handles the creation of a new project.
    * @param req The request containing project data.
@@ -76,7 +87,7 @@ const projectController = (socket: FakeSOSocket) => {
       const requestProject = req.body;
       
       // Retrieve project creator's User document from database
-      const owner: UserResponse = await getUserByUsername(requestProject.creator);
+      const owner: UserResponse = await getUserByUsername(requestProject.actor);
       
       if ('error' in owner) {
         throw Error(owner.error);
@@ -152,13 +163,196 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteProjectRoute = async(req: DeleteProjectRequest, res: Response): Promise<void> => {
+  const deleteProjectRoute = async(req: UpdateProjectRequest, res: Response): Promise<void> => {
     
   };
 
   /**
-   * TODO: 
+   * TODO: Updates a project by its ID.
+   * @param req The request containing the project's ID as a route parameter.
+   * @param res The response, either confirming the update or returning an error.
+   * @returns A promise resolving to void.
    */
+  const updateProjectRoute = async(req: UpdateProjectRequest, res: Response): Promise<void> => {
+
+  };
+
+  /**
+   * TODO: Retrieves all projects a user is collaborating on.
+   * @param req The request containing user's username as a route parameter.
+   * @param res The response, either containing the user's projects or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getProjectsByUserRoute = async(req: UserByUsernameRequest, res: Response): Promise<void> => {
+
+  };
+
+  /**
+   * TODO: Retrieves a project by its ID.
+   * @param req The request containing the project's ID as a route parameter.
+   * @param The response, either containing the project or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Adds a collaborator to a project.
+   * @param req The request containing the project's ID and the collaborator's username
+   * as route parameters.
+   * @param The response, either confirming addition or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const addCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Removes a collaborator from a project.
+   * @param req The request containing the project's ID and the collaborator's username
+   * as route parameters.
+   * @param The response, either confirming removal or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const removeCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Retrieves all saved states of a project.
+   * @param req The request containing the project's ID as a route parameter.
+   * @param The response, either containing the saved states or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getStatesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Creates a backup of the project's current state.
+   * @param req The request containing the project's ID as a route parameter.
+   * @param The response, either confirming backup or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const createBackupRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Restores a project's state to a saved state.
+   * @param req The request containing the project and state IDs as route parameters.
+   * @param The response, either confirming restoration or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const restoreStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Deletes a saved project state. 
+   * @param req The request containing the project and state IDs as route parameters.
+   * @param The response, either confirming deletion or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const deleteStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Updates a saved project state. 
+   * @param req The request containing the project and state IDs as route parameters.
+   * @param The response, either confirming update or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const updateStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Retrieves a project's files based on its current state.
+   * @param req The request containing the project's ID as a route parameter.
+   * @param The response, either containing the files or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getFilesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Creates a new file in a project.
+   * @param req The request containing the project's ID as a route parameter and file data.
+   * @param The response, either returning the created file or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const createFileRoute = async(req: CreateFileRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Deletes a file in a project.
+   * @param req The request containing the project and file IDs as route parameters.
+   * @param The response, either confirming deletion or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const deleteFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Updates a file in a project.
+   * @param req The request containing the project and file IDs as route parameters.
+   * @param The response, either confirming update or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const updateFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Retrieves a file in a project.
+   * @param req The request containing the project and file IDs as route parameters.
+   * @param The response, either containing the file or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Adds a comment to a file in a project.
+   * @param req The request containing the project and file IDs as route parameters,
+   * and the comment data.
+   * @param The response, either containing the created comment or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const addFileCommentRoute = async(req: AddFileCommentRequest, res: Response): Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Deletes all comments on a line in a file.
+   * @param req The request containing the project and file IDs, and line number 
+   * as route parameters.
+   * @param The response, either confirming deletion or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const deleteFileCommentsByLineRoute = async(req: DeleteFileCommentsByLineRequest, res: Response):
+    Promise<void> => {
+    
+  };
+
+  /**
+   * TODO: Deletes a comment on a project file.
+   * @param req The request containing the project, file, and comment IDs 
+   * as route parameters.
+   * @param The response, either confirming deletion or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const deleteFileCommentByIdRoute = async(req: DeleteFileCommentByIdRequest, res: Response):
+    Promise<void> => {
+    
+  };
 
 
   // Register the routes

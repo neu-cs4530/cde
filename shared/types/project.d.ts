@@ -57,20 +57,47 @@ export type ProjectResponse = DatabaseProject | { error: string };
 /**
  * Express request for project creation, containing project details.
  * - `name`: The name of the project submitted in the request (body).
- * - `creator`: The username of the project creator submitted in the request (body).
+ * - `actor`: The username of the project actor submitted in the request (body).
  * - `collaborators`: Optional field for additional collaborators (body).
  */
-export interface ProjectRequest extends Request {
+export interface CreateProjectRequest extends Request {
   body: {
     name: string;
-    creator: string;
+    actor: string;
     collaborators?: RequestCollaborator[];
   };
 }
 
 /**
- * Express request for deleting a project, containing project ID and 
+ * Express request for updating or deleting a project, containing project ID and 
  * username of deleter.
  * - `projectId`: The ID of the project provided as a route parameter.
- * - `username`: The username of the project deleter submitted in the request (body).
+ * - `actor`: The username of the actor submitted in the request (body).
  */
+export interface ProjectRequest extends Request {
+  params: {
+    projectId: string;
+  };
+  body: {
+    actor: string;
+  };
+}
+
+/**
+ * Express request for adding or removing project collaborators, containing 
+ * project ID and collaborator username as route parameters, and username of
+ * the actor.
+ * - `projectId`: The ID of the project provided as a route parameter
+ * - `collaborator`: The username of the collaborator provided as a route 
+ *   parameter.
+ * - `actor`: The username of the actor submitted in the request (body).
+ */
+export interface CollaboratorRequest extends Request {
+  params: {
+    projectId: string;
+    collaborator: string;
+  };
+  body: {
+    actor: string;
+  };
+}

@@ -51,3 +51,37 @@ export interface PopulatedDatabaseProjectFile extends Omit<DatabaseProjectFile, 
  * - Either a `DatabaseProjectFile` object or an error message.
  */
 export type ProjectFileResponse = DatabaseProjectFile | { error: string };
+
+/**
+ * Express request for creating project files, containing project ID and 
+ * file data.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `actor`: The username of the actor submitted in the request (body).
+ */
+export interface CreateFileRequest extends Request {
+  params: {
+    projectId: string;
+  };
+  body: {
+    actor: string;
+    name: string;
+    fileType: ProjectFileType;
+  };
+}
+
+/**
+ * Express request for updating files, containing project and file IDs,
+ * and the username of the actor.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `actor`: The username of the actor submitted in the request (body).
+ */
+export interface FileRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+  };
+  body: {
+    actor: string;
+  };
+}
