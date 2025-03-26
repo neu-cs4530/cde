@@ -70,6 +70,8 @@ const projectController = (socket: FakeSOSocket) => {
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
     req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true;
+
+  const isP
   
   /**
    * Handles the creation of a new project.
@@ -220,6 +222,18 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
+   * TODO: Updates a collaborator's role in a project.
+   * @param req The request containing the project's ID and the collaborator's username
+   * as route parameters.
+   * @param The response, either confirming update or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const updateCollaboratorRoleRoute = async(req: CollaboratorRequest, res: Response):
+    Promise<void> => {
+    
+  };
+
+  /**
    * TODO: Retrieves all saved states of a project.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the saved states or returning an error.
@@ -363,7 +377,8 @@ const projectController = (socket: FakeSOSocket) => {
   router.get('/:projectId', getProjectRoute);
   // TODO: Change addCollaborator to inviteCollaborator
   router.post('/:projectId/addCollaborator/:username', addCollaboratorRoute);
-  router.patch('/:projectId/removeCollaborator/:username', removeCollaboratorRole);
+  router.patch('/:projectId/removeCollaborator/:username', removeCollaboratorRoute);
+  router.patch(':/projectId/updateCollaboratorRole/:username', updateCollaboratorRoleRoute);
   router.get('/:projectId/getStates', getStatesRoute);
   router.post('/:projectId/createBackup', createBackupRoute);
   router.patch('/:projectId/restoreStateById/:stateId', restoreStateRoute);

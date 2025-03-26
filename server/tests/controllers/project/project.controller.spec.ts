@@ -174,6 +174,32 @@ describe.skip('Project Controller', () => {
     });
   });
 
+  describe('PATCH /projects/:projectId/updateCollaboratorRole/:username', () => {
+    it('should successfully update collaborator role in project', async () => {
+      expect(true).toBe(false);
+    });
+
+    it('should return 403 if remover is not owner', async () => {
+      expect(true).toBe(false);
+    });
+
+    it('should return 403 if remover is not a project collaborator', async () => {
+      expect(true).toBe(false);
+    });
+
+    it('should return 500 on service error', async () => {
+      expect(true).toBe(false);
+    });
+
+    it('should return 404 if username not provided', async () => {
+      expect(true).toBe(false);
+    });
+
+    it('should return 404 if projectId not provided', async () => {
+      expect(true).toBe(false);
+    });
+  });
+
   describe('GET /projects/:projectId/getStates', () => {
     it('should successfully get all saved project states', async () => {
       expect(true).toBe(false);
