@@ -179,11 +179,11 @@ describe.skip('Project Controller', () => {
       expect(true).toBe(false);
     });
 
-    it('should return 403 if remover is not owner', async () => {
+    it('should return 403 if updater is not owner', async () => {
       expect(true).toBe(false);
     });
 
-    it('should return 403 if remover is not a project collaborator', async () => {
+    it('should return 403 if updater is not a project collaborator', async () => {
       expect(true).toBe(false);
     });
 
