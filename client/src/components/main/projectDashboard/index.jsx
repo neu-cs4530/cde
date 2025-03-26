@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './index.css';
-import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
 
-import useUserSearch from '../../../hooks/useUserSearch';
+// import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
@@ -13,7 +13,7 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
 
-  const { val: searchUsername, handleInputChange } = useUserSearch(setFilteredUsers);
+  const [searchUsername, setSearchUsername] = useState('');
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -24,6 +24,28 @@ const ProjectDashboard = () => {
     starred: false,
     inTrash: false,
   });
+  const closeAndResetForm = () => {
+    setNewProject({
+      name: '',
+      type: 'doc',
+      language: 'javascript',
+      sharedUsers: [],
+    });
+    setSearchUsername('');
+    setShowAddForm(false);
+  };
+  const handleInputChange = e => {
+    const inputValue = e.target.value;
+    setSearchUsername(inputValue);
+    // Filter users based on the input
+    const filtered = allUsers.filter(
+      user =>
+        user.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        // Exclude already added users
+        !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
+    );
+    setFilteredUsers(filtered);
+  };
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
       getUsers()
@@ -44,14 +66,13 @@ const ProjectDashboard = () => {
   }, [searchUsername, allUsers]);
 
   const handleAddSharedUser = user => {
-    const alreadyAdded = newProject.sharedUsers.some(u => u.id === user.id);
-    if (!alreadyAdded) {
-      setNewProject({
-        ...newProject,
-        sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
-      });
-      setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
-    }
+    setNewProject({
+      ...newProject,
+      sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
+    });
+    // Update filtered users and search
+    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+    setSearchUsername('');
   };
 
   // update user permissions
@@ -66,10 +87,13 @@ const ProjectDashboard = () => {
 
   // remove a shared user
   const removeSharedUser = userId => {
+    const removedUser = newProject.sharedUsers.find(user => user.id === userId);
     setNewProject({
       ...newProject,
       sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
     });
+    // Add the removed user back to filteredUsers
+    setFilteredUsers(prev => [...prev, removedUser]);
   };
   const addProject = () => {
     if (newProject.name.trim()) {
@@ -154,11 +178,13 @@ const ProjectDashboard = () => {
               maxWidth: '36rem',
               maxHeight: '80vh',
               overflowY: 'auto',
+              backgroundColor: '#ffffff',
+              zIndex: 100,
             }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
-              <button onClick={() => setShowAddForm(false)} className='modal-close'>
-                <FiX size={20} />
+              <button onClick={closeAndResetForm} className='modal-close'>
+                <FiTrash2 size={20} />
               </button>
             </div>
 
@@ -234,7 +260,7 @@ const ProjectDashboard = () => {
                         <option value='editor'>Editor</option>
                       </select>
                       <button onClick={() => removeSharedUser(user.id)} className='text-red-500'>
-                        <FiX />
+                        <FiTrash2 />
                       </button>
                     </div>
                   </div>
@@ -242,7 +268,7 @@ const ProjectDashboard = () => {
               </div>
             )}
             <div className='form-footer'>
-              <button onClick={() => setShowAddForm(false)} className='btn btn-cancel'>
+              <button onClick={closeAndResetForm} className='btn btn-cancel'>
                 Cancel
               </button>
               <button
@@ -404,7 +430,7 @@ const ProjectDashboard = () => {
                             padding: '0.5rem',
                             color: '#9ca3af',
                           }}>
-                          <FiX size={20} />
+                          <FiTrash2 size={20} />
                         </button>
                       </td>
                     </tr>
