@@ -168,6 +168,43 @@ export const addProjectCollaborator = async (
 };
 
 /**
+ * Removes a collaborator to a project and updates the user accordingly.
+ * @param {string} projectId - The ID of the project the collaborator is being added to.
+ * @param {string} username - The username of the user to be added as a collaborator.
+ * @returns {Promise<ProjectResponse>} - Resolves with the updated project object or an error message.
+ */
+export const removeProjectCollaborator = async (
+  projectId: string,
+  username: string,
+): Promise<ProjectResponse> => {
+  try {
+    const user: SafeDatabaseUser | null = await UserModel.findOne({ username }).select('-password');
+
+    if (!user) {
+      throw Error('Error finding user');
+    }
+
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      {
+        $pull: { collaborators: { user: user._id } },
+      },
+      { new: true },
+    );
+
+    if (!updatedProject) {
+      throw Error('Error finding project');
+    }
+
+    await UserModel.updateOne({ _id: user._id }, { $pull: { projects: new ObjectId(projectId) } });
+
+    return updatedProject;
+  } catch (error) {
+    return { error: `Error occurred when removing project collaborator: ${error}` };
+  }
+};
+
+/**
  * Retrieves a project by its ID.
  * @param {string} projectId - The ID of the project being retrieved.
  * @returns {Promise<ProjectResponse>} - Resolves with the desired project object or an error message.
