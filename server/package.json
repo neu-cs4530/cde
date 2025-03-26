@@ -52,6 +52,7 @@
     "start:prod": "node ./dist/server.js",
     "stryker": "stryker run",
     "populate-db": "ts-node populate_db.ts mongodb://127.0.0.1:27017/fake_so",
-    "delete-db": "ts-node remove_db.ts mongodb://127.0.0.1:27017/fake_so"
+    "delete-db": "ts-node remove_db.ts mongodb://127.0.0.1:27017/fake_so",
+    "test:project": "jest --coverage server/tests/services/project/"
   }
 }
