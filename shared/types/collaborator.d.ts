@@ -25,3 +25,13 @@ export interface Collaborator {
 export interface PopulatedCollaborator extends Omit<Collaborator, 'userId'> {
   user: User;
 }
+
+/**
+ * Represents a project collaborator within an express request.
+ * - `username`: The collaborator's username.
+ * - `role`: The collaborator's role.
+ */
+export interface RequestCollaborator {
+  username: string;
+  role: CollaboratorRole;
+}
