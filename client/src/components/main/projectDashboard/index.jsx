@@ -3,7 +3,7 @@ import './index.css';
 import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 
-import useUserSearch from '../../../hooks/useUserSearch';
+// import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
@@ -12,7 +12,7 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
 
-  const { val: searchUsername, handleInputChange } = useUserSearch(setFilteredUsers);
+  const [searchUsername, setSearchUsername] = useState('');
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -20,6 +20,18 @@ const ProjectDashboard = () => {
     language: 'javascript',
     sharedUsers: [],
   });
+  const handleInputChange = e => {
+    const inputValue = e.target.value;
+    setSearchUsername(inputValue);
+    // Filter users based on the input
+    const filtered = allUsers.filter(
+      user =>
+        user.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        // Exclude already added users
+        !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
+    );
+    setFilteredUsers(filtered);
+  };
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
       getUsers()
@@ -40,14 +52,13 @@ const ProjectDashboard = () => {
   }, [searchUsername, allUsers]);
 
   const handleAddSharedUser = user => {
-    const alreadyAdded = newProject.sharedUsers.some(u => u.id === user.id);
-    if (!alreadyAdded) {
-      setNewProject({
-        ...newProject,
-        sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
-      });
-      setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
-    }
+    setNewProject({
+      ...newProject,
+      sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
+    });
+    // Update filtered users and search
+    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+    setSearchUsername('');
   };
 
   // update user permissions
@@ -62,10 +73,13 @@ const ProjectDashboard = () => {
 
   // remove a shared user
   const removeSharedUser = userId => {
+    const removedUser = newProject.sharedUsers.find(user => user.id === userId);
     setNewProject({
       ...newProject,
       sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
     });
+    // Add the removed user back to filteredUsers
+    setFilteredUsers(prev => [...prev, removedUser]);
   };
   const addProject = () => {
     if (newProject.name.trim()) {
