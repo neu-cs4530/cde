@@ -1,10 +1,6 @@
 import ProjectFileCommentModel from '../../models/projectFileComments.model';
 import ProjectFileModel from '../../models/projectFiles.model';
-import {
-  DatabaseProjectFile,
-  ProjectFile,
-  ProjectFileResponse,
-} from '../../types/types';
+import { DatabaseProjectFile, ProjectFile, ProjectFileResponse } from '../../types/types';
 
 /**
  * Saves a new project file to the database.

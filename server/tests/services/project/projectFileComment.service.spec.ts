@@ -1,3 +1,11 @@
+import { ObjectId } from 'mongodb';
+import {
+  ProjectFileComment,
+  DatabaseProjectFileComment,
+  DatabaseProjectFile,
+  ProjectFileCommentResponse,
+  ProjectFileResponse,
+} from '@fake-stack-overflow/shared/types/types';
 import ProjectFileCommentModel from '../../../models/projectFileComments.model';
 import ProjectFileModel from '../../../models/projectFiles.model';
 import {
@@ -5,17 +13,11 @@ import {
   deleteProjectFileCommentById,
   addCommentToFile,
 } from '../../../services/project/projectFileComment.service';
-import { ObjectId } from 'mongodb';
-import {
-  ProjectFileComment,
-  DatabaseProjectFileComment,
-  DatabaseProjectFile,
-} from '../../../../shared/types/types';
 
 jest.mock('../../../models/projectFileComments.model');
 jest.mock('../../../models/projectFiles.model');
 
-const fakeObjectId = new ObjectId();
+const fakeObjectId: ObjectId = new ObjectId();
 
 const fakeProjectFileComment: ProjectFileComment = {
   text: 'Nice function',
@@ -46,39 +48,57 @@ describe('Project File Comment Service', () => {
   describe('saveProjectFileComment', () => {
     it('should return the saved comment', async () => {
       (ProjectFileCommentModel.create as jest.Mock).mockResolvedValue(fakeDatabaseComment);
-      const result = await saveProjectFileComment(fakeProjectFileComment);
+      const result: ProjectFileCommentResponse =
+        await saveProjectFileComment(fakeProjectFileComment);
       expect(result).toEqual(fakeDatabaseComment);
     });
 
     it('should return error if saving fails', async () => {
       (ProjectFileCommentModel.create as jest.Mock).mockResolvedValue(null);
-      const result = await saveProjectFileComment({} as any);
+      const invalidComment: ProjectFileComment = {
+        text: '',
+        commentBy: '',
+        commentDateTime: new Date(),
+        lineNumber: 0,
+      };
+      const result: ProjectFileCommentResponse = await saveProjectFileComment(invalidComment);
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
       (ProjectFileCommentModel.create as jest.Mock).mockRejectedValue(new Error('save error'));
-      const result = await saveProjectFileComment({} as any);
+      const result: ProjectFileCommentResponse =
+        await saveProjectFileComment(fakeProjectFileComment);
       expect('error' in result).toBe(true);
     });
   });
 
   describe('deleteProjectFileCommentById', () => {
     it('should delete and return the comment', async () => {
-      (ProjectFileCommentModel.findOneAndDelete as jest.Mock).mockResolvedValue(fakeDatabaseComment);
-      const result = await deleteProjectFileCommentById(fakeObjectId.toHexString());
+      (ProjectFileCommentModel.findOneAndDelete as jest.Mock).mockResolvedValue(
+        fakeDatabaseComment,
+      );
+      const result: ProjectFileCommentResponse = await deleteProjectFileCommentById(
+        fakeObjectId.toHexString(),
+      );
       expect(result).toEqual(fakeDatabaseComment);
     });
 
     it('should return error if comment is not found', async () => {
       (ProjectFileCommentModel.findOneAndDelete as jest.Mock).mockResolvedValue(null);
-      const result = await deleteProjectFileCommentById(fakeObjectId.toHexString());
+      const result: ProjectFileCommentResponse = await deleteProjectFileCommentById(
+        fakeObjectId.toHexString(),
+      );
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
-      (ProjectFileCommentModel.findOneAndDelete as jest.Mock).mockRejectedValue(new Error('delete error'));
-      const result = await deleteProjectFileCommentById(fakeObjectId.toHexString());
+      (ProjectFileCommentModel.findOneAndDelete as jest.Mock).mockRejectedValue(
+        new Error('delete error'),
+      );
+      const result: ProjectFileCommentResponse = await deleteProjectFileCommentById(
+        fakeObjectId.toHexString(),
+      );
       expect('error' in result).toBe(true);
     });
   });
@@ -86,19 +106,28 @@ describe('Project File Comment Service', () => {
   describe('addCommentToFile', () => {
     it('should add the comment and return the updated file', async () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeDatabaseFile);
-      const result = await addCommentToFile(fakeDatabaseFile._id.toHexString(), fakeDatabaseComment);
+      const result: ProjectFileResponse = await addCommentToFile(
+        fakeDatabaseFile._id.toHexString(),
+        fakeDatabaseComment,
+      );
       expect(result).toEqual(fakeDatabaseFile);
     });
 
     it('should return error if file update fails', async () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
-      const result = await addCommentToFile(fakeDatabaseFile._id.toHexString(), fakeDatabaseComment);
+      const result: ProjectFileResponse = await addCommentToFile(
+        fakeDatabaseFile._id.toHexString(),
+        fakeDatabaseComment,
+      );
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockRejectedValue(new Error('update error'));
-      const result = await addCommentToFile(fakeDatabaseFile._id.toHexString(), fakeDatabaseComment);
+      const result: ProjectFileResponse = await addCommentToFile(
+        fakeDatabaseFile._id.toHexString(),
+        fakeDatabaseComment,
+      );
       expect('error' in result).toBe(true);
     });
   });

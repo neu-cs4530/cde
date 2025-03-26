@@ -1,3 +1,12 @@
+import { ObjectId } from 'mongodb';
+import {
+  ProjectState,
+  DatabaseProjectState,
+  PopulatedDatabaseProjectState,
+  ProjectFile,
+  PopulatedDatabaseProjectFile,
+  ProjectStateResponse,
+} from '@fake-stack-overflow/shared/types/types';
 import ProjectStateModel from '../../../models/projectStates.model';
 import {
   saveProjectState,
@@ -6,18 +15,10 @@ import {
   getProjectStateById,
   filterProjectStateFilesBySearch,
 } from '../../../services/project/projectState.service';
-import { ObjectId } from 'mongodb';
-import {
-  ProjectState,
-  DatabaseProjectState,
-  PopulatedDatabaseProjectState,
-  ProjectFile,
-  PopulatedDatabaseProjectFile,
-} from '../../../../shared/types/types';
 
 jest.mock('../../../models/projectStates.model');
 
-const fakeObjectId = new ObjectId();
+const fakeObjectId: ObjectId = new ObjectId();
 
 const fakeProjectFile: PopulatedDatabaseProjectFile = {
   _id: new ObjectId(),
@@ -54,19 +55,19 @@ describe('Project State Service', () => {
   describe('saveProjectState', () => {
     it('should return the saved state', async () => {
       (ProjectStateModel.create as jest.Mock).mockResolvedValue(fakeDatabaseState);
-      const result = await saveProjectState(fakeState);
+      const result: ProjectStateResponse = await saveProjectState(fakeState);
       expect(result).toEqual(fakeDatabaseState);
     });
 
     it('should return error if saving fails', async () => {
       (ProjectStateModel.create as jest.Mock).mockResolvedValue(null);
-      const result = await saveProjectState({} as any);
+      const result: ProjectStateResponse = await saveProjectState({ files: [] });
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
       (ProjectStateModel.create as jest.Mock).mockRejectedValue(new Error('save error'));
-      const result = await saveProjectState({} as any);
+      const result: ProjectStateResponse = await saveProjectState({ files: [] });
       expect('error' in result).toBe(true);
     });
   });
@@ -74,41 +75,57 @@ describe('Project State Service', () => {
   describe('deleteProjectStateById', () => {
     it('should delete and return the state', async () => {
       (ProjectStateModel.findOneAndDelete as jest.Mock).mockResolvedValue(fakeDatabaseState);
-      const result = await deleteProjectStateById(fakeObjectId.toHexString());
+      const result: ProjectStateResponse = await deleteProjectStateById(fakeObjectId.toHexString());
       expect(result).toEqual(fakeDatabaseState);
     });
 
     it('should return error if state is not found', async () => {
       (ProjectStateModel.findOneAndDelete as jest.Mock).mockResolvedValue(null);
-      const result = await deleteProjectStateById(fakeObjectId.toHexString());
+      const result: ProjectStateResponse = await deleteProjectStateById(fakeObjectId.toHexString());
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
-      (ProjectStateModel.findOneAndDelete as jest.Mock).mockRejectedValue(new Error('delete error'));
-      const result = await deleteProjectStateById(fakeObjectId.toHexString());
+      (ProjectStateModel.findOneAndDelete as jest.Mock).mockRejectedValue(
+        new Error('delete error'),
+      );
+      const result: ProjectStateResponse = await deleteProjectStateById(fakeObjectId.toHexString());
       expect('error' in result).toBe(true);
     });
   });
 
   describe('updateProjectState', () => {
     it('should update and return the state', async () => {
-      const updates = { files: [fakeProjectFile._id] };
-      const updatedState = { ...fakeDatabaseState, ...updates };
+      const updates: Partial<ProjectState> = {
+        files: [
+          {
+            name: fakeProjectFile.name,
+            fileType: fakeProjectFile.fileType,
+            contents: fakeProjectFile.contents,
+            comments: fakeProjectFile.comments,
+          },
+        ],
+      };
+      const updatedState: DatabaseProjectState = { ...fakeDatabaseState };
       (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(updatedState);
-      const result = await updateProjectState(fakeObjectId.toHexString(), updates as any);
+      const result: ProjectStateResponse = await updateProjectState(
+        fakeObjectId.toHexString(),
+        updates,
+      );
       expect(result).toEqual(updatedState);
     });
 
     it('should return error if update fails', async () => {
       (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
-      const result = await updateProjectState(fakeObjectId.toHexString(), {});
+      const result: ProjectStateResponse = await updateProjectState(fakeObjectId.toHexString(), {});
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
-      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockRejectedValue(new Error('update error'));
-      const result = await updateProjectState(fakeObjectId.toHexString(), {});
+      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockRejectedValue(
+        new Error('update error'),
+      );
+      const result: ProjectStateResponse = await updateProjectState(fakeObjectId.toHexString(), {});
       expect('error' in result).toBe(true);
     });
   });
@@ -116,19 +133,19 @@ describe('Project State Service', () => {
   describe('getProjectStateById', () => {
     it('should return the state if found', async () => {
       (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
-      const result = await getProjectStateById(fakeObjectId.toHexString());
+      const result: ProjectStateResponse = await getProjectStateById(fakeObjectId.toHexString());
       expect(result).toEqual(fakeDatabaseState);
     });
 
     it('should return error if not found', async () => {
       (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(null);
-      const result = await getProjectStateById(fakeObjectId.toHexString());
+      const result: ProjectStateResponse = await getProjectStateById(fakeObjectId.toHexString());
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', async () => {
       (ProjectStateModel.findOne as jest.Mock).mockRejectedValue(new Error('find error'));
-      const result = await getProjectStateById(fakeObjectId.toHexString());
+      const result: ProjectStateResponse = await getProjectStateById(fakeObjectId.toHexString());
       expect('error' in result).toBe(true);
     });
   });
@@ -140,18 +157,27 @@ describe('Project State Service', () => {
     };
 
     it('should return the file if found by name', () => {
-      const result = filterProjectStateFilesBySearch(populatedState, 'main');
+      const result: ProjectFile | { error: string } = filterProjectStateFilesBySearch(
+        populatedState,
+        'main',
+      );
       expect(result).toEqual(fakeProjectFile);
     });
 
     it('should return error if no matching file is found', () => {
-      const result = filterProjectStateFilesBySearch(populatedState, 'other');
+      const result: ProjectFile | { error: string } = filterProjectStateFilesBySearch(
+        populatedState,
+        'other',
+      );
       expect('error' in result).toBe(true);
     });
 
     it('should return error if exception is thrown', () => {
       const badState = null as unknown as PopulatedDatabaseProjectState;
-      const result = filterProjectStateFilesBySearch(badState, 'main');
+      const result: ProjectFile | { error: string } = filterProjectStateFilesBySearch(
+        badState,
+        'main',
+      );
       expect('error' in result).toBe(true);
     });
   });
