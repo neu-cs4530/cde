@@ -21,6 +21,7 @@ const ProjectDashboard = () => {
     currentState: 'draft', // should all new projects have current/initial state being a draft?
     language: 'javascript',
     sharedUsers: [],
+    starred: false,
   });
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -74,6 +75,9 @@ const ProjectDashboard = () => {
       const project = {
         id: Date.now(),
         name: newProject.name,
+        createdAt: new Date(),
+        currentState: 'draft',
+        collaborators: [],
         lastEdited: 'Just now',
         starred: false,
         type: 'doc',
