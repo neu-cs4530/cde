@@ -71,6 +71,7 @@ const projectController = (socket: FakeSOSocket) => {
       res.status(400).send('Invalid project body');
       return;
     }
+
     try {
       const requestProject = req.body;
       
@@ -152,11 +153,11 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const deleteProjectRoute = async(req: DeleteProjectRequest, res: Response): Promise<void> => {
-
+    
   };
 
   /**
-   * 
+   * TODO: 
    */
 
 
