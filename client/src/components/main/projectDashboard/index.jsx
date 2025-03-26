@@ -22,6 +22,7 @@ const ProjectDashboard = () => {
     language: 'javascript',
     sharedUsers: [],
     starred: false,
+    inTrash: false,
   });
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -80,6 +81,7 @@ const ProjectDashboard = () => {
         collaborators: [],
         lastEdited: 'Just now',
         starred: false,
+        inTrash: false,
         type: 'doc',
         language: newProject.language || 'javascript',
         sharedUsers: newProject.sharedUsers || [],
@@ -103,8 +105,8 @@ const ProjectDashboard = () => {
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
   const trashProject = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
-  };
+      setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
+    };
 
   return (
     <div className='project-dashboard'>
@@ -362,8 +364,8 @@ const ProjectDashboard = () => {
                 {projects
                   .filter(project => {
                     if (activeTab === 'starred') return project.starred;
-                    if (activeTab === 'trash') return false; // No trash implementation yet
-                    return true; // Recent tab shows all
+                    if (activeTab === 'trash') return project.inTrash; // No trash implementation yet
+                    return !project.inTrash; // Recent tab shows all
                   })
                   .map(project => (
                     <tr key={project.id} className='table-row'>
