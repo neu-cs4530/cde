@@ -76,10 +76,12 @@ const ProjectEditor = () => {
                     alert('You need at least one file!');
                     return;
                   }
+                  // eslint-disable-next-line no-alert
+                  const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
+                  if (!confirmed) return;
                   const updated = { ...fileContents };
                   delete updated[file];
                   setFileContents(updated);
-
                   if (file === activeFile) {
                     const nextFile = Object.keys(updated)[0];
                     setActiveFile(nextFile || '');
