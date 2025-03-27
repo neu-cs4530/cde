@@ -73,6 +73,7 @@ export interface CreateProjectRequest extends Request {
  * username of deleter.
  * - `projectId`: The ID of the project provided as a route parameter.
  * - `actor`: The username of the actor submitted in the request (body).
+ * - `name`: Optionally, a new name for the project.
  */
 export interface ProjectRequest extends Request {
   params: {
@@ -80,24 +81,6 @@ export interface ProjectRequest extends Request {
   };
   body: {
     actor: string;
-  };
-}
-
-/**
- * Express request for adding or removing project collaborators, containing 
- * project ID and collaborator username as route parameters, and username of
- * the actor.
- * - `projectId`: The ID of the project provided as a route parameter
- * - `collaborator`: The username of the collaborator provided as a route 
- *   parameter.
- * - `actor`: The username of the actor submitted in the request (body).
- */
-export interface CollaboratorRequest extends Request {
-  params: {
-    projectId: string;
-    collaborator: string;
-  };
-  body: {
-    actor: string;
+    name?: string;
   };
 }

@@ -4,8 +4,7 @@ import express, { Response } from 'express';
 //   deleteProjectById,
 //   updateProject,
 //   addProjectCollaborator,
-//   TODO removeProjectCollaborator,
-//   
+//   removeProjectCollaborator,
 // } from '../services/project/project.service';
 // import {
 //   saveProjectState,
@@ -35,7 +34,8 @@ import {
   CreateFileRequest,
   FileRequest,
   AddFileCommentRequest,
-  FileCommentRequest,
+  DeleteFileCommentsByLineRequest,
+  DeleteFileCommentByIdRequest,
 } from '../types/types';
 
 /**
@@ -47,7 +47,6 @@ import {
 const projectController = (socket: FakeSOSocket) => {
   const router = express.Router();
 
-  // TODO: Request validators
   /**
    * Validates that a string is a valid CollaboratorRole.
    * @param role The string to validate.
@@ -59,28 +58,167 @@ const projectController = (socket: FakeSOSocket) => {
     role === 'VIEWER';
 
   /**
-   * Validates that the request body contains all required fields for a project.
+   * Validates that a string is a valid ProjectFileType.
+   * @param fileType The string to validate.
+   * @returns `true` if the fileType is `PYTHON`, `JAVA`, `JAVASCRIPT`, or `OTHER`;
+   * otherwise `false`.
+   */
+  const isProjectFileTypeValid = (fileType: string): boolean =>
+    fileType === 'PYTHON' ||
+    fileType === 'JAVA' ||
+    fileType === 'JAVASCRIPT' ||
+    fileType === 'OTHER';
+
+
+  /**
+   * Validates that the request body contains all required fields for creating a project.
    * @param req The incoming request containing project data.
    * @returns `true` if the body contains valid project fields; otherwise, `false`.
    */
-  const isProjectBodyValid = (req: ProjectRequest): boolean =>
+  const isCreateProjectReqValid = (req: CreateProjectRequest): boolean =>
     req.body !== undefined &&
     req.body.name !== undefined &&
     req.body.name !== '' &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
-    req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true;
+    (req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
 
-  const isP
+  /**
+   * Validates that the request contains all required fields for a project.
+   * @param req The incoming request containing project ID and actor.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isProjectReqValid = (req: ProjectRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '';
   
   /**
-   * Handles the creation of a new project.
+   * Validates that the request contains all required fields for a collaborator.
+   * @param req The incoming request containing project ID, collaborator, and actor.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isCollaboratorReqValid = (req: CollaboratorRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.collaborator !== undefined &&
+    req.params.collaborator !== '' &&
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    (req.body.role? !== undefined ?? true) &&
+    (req.body.role ? isCollaboratorRoleValid(req.body.role) : true);
+
+  /**
+   * Validates that the request contains all required fields for a project state.
+   * @param req The incoming request containing project and state IDs, and actor.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.stateId !== undefined &&
+    req.params.stateId !== '' &&
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '';
+
+  /**
+   * Validates that the request contains all required fields for file creation.
+   * @param req The incoming request containing project ID, actor, and file data.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isCreateFileRequestValid = (req: CreateFileRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== ''
+    req.body.name !== undefined &&
+    req.body.name !== ''
+    req.body.fileType !== undefined &&
+    isProjectFileTypeValid(req.body.fileType);
+
+  /**
+   * Validates that the request contains all required fields for a file.
+   * @param req The incoming request containing project and file IDs, and actor.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isFileRequestValid = (req: FileRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.fileId !== undefined &&
+    req.params.fileId !== '' &&
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '';
+
+  /**
+   * Validates that the request contains all required fields for creating 
+   * a file comment.
+   * @param req The incoming request containing project and file IDs, and comment data.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   */
+  const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.fileId !== undefined &&
+    req.params.fileId !== '' &&
+    req.body !== undefined &&
+    req.body.comment !== undefined &&
+    req.body.comment.text !== undefined &&
+    req.body.comment.commentBy !== undefined &&
+    req.body.comment.commentBy !== '' &&
+    req.body.comment.commentDateTime !== undefined;
+
+  /**
+   * Validates that the request contains all required fields for deleting file 
+   * comments by line.
+   * @param req The incoming request containing project and file IDs, and line number.
+   * @returns `true` if the request contains valid params; otherwise, `false`.
+   */
+  const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest): 
+    boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.fileId !== undefined &&
+    req.params.fileId !== '' &&
+    req.params.lineNumber !== undefined &&
+    req.params.lineNumber >= 0;
+
+  /**
+   * Validates that the request contains all required fields for deleting file
+   * comment by ID.
+   * @param req The incoming request containing project, file, and comment IDs.
+   * @returns `true` if the request contains valid params; otherwise, `false`.
+   */
+  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest): 
+    boolean =>
+    req.params !== undefined &&
+    req.params.projectId !== undefined &&
+    req.params.projectId !== '' &&
+    req.params.fileId !== undefined &&
+    req.params.fileId !== '' &&
+    req.params.commentId !== undefined &&
+    req.params.commentId !== '';
+
+  /**
+   * Creates a new project.
    * @param req The request containing project data.
    * @param res The response, either returning the created Project or an error.
    * @returns A promise resolving to void.
    */
-  const createProjectRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
-    if (!isProjectBodyValid(req)) {
+  const createProjectRoute = async (req: CreateProjectRequest, res: Response): Promise<void> => {
+    if (!isCreateProjectReqValid(req)) {
       res.status(400).send('Invalid project body');
       return;
     }
@@ -165,7 +303,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteProjectRoute = async(req: UpdateProjectRequest, res: Response): Promise<void> => {
+  const deleteProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
     
   };
 
@@ -175,7 +313,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either confirming the update or returning an error.
    * @returns A promise resolving to void.
    */
-  const updateProjectRoute = async(req: UpdateProjectRequest, res: Response): Promise<void> => {
+  const updateProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
 
   };
 
