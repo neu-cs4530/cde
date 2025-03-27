@@ -18,6 +18,7 @@ import ProfileSettings from './profileSettings';
 import AllGamesPage from './main/games/allGamesPage';
 import GamePage from './main/games/gamePage';
 import ProjectDashboard from './main/projectDashboard';
+import ProjectEditor from './main/projectEditor';
 
 const ProtectedRoute = ({
   user,
@@ -68,6 +69,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/games' element={<AllGamesPage />} />
             <Route path='/games/:gameID' element={<GamePage />} />
             <Route path='/projects' element={<ProjectDashboard />} />
+            <Route path='/projects/:projectId' element={<ProjectEditor />} />
           </Route>
         }
       </Routes>
