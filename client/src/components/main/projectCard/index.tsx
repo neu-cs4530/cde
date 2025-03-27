@@ -18,7 +18,7 @@ const ProjectCard = ({ project }: { project: DatabaseProject }) => {
   };
 
   return (
-    <div className='card shadow-sm'>
+    <div className='card shadow-sm hover-card' onClick={handleClick} style={{ cursor: 'pointer' }}>
       <div className='card-body project'>
         <div className='project-header'>
           <div className='fw-bold mb-2 project-name'>{project.name}</div>
