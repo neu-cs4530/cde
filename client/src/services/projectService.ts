@@ -9,7 +9,6 @@ const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
 const createProject = async (): Promise<DatabaseProject> => {
   const res = await api.post(`${PROJECT_API_URL}/createProject`);
   if (res.status !== 200) {
-    throw new Error(`Error when fetching project`);
   }
   return res.data;
 };
