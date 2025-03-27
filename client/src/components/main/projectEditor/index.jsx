@@ -8,6 +8,11 @@ import { getUsers } from '../../../services/userService';
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [activeFile, setActiveFile] = useState('main.py');
+  const [fileContents, setFileContents] = useState({
+    'main.py': '# Start coding here...',
+    'utils.py': '# Start coding here...',
+  });
 
   const [sharedUsers, setSharedUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
@@ -56,15 +61,67 @@ const ProjectEditor = () => {
       <aside className='file-tree'>
         <div className='file-tree-header'>Files</div>
         <ul className='file-list'>
-          <li className='file-item active'>main.py</li>
-          <li className='file-item'>utils.py</li>
+          {Object.keys(fileContents).map(file => (
+            <li
+              key={file}
+              className={`file-item ${file === activeFile ? 'active' : ''}`}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span onClick={() => setActiveFile(file)} style={{ flexGrow: 1 }}>
+                {file}
+              </span>
+              <button
+                onClick={() => {
+                  if (Object.keys(fileContents).length === 1) {
+                    // eslint-disable-next-line no-alert
+                    alert('You need at least one file in a project!!');
+                    return;
+                  }
+                  // eslint-disable-next-line no-alert
+                  const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
+                  if (!confirmed) return;
+                  const updated = { ...fileContents };
+                  delete updated[file];
+                  setFileContents(updated);
+                  if (file === activeFile) {
+                    const nextFile = Object.keys(updated)[0];
+                    setActiveFile(nextFile || '');
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  marginLeft: '0.5rem',
+                }}
+                title='Delete file'>
+                <FiTrash2 size={16} />
+              </button>
+            </li>
+          ))}
         </ul>
-      </aside>
 
+        {/* Add file button */}
+        <button
+          onClick={() => {
+            // eslint-disable-next-line no-alert
+            const newFileName = prompt('Enter new file name');
+            if (newFileName && !Object.keys(fileContents).includes(newFileName)) {
+              setFileContents(prev => ({
+                ...prev,
+                [newFileName]: `# ${newFileName} content`,
+              }));
+              setActiveFile(newFileName);
+            }
+          }}
+          className='btn btn-primary'
+          style={{ marginTop: '1rem' }}>
+          + Add File
+        </button>
+      </aside>
       {/* Main editor */}
       <main className='code-editor'>
         <div className='editor-header'>
-          <span className='file-name'>main.py</span>
+          <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
             <button
               className='btn'
@@ -78,8 +135,9 @@ const ProjectEditor = () => {
         </div>
         <Editor
           height='calc(100vh - 3rem)'
-          defaultLanguage='python'
-          defaultValue={'# Start coding here...'}
+          language='python'
+          value={fileContents[activeFile]}
+          onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
           theme={theme}
         />
       </main>
