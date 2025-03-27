@@ -66,7 +66,9 @@ const ProjectEditor = () => {
               key={file}
               className={`file-item ${file === activeFile ? 'active' : ''}`}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span onClick={() => setActiveFile(file)}>{file}</span>
+              <span onClick={() => setActiveFile(file)} style={{ flexGrow: 1 }}>
+                {file}
+              </span>
               <button
                 onClick={() => {
                   if (Object.keys(fileContents).length === 1) {
