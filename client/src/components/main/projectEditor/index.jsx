@@ -14,13 +14,13 @@ const ProjectEditor = () => {
   const [searchUsername, setSearchUsername] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
-  const { projectId } = useParams();
   useEffect(() => {
     getUsers()
       .then(data => {
         setAllUsers(data);
         setFilteredUsers(data);
       })
+      // eslint-disable-next-line no-console
       .catch(err => console.error('Error loading users', err));
   }, []);
   const handleUserSearch = e => {
