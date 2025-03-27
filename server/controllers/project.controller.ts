@@ -412,16 +412,6 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Updates a saved project state. 
-   * @param req The request containing the project and state IDs as route parameters.
-   * @param The response, either confirming update or returning an error.
-   * @returns A promise resolving to void.
-   */
-  const updateStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
-    
-  };
-
-  /**
    * TODO: Retrieves a project's files based on its current state.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the files or returning an error.
@@ -521,15 +511,14 @@ const projectController = (socket: FakeSOSocket) => {
   router.post('/:projectId/createBackup', createBackupRoute);
   router.patch('/:projectId/restoreStateById/:stateId', restoreStateRoute);
   router.delete('/:projectId/deleteStateById/:stateId', deleteStateRoute);
-  router.patch('/:projectId/updateStateById/:stateId', updateStateRoute);
   router.get('/:projectId/getFiles', getFilesRoute);
   router.post('/:projectId/createFile', createFileRoute);
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
-  router.get('/:projectId/:fileId', getFileRoute);
-  router.post('/:projectId/:fileId/addComment', addFileCommentRoute);
-  router.delete('/:projectId/:fileId/deleteCommentsByLine/:lineNumber', deleteFileCommentsByLineRoute);
-  router.delete('/:projectId/:fileId/deleteCommentById/:commentId', deleteFileCommentByIdRoute);
+  router.get('/:projectId/file/:fileId', getFileRoute);
+  router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
+  router.delete('/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber', deleteFileCommentsByLineRoute);
+  router.delete('/:projectId/file/:fileId/deleteCommentById/:commentId', deleteFileCommentByIdRoute);
 
   return router;
 };
