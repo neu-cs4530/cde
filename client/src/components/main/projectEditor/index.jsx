@@ -8,6 +8,11 @@ import { getUsers } from '../../../services/userService';
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [activeFile, setActiveFile] = useState('main.py');
+  const [fileContents, setFileContents] = useState({
+    'main.py': '# Start coding here...',
+    'utils.py': '# Start coding here...',
+  });
 
   const [sharedUsers, setSharedUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
@@ -56,15 +61,20 @@ const ProjectEditor = () => {
       <aside className='file-tree'>
         <div className='file-tree-header'>Files</div>
         <ul className='file-list'>
-          <li className='file-item active'>main.py</li>
-          <li className='file-item'>utils.py</li>
+          {Object.keys(fileContents).map(file => (
+            <li
+              key={file}
+              className={`file-item ${file === activeFile ? 'active' : ''}`}
+              onClick={() => setActiveFile(file)}>
+              {file}
+            </li>
+          ))}
         </ul>
       </aside>
-
       {/* Main editor */}
       <main className='code-editor'>
         <div className='editor-header'>
-          <span className='file-name'>main.py</span>
+          <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
             <button
               className='btn'
@@ -78,8 +88,9 @@ const ProjectEditor = () => {
         </div>
         <Editor
           height='calc(100vh - 3rem)'
-          defaultLanguage='python'
-          defaultValue={'# Start coding here...'}
+          language='python'
+          value={fileContents[activeFile]}
+          onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
           theme={theme}
         />
       </main>
