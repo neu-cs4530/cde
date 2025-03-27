@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { useParams } from 'react-router-dom';
 import { FiUser, FiTrash2, FiX } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 
