@@ -142,3 +142,22 @@ export const resolveProjectFileCommentsByLine = async (
     return { error: `Error occurred when resolving comments: ${error}` };
   }
 };
+
+/**
+ * Retrieves a project file document by its ID.
+ * @param fileId - The ID of the project file to retrieve.
+ * @returns {Promise<ProjectFileResponse>} - The project file or an error message.
+ */
+export const getProjectFile = async (fileId: string): Promise<ProjectFileResponse> => {
+  try {
+    const file: DatabaseProjectFile | null = await ProjectFileModel.findById(fileId);
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    return file;
+  } catch (error) {
+    return { error: `Error retrieving file: ${error}` };
+  }
+};

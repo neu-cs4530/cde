@@ -79,3 +79,25 @@ export const addCommentToFile = async (
     return { error: `Error occurred when updating file: ${error}` };
   }
 };
+
+/**
+ * Retrieves a project file comment document by its ID.
+ * @param commentFileId - The ID of the project file comment to retrieve.
+ * @returns {Promise<ProjectFileCommentResponse>} - The project file comment or an error message.
+ */
+export const getProjectFileComment = async (
+  commentFileId: string,
+): Promise<ProjectFileCommentResponse> => {
+  try {
+    const fileComment: DatabaseProjectFileComment | null =
+      await ProjectFileCommentModel.findById(commentFileId);
+
+    if (!fileComment) {
+      throw new Error('File comment not found');
+    }
+
+    return fileComment;
+  } catch (error) {
+    return { error: `Error retrieving file comment: ${error}` };
+  }
+};
