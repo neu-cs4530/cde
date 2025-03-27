@@ -73,7 +73,7 @@ const ProjectEditor = () => {
                 onClick={() => {
                   if (Object.keys(fileContents).length === 1) {
                     // eslint-disable-next-line no-alert
-                    alert('You need at least one file!');
+                    alert('You need at least one file in a project!!');
                     return;
                   }
                   // eslint-disable-next-line no-alert
