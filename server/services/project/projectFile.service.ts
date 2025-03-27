@@ -149,16 +149,15 @@ export const resolveProjectFileCommentsByLine = async (
  * @returns {Promise<ProjectFileResponse>} - The project file or an error message.
  */
 export const getProjectFile = async (fileId: string): Promise<ProjectFileResponse> => {
-    try {
-      const file: DatabaseProjectFile | null = await ProjectFileModel.findById(fileId);
-  
-      if (!file) {
-        throw new Error('File not found');
-      }
-  
-      return file;
-    } catch (error) {
-      return { error: `Error retrieving file: ${error}` };
+  try {
+    const file: DatabaseProjectFile | null = await ProjectFileModel.findById(fileId);
+
+    if (!file) {
+      throw new Error('File not found');
     }
-  };
-  
+
+    return file;
+  } catch (error) {
+    return { error: `Error retrieving file: ${error}` };
+  }
+};
