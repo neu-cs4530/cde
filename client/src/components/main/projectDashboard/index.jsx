@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './index.css';
-import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiX } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
 
@@ -184,7 +184,7 @@ const ProjectDashboard = () => {
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
               <button onClick={closeAndResetForm} className='modal-close'>
-                <FiTrash2 size={20} />
+                <FiX size={20} />
               </button>
             </div>
 
