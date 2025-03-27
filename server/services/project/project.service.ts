@@ -248,7 +248,7 @@ export const revertProjectToState = async (
 
     const updates: Partial<DatabaseProject> = {
       currentState: revertedState._id,
-      savedStates: [revertedState._id],
+      savedStates: [project.currentState._id],
     };
 
     const revertedProject = await updateProject(projectId, updates);
