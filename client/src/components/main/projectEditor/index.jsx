@@ -65,11 +65,54 @@ const ProjectEditor = () => {
             <li
               key={file}
               className={`file-item ${file === activeFile ? 'active' : ''}`}
-              onClick={() => setActiveFile(file)}>
-              {file}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span onClick={() => setActiveFile(file)}>{file}</span>
+              <button
+                onClick={() => {
+                  if (Object.keys(fileContents).length === 1) {
+                    // eslint-disable-next-line no-alert
+                    alert('You need at least one file!');
+                    return;
+                  }
+                  const updated = { ...fileContents };
+                  delete updated[file];
+                  setFileContents(updated);
+
+                  if (file === activeFile) {
+                    const nextFile = Object.keys(updated)[0];
+                    setActiveFile(nextFile || '');
+                  }
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  marginLeft: '0.5rem',
+                }}
+                title='Delete file'>
+                <FiTrash2 size={16} />
+              </button>
             </li>
           ))}
         </ul>
+
+        {/* Add file button */}
+        <button
+          onClick={() => {
+            // eslint-disable-next-line no-alert
+            const newFileName = prompt('Enter new file name');
+            if (newFileName && !Object.keys(fileContents).includes(newFileName)) {
+              setFileContents(prev => ({
+                ...prev,
+                [newFileName]: `# ${newFileName} content`,
+              }));
+              setActiveFile(newFileName);
+            }
+          }}
+          className='btn btn-primary'
+          style={{ marginTop: '1rem' }}>
+          + Add File
+        </button>
       </aside>
       {/* Main editor */}
       <main className='code-editor'>
