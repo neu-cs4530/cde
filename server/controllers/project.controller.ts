@@ -5,6 +5,7 @@ import express, { Response } from 'express';
 //   updateProject,
 //   addProjectCollaborator,
 //   removeProjectCollaborator,
+//   getProjectById,
 // } from '../services/project/project.service';
 // import {
 //   saveProjectState,
@@ -23,6 +24,8 @@ import {
   FakeSOSocket,
   User,
   Project,
+  DatabaseProject,
+  ProjectResponse,
   ProjectState,
   ProjectFile,
   ProjectFileComment,
@@ -94,7 +97,9 @@ const projectController = (socket: FakeSOSocket) => {
     req.params.projectId !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
-    req.body.actor !== '';
+    req.body.actor !== '' &&
+    req.body.name ? req.body.name !== undefined : true
+    req.body.name ? req.body.name !== '' : true;
   
   /**
    * Validates that the request contains all required fields for a collaborator.
@@ -110,7 +115,7 @@ const projectController = (socket: FakeSOSocket) => {
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
-    (req.body.role? !== undefined ?? true) &&
+    (req.body.role ? req.body.role !== undefined : true) &&
     (req.body.role ? isCollaboratorRoleValid(req.body.role) : true);
 
   /**
@@ -212,6 +217,46 @@ const projectController = (socket: FakeSOSocket) => {
     req.params.commentId !== '';
 
   /**
+   * Validates that a given user is a collaborator on a given project.
+   * @param userId The ID of the user.
+   * @param project The project response from the database.
+   * @returns `true` if the user is a project collaborator; otherwise, `false`.
+   */
+  const isProjectCollaborator = async (userId: string, project: ProjectResponse): Promise<boolean> => {
+    if ('error' in project || project.collaborators === undefined) {
+      return false;
+    }
+    
+    const rv = false;
+
+    for (const collaborator of project.collaborators) {
+      rv |= collaborator.userId === userId;
+    }
+    
+    return rv;
+  };
+
+  /**
+   * Validates that a given user is an owner on a given project.
+   * @param userId The ID of the user.
+   * @param project The project response from the database.
+   * @returns `true` if the user is a project owner; otherwise, `false`.
+   */
+  const isProjectOwner = async (userId: string, project: ProjectResponse): Promise<boolean> => {
+    if ('error' in project || project.collaborators === undefined) {
+      return false;
+    }
+    
+    const rv = false;
+
+    for (const collaborator of project.collaborators) {
+      rv |= (collaborator.userId === userId && collaborator.role === 'OWNER');
+    }
+    
+    return rv;
+  };
+
+  /**
    * Creates a new project.
    * @param req The request containing project data.
    * @param res The response, either returning the created Project or an error.
@@ -219,7 +264,7 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const createProjectRoute = async (req: CreateProjectRequest, res: Response): Promise<void> => {
     if (!isCreateProjectReqValid(req)) {
-      res.status(400).send('Invalid project body');
+      res.status(400).send('Invalid create project request');
       return;
     }
 
@@ -228,9 +273,8 @@ const projectController = (socket: FakeSOSocket) => {
       
       // Retrieve project creator's User document from database
       const owner: UserResponse = await getUserByUsername(requestProject.actor);
-      
       if ('error' in owner) {
-        throw Error(owner.error);
+        throw new Error(owner.error);
       }
       
       // Initialize list of collaborators as just owner
@@ -244,9 +288,8 @@ const projectController = (socket: FakeSOSocket) => {
         const invitedCollaborators: Collaborator[] = await Promise.all(
           req.body.collaborators.map(c => {
             const user: UserResponse = await getUserByUsername(c.username);
-
             if ('error' in user) {
-              throw Error(user.error);
+              throw new Error(user.error);
             }
             
             const collaborator: Collaborator = {
@@ -267,9 +310,8 @@ const projectController = (socket: FakeSOSocket) => {
       };
       
       const stateResult: StateResponse = await saveProjectState(state);
-
       if ('error' in stateResult) {
-        throw Error(stateResult.error);
+        throw new Error(stateResult.error);
       }
       
       // Create a new project and save it to the database
@@ -282,11 +324,11 @@ const projectController = (socket: FakeSOSocket) => {
       };
 
       const result = saveProject(project);
-
       if ('error' in result) {
         throw new Error(result.error);
       }
 
+      // TODO: Hook this up to client service
       socket.emit('projectUpdate', {
         project: result,
         type: 'created',
@@ -298,13 +340,45 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Deletes a project by its ID.
+   * Deletes a project by its ID.
    * @param req The request containing the project's ID as a route parameter.
    * @param res The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
   const deleteProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    
+    if (!isProjectReqValid(req)) {
+      res.status(400).send('Invalid project reqeust');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in project) {
+        throw Error(project.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+      
+      const result: ProjectResponse = await deleteProjectById(projectId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+      
+      result.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when deleting project: ${error}`);
+    }
   };
 
   /**
