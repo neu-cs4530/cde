@@ -1490,12 +1490,12 @@ describe('Project Controller', () => {
     });
   });
 
-  // TODO
   describe.skip('PATCH /projects/:projectId/updateFileById/:fileId', () => {
     it('should successfully update a project file', async () => {
+      const newName = 'goodbye.py';
       const mockReqBody = {
         actor: mockOwnerUser.username,
-        // TODO
+        name: newName,
       };
       
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
@@ -1504,20 +1504,26 @@ describe('Project Controller', () => {
         ...mockDatabaseProjectState,
         files: [mockDatabaseProjectFile._id],
       });
-      // TODO
-      updateProjectFileByIdSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
+      updateProjectFileByIdSpy.mockResolvedValueOnce({
+        ...mockDatabaseProjectFile,
+        name: newName,
+      });
 
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/updateFileById/${mockDatabaseProjectFile._id}`)
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
-      expect(response.body).toBe(mockFileJSONResponse);
+      expect(response.body).toBe({
+        ...mockFileJSONResponse,
+        name: newName,
+      });
     });
 
     it('should return 403 if user is not owner', async () => {
       const mockReqBody = {
         actor: mockViewerUser.username,
+        name: 'goodbye.py',
       };
       
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
@@ -1533,6 +1539,7 @@ describe('Project Controller', () => {
     it('should return 403 if user is not a project collaborator', async () => {
       const mockReqBody = {
         actor: mockOutsiderUser.username,
+        name: 'goodbye.py',
       };
       
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
@@ -1548,7 +1555,7 @@ describe('Project Controller', () => {
     it('should return 500 on service error', async () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
-        // TODO
+        name: 'goodbye.py',
       };
       
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
@@ -1557,7 +1564,6 @@ describe('Project Controller', () => {
         ...mockDatabaseProjectState,
         files: [mockDatabaseProjectFile._id],
       });
-      // TODO
       updateProjectFileByIdSpy.mockResolvedValueOnce({
         error: 'Error updating file'
       });
@@ -1605,26 +1611,79 @@ describe('Project Controller', () => {
     });
 
     it('should return 400 if file is not part of current state', async () => {
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+      };
+      
+      const paramId = new mongoose.Types.ObjectId();
 
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getProjectStateByIdSpy.mockResolvedValueOnce({
+        ...mockDatabaseProjectState,
+        files: [mockDatabaseProjectFile._id],
+      });
+
+      const response = supertest(app)
+        .get(`/projects/${mockDatabaseProject._id}/file/${paramId}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 403 if user is not a project collaborator', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        actor: mockOutsiderUser.username,
+      };
+      
+      const paramId = new mongoose.Types.ObjectId();
+
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
+
+      const response = supertest(app)
+        .get(`/projects/${mockDatabaseProject._id}/file/${paramId}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(403);
     });
 
     it('should return 500 on service error', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+      };
+
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getProjectStateByIdSpy.mockResolvedValueOnce({
+        ...mockDatabaseProjectState,
+        files: [mockDatabaseProjectFile._id],
+      });
+      getProjectFileByIdSpy.mockResolvedValueOnce({
+        error: 'Error retrieving file'
+      }); 
+
+      const response = supertest(app)
+        .get(`/projects/${mockDatabaseProject._id}/file/${mockDatabaseProjectFile._id}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(500);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      expect(true).toBe(false);
+      const response = supertest(app)
+        .get(`/projects//file/${mockDatabaseProjectFile._id}`);
+      expect(response.status).toBe(404);
     });
 
     it('should return 404 if fileId not provided', async () => {
-      expect(true).toBe(false);
+      const response = supertest(app)
+        .get(`/projects/${mockDatabaseProject._id}/file/`);
+      expect(response.status).toBe(404);
     });
   });
 
+  // TODO File comments!!
   describe('POST /projects/:projectId/:fileId/addComment', () => {
     it('should successfully add comment to file', async () => {
       expect(true).toBe(false);
