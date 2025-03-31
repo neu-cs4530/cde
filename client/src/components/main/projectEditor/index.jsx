@@ -190,6 +190,33 @@ const ProjectEditor = () => {
             <button className='btn' onClick={() => setIsShareOpen(true)}>
               Share
             </button>
+            {fileLanguages[activeFile] === 'javascript' && (
+              <button
+                className='btn'
+                onClick={() => {
+                  try {
+                    // capturing console.log output
+                    // eslint-disable-next-line no-console
+                    const originalLog = console.log;
+                    let output = '';
+                    // eslint-disable-next-line no-console
+                    console.log = (...args) => {
+                      output += `${args.join(' ')}\n`;
+                    };
+                    // eslint-disable-next-line no-eval
+                    eval(fileContents[activeFile]);
+                    // eslint-disable-next-line no-console
+                    console.log = originalLog;
+                    // eslint-disable-next-line no-alert
+                    if (output) alert(output);
+                  } catch (e) {
+                    // eslint-disable-next-line no-alert
+                    alert(`Error running code: ${e.message}`);
+                  }
+                }}>
+                Run
+              </button>
+            )}
           </div>
         </div>
         <Editor
