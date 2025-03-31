@@ -190,6 +190,7 @@ const ProjectEditor = () => {
             <button className='btn' onClick={() => setIsShareOpen(true)}>
               Share
             </button>
+            {/* cannot directly run python or java  in the browser because they require runtime environments */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button
                 className='btn'
