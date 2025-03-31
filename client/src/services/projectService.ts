@@ -8,11 +8,11 @@ const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
 
 //Create a new project.
 /**
- * 
- * @returns 
+ *
+ * @returns
  */
-const createProject = async (): Promise<DatabaseProject> => {
-  const res = await api.post(`${PROJECT_API_URL}/createProject`);
+const createProject = async (projectData: Partial<DatabaseProject>): Promise<DatabaseProject> => {
+  const res = await api.post(`${PROJECT_API_URL}/createProject`, projectData);
   if (res.status !== 200) {
     throw new Error(`Error when creating project`);
   }
@@ -20,9 +20,9 @@ const createProject = async (): Promise<DatabaseProject> => {
 };
 
 /**
- * 
- * @param id 
- * @returns 
+ *
+ * @param id
+ * @returns
  */
 //Delete a project by ID.
 const deleteProjectById = async (id: string): Promise<DatabaseProject> => {
@@ -33,10 +33,10 @@ const deleteProjectById = async (id: string): Promise<DatabaseProject> => {
   return res.data;
 };
 /**
- * 
- * @param id 
- * @param projectData 
- * @returns 
+ *
+ * @param id
+ * @param projectData
+ * @returns
  */
 //Update project by ID.
 const updateProjectById = async (
@@ -51,9 +51,9 @@ const updateProjectById = async (
 };
 
 /**
- * 
- * @param user 
- * @returns 
+ *
+ * @param user
+ * @returns
  */
 //Retrieve all projects for a specific user based on their username.
 const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
@@ -64,9 +64,9 @@ const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
   return res.data;
 };
 /**
- * 
- * @param projectId 
- * @returns 
+ *
+ * @param projectId
+ * @returns
  */
 const getProjectById = async (projectId: string): Promise<DatabaseProject> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}`);
@@ -77,13 +77,20 @@ const getProjectById = async (projectId: string): Promise<DatabaseProject> => {
 };
 
 /**
- * 
- * @param user 
- * @param id 
- * @returns 
+ *
+ * @param user
+ * @param projectId
+ * @returns
  */
-const addCollaboratorToProject = async (user: string, id: string): Promise<DatabaseProject> => {
-  const res = await api.post(`${PROJECT_API_URL}/${id}/addCollaborator/${user}`);
+const addCollaboratorToProject = async (
+  projectId: string,
+  username: string,
+  role: string,
+): Promise<DatabaseProject> => {
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/addCollaborator/`, {
+    username,
+    role,
+  });
   if (res.status !== 200) {
     throw new Error(`Error when adding collaborators to the project`);
   }
@@ -91,16 +98,16 @@ const addCollaboratorToProject = async (user: string, id: string): Promise<Datab
 };
 
 /**
- * 
- * @param user 
- * @param id 
- * @returns 
+ *
+ * @param user
+ * @param projectId
+ * @returns
  */
 const removeCollaboratorFromProject = async (
-  user: string,
-  id: string,
+  projectId: string,
+  username: string,
 ): Promise<DatabaseProject> => {
-  const res = await api.patch(`${PROJECT_API_URL}/${id}/removeCollaborator/${user}`);
+  const res = await api.patch(`${PROJECT_API_URL}/${projectId}/removeCollaborator`, { username });
   if (res.status !== 200) {
     throw new Error(`Error when removing collaborators to the project`);
   }
@@ -108,18 +115,21 @@ const removeCollaboratorFromProject = async (
 };
 
 /**
- * 
- * @param user 
- * @param id 
- * @param role 
- * @returns 
+ *
+ * @param user
+ * @param id
+ * @param role
+ * @returns
  */
 const updateCollaboratorRole = async (
-  user: string,
-  id: string,
+  projectId: string,
+  username: string,
   role: string,
 ): Promise<DatabaseProject> => {
-  const res = await api.patch(`${PROJECT_API_URL}/${id}/updateCollaboratorRole/${user}`, { role });
+  const res = await api.patch(`${PROJECT_API_URL}/${projectId}/updateCollaboratorRole`, {
+    username,
+    role,
+  });
   if (res.status !== 200) {
     throw new Error(`Error when updating collaborator roles`);
   }
@@ -127,12 +137,12 @@ const updateCollaboratorRole = async (
 };
 
 /**
- * 
- * @param id 
- * @param projectId 
- * @returns 
+ *
+ * @param id
+ * @param projectId
+ * @returns
  */
-const getProjectStates = async (id: string, projectId: string): Promise<DatabaseProject> => {
+const getProjectStates = async (projectId: string): Promise<DatabaseProject> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/getStates`);
   if (res.status !== 200) {
     throw new Error(`Error when getting project states`);
@@ -141,12 +151,12 @@ const getProjectStates = async (id: string, projectId: string): Promise<Database
 };
 
 /**
- * 
- * @param id 
- * @param projectId 
- * @returns 
+ *
+ * @param id
+ * @param projectId
+ * @returns
  */
-const createProjectBackup = async (id: string, projectId: string): Promise<DatabaseProject> => {
+const createProjectBackup = async (projectId: string): Promise<DatabaseProject> => {
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/createBackup`);
   if (res.status !== 200) {
     throw new Error(`Error when creating project backups`);
@@ -155,10 +165,10 @@ const createProjectBackup = async (id: string, projectId: string): Promise<Datab
 };
 
 /**
- * 
- * @param projectId 
- * @param stateId 
- * @returns 
+ *
+ * @param projectId
+ * @param stateId
+ * @returns
  */
 const restoreStateById = async (projectId: string, stateId: string): Promise<DatabaseProject> => {
   const res = await api.patch(`${PROJECT_API_URL}/${projectId}/restoreStateById/${stateId}`);
@@ -169,10 +179,10 @@ const restoreStateById = async (projectId: string, stateId: string): Promise<Dat
 };
 
 /**
- * 
- * @param projectId 
- * @param stateId 
- * @returns 
+ *
+ * @param projectId
+ * @param stateId
+ * @returns
  */
 const deleteStateById = async (projectId: string, stateId: string): Promise<DatabaseProject> => {
   const res = await api.delete(`${PROJECT_API_URL}/${projectId}/deleteStateById/${stateId}`);
@@ -183,9 +193,9 @@ const deleteStateById = async (projectId: string, stateId: string): Promise<Data
 };
 
 /**
- * 
- * @param projectId 
- * @returns 
+ *
+ * @param projectId
+ * @returns
  */
 const getFiles = async (projectId: string): Promise<DatabaseProjectFile[]> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`);
@@ -196,10 +206,10 @@ const getFiles = async (projectId: string): Promise<DatabaseProjectFile[]> => {
 };
 
 /**
- * 
- * @param projectId 
- * @param stateId 
- * @returns 
+ *
+ * @param projectId
+ * @param stateId
+ * @returns
  */
 const updateStateById = async (projectId: string, stateId: string): Promise<DatabaseProject> => {
   const res = await api.patch(`${PROJECT_API_URL}/${projectId}/updateStateById/${stateId}`);
@@ -210,10 +220,10 @@ const updateStateById = async (projectId: string, stateId: string): Promise<Data
 };
 
 /**
- * 
- * @param projectId 
- * @param fileDetails 
- * @returns 
+ *
+ * @param projectId
+ * @param fileDetails
+ * @returns
  */
 const createFile = async (
   projectId: string,
@@ -227,10 +237,10 @@ const createFile = async (
 };
 
 /**
- * 
- * @param projectId 
- * @param fileId 
- * @returns 
+ *
+ * @param projectId
+ * @param fileId
+ * @returns
  */
 const deleteFileById = async (projectId: string, fileId: string): Promise<DatabaseProjectFile> => {
   const res = await api.delete(`${PROJECT_API_URL}/${projectId}/deleteFileById/${fileId}`);
@@ -241,11 +251,11 @@ const deleteFileById = async (projectId: string, fileId: string): Promise<Databa
 };
 
 /**
- * 
- * @param projectId 
- * @param fileId 
- * @param fileDetails 
- * @returns 
+ *
+ * @param projectId
+ * @param fileId
+ * @param fileDetails
+ * @returns
  */
 const updateFileById = async (
   projectId: string,
@@ -263,10 +273,10 @@ const updateFileById = async (
 };
 
 /**
- * 
- * @param projectId 
- * @param fileId 
- * @returns 
+ *
+ * @param projectId
+ * @param fileId
+ * @returns
  */
 const getFileById = async (projectId: string, fileId: string): Promise<DatabaseProjectFile> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`);
@@ -277,12 +287,12 @@ const getFileById = async (projectId: string, fileId: string): Promise<DatabaseP
 };
 
 /**
- * 
- * @param projectId 
- * @param fileId 
- * @param lineNumber 
- * @param commentContent 
- * @returns 
+ *
+ * @param projectId
+ * @param fileId
+ * @param lineNumber
+ * @param commentContent
+ * @returns
  */
 const addCommentToFile = async (
   projectId: string,
@@ -290,10 +300,10 @@ const addCommentToFile = async (
   lineNumber: number,
   commentContent: string,
 ): Promise<DatabaseProjectFile> => {
-  const res = await api.post(
-    `${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment/${lineNumber}`,
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
+    lineNumber,
     commentContent,
-  );
+  });
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
   }
@@ -301,16 +311,19 @@ const addCommentToFile = async (
 };
 
 /**
- * 
- * @param projectId 
- * @param fileId 
- * @returns 
+ *
+ * @param projectId
+ * @param fileId
+ * @returns
  */
 const deleteCommentsByLine = async (
   projectId: string,
   fileId: string,
+  lineNumber: number,
 ): Promise<DatabaseProjectFile> => {
-  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine`);
+  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine`, {
+    data: { lineNumber },
+  });
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by line`);
   }
@@ -318,11 +331,11 @@ const deleteCommentsByLine = async (
 };
 
 /**
- * 
- * @param fileId 
- * @param projectId 
- * @param commentId 
- * @returns 
+ *
+ * @param fileId
+ * @param projectId
+ * @param commentId
+ * @returns
  */
 const deleteCommentById = async (
   fileId: string,
