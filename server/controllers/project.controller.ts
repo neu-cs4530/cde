@@ -9,6 +9,9 @@ import express, { Response } from 'express';
 // } from '../services/project/project.service';
 // import {
 //   saveProjectState,
+//   deleteProjectStateById,
+//   updateProjectState,
+//   getProjectStateById,
 // } from '../services/project/projectState.service';
 // import {
 //   
@@ -27,6 +30,8 @@ import {
   DatabaseProject,
   ProjectResponse,
   ProjectState,
+  DatabaseProjectState,
+  ProjectStateResponse,
   ProjectFile,
   ProjectFileComment,
   CreateProjectRequest,
@@ -222,7 +227,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param project The project response from the database.
    * @returns `true` if the user is a project collaborator; otherwise, `false`.
    */
-  const isProjectCollaborator = async (userId: string, project: ProjectResponse): Promise<boolean> => {
+  const isProjectCollaborator = async (userId: string, project: DatabaseProject): Promise<boolean> => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
@@ -242,7 +247,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param project The project response from the database.
    * @returns `true` if the user is a project owner; otherwise, `false`.
    */
-  const isProjectOwner = async (userId: string, project: ProjectResponse): Promise<boolean> => {
+  const isProjectOwner = async (userId: string, project: DatabaseProject): Promise<boolean> => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
@@ -361,7 +366,7 @@ const projectController = (socket: FakeSOSocket) => {
 
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
-        throw Error(actor.error);
+        throw new Error(actor.error);
       }
 
       const validActor = await isProjectOwner(actor._id, project);
@@ -439,48 +444,171 @@ const projectController = (socket: FakeSOSocket) => {
 
       const projects = [];
       if (user.projects !== undefined) {
-        // TODO: Get each project in user.projects and push to projects 
-        // projects.push(project);
+        const userProjects: DatabaseProject[] = await Promise.all(
+          user.projects.map(projectId => {
+            const project: ProjectResponse = await getProjectById(projectId);
+            if ('error' in project) {
+              throw new Error(project.error);
+            }
+
+            return project;
+          })
+        );
+
+        projects.push(...userProjects);
       }
+      
+      res.status(200).json(projects);
     } catch (error) {
       res.status(500).send(`Error when getting projects by username: ${error}`);
     }
   };
 
   /**
-   * TODO: Retrieves a project by its ID.
+   * Retrieves a project by its ID.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the project or returning an error.
    * @returns A promise resolving to void.
    */
   const getProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    
+    if (!isProjectReqValid(req)) {
+      res.status(400).send('Invalid project reqeust');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectCollaborator(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      res.status(200).json(project);
+    } catch (error) {
+      res.status(500).send(`Error when getting project: ${error}`);
+    }
   };
 
   /**
-   * TODO: Adds a collaborator to a project.
+   * Adds a collaborator to a project.
    * @param req The request containing the project's ID and the collaborator's username
    * as route parameters.
    * @param The response, either confirming addition or returning an error.
    * @returns A promise resolving to void.
    */
   const addCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
-    
+    if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
+      res.status(400).send('Invalid add collaborator request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const collabName = req.params.collaborator;
+      const collaborator: UserResponse = await getUserByUsername(collabName);
+      if ('error' in collaborator) {
+        throw new Error(collaborator.error);
+      }
+
+      const response: ProjectResponse = await addProjectCollaborator(
+        projectId,
+        collabName,
+        req.body.role
+      );
+      if ('error' in response) {
+        throw new Error(response.error);
+      }
+
+      res.status(200).json(response);
+    } catch (error) {
+      res.status(500).send(`Error when adding collaborator: ${error}`);
+    }
   };
 
   /**
-   * TODO: Removes a collaborator from a project.
+   * Removes a collaborator from a project.
    * @param req The request containing the project's ID and the collaborator's username
    * as route parameters.
    * @param The response, either confirming removal or returning an error.
    * @returns A promise resolving to void.
    */
   const removeCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
-    
+    if (!isCollaboratorReqValid(req)) {
+      res.status(400).send('Invalid collaborator request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const collabName = req.params.collaborator;
+      const collaborator: UserResponse = await getUserByUsername(collabName);
+      if ('error' in collaborator) {
+        throw new Error(collaborator.error);
+      }
+
+      const validCollab = await isProjectCollaborator(collaborator._id, project);
+      if (!validCollab) {
+        res.status(400).send('Invalid collaborator');
+        return;
+      }
+
+      const result: ProjectResponse = await removeProjectCollaborator(projectId, collabName);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when removing collaborator: ${error}`);
+    }
   };
 
   /**
-   * TODO: Updates a collaborator's role in a project.
+   * Updates a collaborator's role in a project.
    * @param req The request containing the project's ID and the collaborator's username
    * as route parameters.
    * @param The response, either confirming update or returning an error.
@@ -488,17 +616,102 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const updateCollaboratorRoleRoute = async(req: CollaboratorRequest, res: Response):
     Promise<void> => {
-    
+    if (!isCollaboratorReqValid(req)) {
+      res.status(400).send('Invalid collaborator request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const collabName = req.params.collaborator;
+      const collaborator: UserResponse = await getUserByUsername(collabName);
+      if ('error' in collaborator) {
+        throw new Error(collaborator.error);
+      }
+
+      const validCollab = await isProjectCollaborator(collaborator._id, project);
+      if (!validCollab) {
+        res.status(400).send('Invalid collaborator');
+        return;
+      }
+
+      // TODO: Figure out how to do Partial<Project> for collaborator without
+      // removing all collaborators.
+      // IDEA: Maybe construct a new list and filter/update for collabName?
+
+      res.status(500).json('Unimplemented');
+    } catch (error) {
+      res.status(500).send(`Error when updating collaborator role: ${error}`);
+    }
   };
 
   /**
-   * TODO: Retrieves all saved states of a project.
+   * Retrieves all saved states of a project.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the saved states or returning an error.
    * @returns A promise resolving to void.
    */
   const getStatesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    
+    if(!isProjectReqValid(req)) {
+      res.status(400).send('Invalid project reqeust');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectCollaborator(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+      
+      const states = [];
+      if (project.savedStates !== undefined) {
+        const projectStates: DatabaseProjectState[] = await Promise.all(
+          project.savedStates.map(stateId => {
+            const state: ProjectStateResponse = await getProjectStateById(stateId);
+            if ('error' in state) {
+              throw new Error(state.error);
+            }
+            
+            return state;
+          })
+        );
+
+        states.push(...projectStates);
+      }
+      
+      result.status(200).json(states);
+    } catch (error) {
+      res.status(500).send(`Error when getting project states: ${error}`);
+    }
   };
 
   /**
