@@ -30,9 +30,9 @@ const ProjectEditor = () => {
   };
   const getFileExtensionForLanguage = language => {
     switch (language) {
-      case 'python':
+      case 'py':
         return '.py';
-      case 'javascript':
+      case 'js':
         return '.js';
       case 'java':
         return '.java';
@@ -42,9 +42,9 @@ const ProjectEditor = () => {
   };
   const getStarterContentForLanguage = (language, fileName) => {
     switch (language) {
-      case 'python':
+      case 'py':
         return `# ${fileName} content\n# Start coding in Python...`;
-      case 'javascript':
+      case 'js':
         return `// ${fileName} content\n// Start coding in JavaScript...`;
       case 'java':
         return `// ${fileName} content\n// Start coding in Java...`;
@@ -141,10 +141,8 @@ const ProjectEditor = () => {
             const newFileName = prompt('Enter new file name (without file extension)');
             if (newFileName) {
               // eslint-disable-next-line no-alert
-              const language = prompt(
-                'Select language (javascript, java, or python).',
-              ).toLowerCase();
-              const validLanguage = ['javascript', 'java', 'python'].includes(language)
+              const language = prompt('Select language (js, java, or py).').toLowerCase();
+              const validLanguage = ['js', 'java', 'py'].includes(language)
                 ? language
                 : 'javascript';
               // appropriate file extension
