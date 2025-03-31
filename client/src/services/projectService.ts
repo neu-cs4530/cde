@@ -151,7 +151,7 @@ const updateFileById = async (
   return res.data;
 };
 const getFileById = async (projectId: string, fileId: string): Promise<DatabaseProjectFile> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/${fileId}`);
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`);
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
   }
@@ -165,7 +165,7 @@ const addCommentToFile = async (
   commentContent: string,
 ): Promise<DatabaseProjectFile> => {
   const res = await api.post(
-    `${PROJECT_API_URL}/${projectId}/${fileId}/addComment/${lineNumber}`,
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment/${lineNumber}`,
     commentContent,
   );
   if (res.status !== 200) {
@@ -177,7 +177,7 @@ const deleteCommentsByLine = async (
   projectId: string,
   fileId: string,
 ): Promise<DatabaseProjectFile> => {
-  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/${fileId}/deleteCommentsByLine`);
+  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine`);
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by line`);
   }
@@ -189,7 +189,7 @@ const deleteCommentById = async (
   commentId: string,
 ): Promise<DatabaseProjectFile> => {
   const res = await api.delete(
-    `${PROJECT_API_URL}/${projectId}/${fileId}/deleteCommentById/${commentId}`,
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentById/${commentId}`,
   );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by id`);
