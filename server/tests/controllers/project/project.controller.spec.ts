@@ -659,6 +659,22 @@ describe('Project Controller', () => {
       });
     });
 
+    it('should return 400 if collaborator is not valid', async () => {
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+      };
+
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
+
+      const response = await supertest(app)
+        .patch(`/projects/${mockDatabaseProject._id}/removeCollaborator/${mockOutsiderUser.username}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
+    });
+
     it('should return 403 if remover is not owner', async () => {
       const mockReqBody = {
         actor: mockEditorUser.username,
@@ -761,6 +777,23 @@ describe('Project Controller', () => {
           },
         ],
       });
+    });
+
+    it('should return 400 if collaborator is invalid', async() => {
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+        role: 'EDITOR',
+      };
+
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
+
+      const response = await supertest(app)
+        .patch(`/projects/${mockDatabaseProject._id}/${mockOutsiderUser.username}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 400 if role is not provided', async () => {
@@ -1491,7 +1524,7 @@ describe('Project Controller', () => {
     });
   });
 
-  describe.skip('PATCH /projects/:projectId/updateFileById/:fileId', () => {
+  describe('PATCH /projects/:projectId/updateFileById/:fileId', () => {
     it('should successfully update a project file', async () => {
       const newName = 'goodbye.py';
       const mockReqBody = {
@@ -1685,7 +1718,7 @@ describe('Project Controller', () => {
   });
 
   // TODO File comments!!
-  describe('POST /projects/:projectId/:fileId/addComment', () => {
+  describe.skip('POST /projects/:projectId/:fileId/addComment', () => {
     it('should successfully add comment to file', async () => {
       expect(true).toBe(false);
     });
@@ -1719,7 +1752,7 @@ describe('Project Controller', () => {
     });
   });
 
-  describe('POST /projects/:projectId/:fileId/deleteCommentsByLine/:lineNumber', () => {
+  describe.skip('POST /projects/:projectId/:fileId/deleteCommentsByLine/:lineNumber', () => {
     it('should successfully delete and return all comments from file on line', async () => {
       expect(true).toBe(false);
     });
@@ -1749,7 +1782,7 @@ describe('Project Controller', () => {
     });
   });
 
-  describe('POST /projects/:projectId/:fileId/deleteCommentById/:commentId', () => {
+  describe.skip('POST /projects/:projectId/:fileId/deleteCommentById/:commentId', () => {
     it('should succesfully delete and return comment from file', async () => {
       expect(true).toBe(false);
     });
