@@ -9,6 +9,10 @@ const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [activeFile, setActiveFile] = useState('main.py');
+  const [fileLanguages, setFileLanguages] = useState({
+    'main.py': 'python',
+    'utils.py': 'python',
+  });
   const [fileContents, setFileContents] = useState({
     'main.py': '# Start coding here...',
     'utils.py': '# Start coding here...',
@@ -18,6 +22,36 @@ const ProjectEditor = () => {
   const [searchUsername, setSearchUsername] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const getDefaultLanguageFromFileName = fileName => {
+    if (fileName.endsWith('.py')) return 'python';
+    if (fileName.endsWith('.js')) return 'javascript';
+    if (fileName.endsWith('.java')) return 'java';
+    return 'plaintext';
+  };
+  const getFileExtensionForLanguage = language => {
+    switch (language) {
+      case 'python':
+        return '.py';
+      case 'javascript':
+        return '.js';
+      case 'java':
+        return '.java';
+      default:
+        return '.txt';
+    }
+  };
+  const getStarterContentForLanguage = (language, fileName) => {
+    switch (language) {
+      case 'python':
+        return `# ${fileName} content\n# Start coding in Python...`;
+      case 'javascript':
+        return `// ${fileName} content\n// Start coding in JavaScript...`;
+      case 'java':
+        return `// ${fileName} content\n// Start coding in Java...`;
+      default:
+        return `// ${fileName} content`;
+    }
+  };
   useEffect(() => {
     getUsers()
       .then(data => {
@@ -104,13 +138,34 @@ const ProjectEditor = () => {
         <button
           onClick={() => {
             // eslint-disable-next-line no-alert
-            const newFileName = prompt('Enter new file name');
-            if (newFileName && !Object.keys(fileContents).includes(newFileName)) {
+            const newFileName = prompt('Enter new file name (without file extension)');
+            if (newFileName) {
+              // eslint-disable-next-line no-alert
+              const language = prompt(
+                'Select language (javascript, java, or python).',
+              ).toLowerCase();
+              const validLanguage = ['javascript', 'java', 'python'].includes(language)
+                ? language
+                : 'javascript';
+              // appropriate file extension
+              const fileExtension = getFileExtensionForLanguage(validLanguage);
+              const fullFileName = `${newFileName}${fileExtension}`;
+              // if file already exists
+              if (Object.keys(fileContents).includes(fullFileName)) {
+                // eslint-disable-next-line no-alert
+                alert('A file with this name already exists');
+                return;
+              }
+              const starterContent = getStarterContentForLanguage(validLanguage, newFileName);
               setFileContents(prev => ({
                 ...prev,
-                [newFileName]: `# ${newFileName} content`,
+                [fullFileName]: starterContent,
               }));
-              setActiveFile(newFileName);
+              setFileLanguages(prev => ({
+                ...prev,
+                [fullFileName]: validLanguage,
+              }));
+              setActiveFile(fullFileName);
             }
           }}
           className='btn btn-primary'
@@ -135,7 +190,7 @@ const ProjectEditor = () => {
         </div>
         <Editor
           height='calc(100vh - 3rem)'
-          language='python'
+          language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
           value={fileContents[activeFile]}
           onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
           theme={theme}
