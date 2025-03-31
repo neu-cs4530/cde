@@ -6,7 +6,7 @@ import api from './config';
 // project api url
 const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
 
-//Create a new project.
+// Create a new project.
 /**
  *
  * @returns
@@ -24,7 +24,7 @@ const createProject = async (projectData: Partial<DatabaseProject>): Promise<Dat
  * @param id
  * @returns
  */
-//Delete a project by ID.
+// Delete a project by ID.
 const deleteProjectById = async (id: string): Promise<DatabaseProject> => {
   const res = await api.delete(`${PROJECT_API_URL}/deleteProjectById/${id}`);
   if (res.status !== 200) {
@@ -38,7 +38,7 @@ const deleteProjectById = async (id: string): Promise<DatabaseProject> => {
  * @param projectData
  * @returns
  */
-//Update project by ID.
+// Update project by ID.
 const updateProjectById = async (
   id: string,
   projectData: Partial<DatabaseProject>,
@@ -55,7 +55,7 @@ const updateProjectById = async (
  * @param user
  * @returns
  */
-//Retrieve all projects for a specific user based on their username.
+// Retrieve all projects for a specific user based on their username.
 const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
   const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser/${user}`);
   if (res.status !== 200) {
