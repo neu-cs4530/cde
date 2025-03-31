@@ -28,11 +28,12 @@ const ProjectEditor = () => {
     if (fileName.endsWith('.java')) return 'java';
     return 'plaintext';
   };
+
   const getFileExtensionForLanguage = language => {
     switch (language) {
-      case 'py':
+      case 'python':
         return '.py';
-      case 'js':
+      case 'javascript':
         return '.js';
       case 'java':
         return '.java';
@@ -42,9 +43,9 @@ const ProjectEditor = () => {
   };
   const getStarterContentForLanguage = (language, fileName) => {
     switch (language) {
-      case 'py':
+      case 'python':
         return `# ${fileName} content\n# Start coding in Python...`;
-      case 'js':
+      case 'javascript':
         return `// ${fileName} content\n// Start coding in JavaScript...`;
       case 'java':
         return `// ${fileName} content\n// Start coding in Java...`;
@@ -52,6 +53,7 @@ const ProjectEditor = () => {
         return `// ${fileName} content`;
     }
   };
+
   useEffect(() => {
     getUsers()
       .then(data => {
@@ -115,6 +117,9 @@ const ProjectEditor = () => {
                   if (!confirmed) return;
                   const updated = { ...fileContents };
                   delete updated[file];
+                  const updatedLanguages = { ...fileLanguages };
+                  delete updatedLanguages[file];
+                  setFileLanguages(updatedLanguages);
                   setFileContents(updated);
                   if (file === activeFile) {
                     const nextFile = Object.keys(updated)[0];
@@ -134,26 +139,27 @@ const ProjectEditor = () => {
           ))}
         </ul>
 
-        {/* Add file button */}
+        {/* Add file button with language selection */}
         <button
           onClick={() => {
             // eslint-disable-next-line no-alert
-            const newFileName = prompt('Enter new file name (without file extension)');
+            const newFileName = prompt('Enter new file name (without extension)');
             if (newFileName) {
               // eslint-disable-next-line no-alert
-              const language = prompt('Select language (js, java, or py).').toLowerCase();
-              const validLanguage = ['js', 'java', 'py'].includes(language)
+              const language = prompt(
+                'Select language (javascript, java, or python)',
+              ).toLowerCase();
+              const validLanguage = ['javascript', 'java', 'python'].includes(language)
                 ? language
                 : 'javascript';
-              // appropriate file extension
               const fileExtension = getFileExtensionForLanguage(validLanguage);
               const fullFileName = `${newFileName}${fileExtension}`;
-              // if file already exists
               if (Object.keys(fileContents).includes(fullFileName)) {
                 // eslint-disable-next-line no-alert
                 alert('A file with this name already exists');
                 return;
               }
+              // new file with appropriate starter content
               const starterContent = getStarterContentForLanguage(validLanguage, newFileName);
               setFileContents(prev => ({
                 ...prev,
