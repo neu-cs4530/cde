@@ -433,12 +433,13 @@ describe('Project Controller', () => {
   describe('GET /projects/getProjectsByUser/:username', () => {
     it('should return all of a user\'s projects', async () => {
       getUserByUsernameSpy.mockResolvedValueOnce({ ...mockOwnerUser, projects: [mockDatabaseProject._id] });
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
 
       const response = await supertest(app)
         .get(`/projects/getProjectsByUser/${mockOwnerUser.username}`);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual(mockProjectJSONResponse);
+      expect(response.body).toEqual([mockProjectJSONResponse]);
     });
 
     it('should return 500 if database error while searching username', async () => {

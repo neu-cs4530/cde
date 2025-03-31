@@ -360,8 +360,8 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       const actor: UserResponse = await getUserByUsername(req.body.actor);
-      if ('error' in project) {
-        throw Error(project.error);
+      if ('error' in actor) {
+        throw Error(actor.error);
       }
 
       const validActor = await isProjectOwner(actor._id, project);
@@ -382,23 +382,69 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Updates a project by its ID.
+   * Updates a project by its ID.
    * @param req The request containing the project's ID as a route parameter.
    * @param res The response, either confirming the update or returning an error.
    * @returns A promise resolving to void.
    */
   const updateProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+    if (!isProjectReqValid(req) || req.body.name === undefined) {
+      res.status(400).send('Invalid update project request');
+      return;
+    }
 
+    try {
+      const projectId = req.parans.projectId;
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+      
+      const validActor = await isProjectOwner(actor._id, project);
+      if ('error' in validActor) {
+        res.status(403).send('Forbidden');
+      }
+
+      const result: ProjectResponse = await updateProjectById(projectId, { name: req.body.name });
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      result.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when updating project: ${error}`);
+    }
   };
 
   /**
-   * TODO: Retrieves all projects a user is collaborating on.
+   * Retrieves all projects a user is collaborating on.
    * @param req The request containing user's username as a route parameter.
    * @param res The response, either containing the user's projects or returning an error.
    * @returns A promise resolving to void.
    */
   const getProjectsByUserRoute = async(req: UserByUsernameRequest, res: Response): Promise<void> => {
+    try {
+      const { username } = req.params;
 
+      const user = await getUserByUsername(username);
+      if ('error' in user) {
+        throw new Error(user.error);
+      }
+
+      const projects = [];
+      if (user.projects !== undefined) {
+        // TODO: Get each project in user.projects and push to projects 
+        // projects.push(project);
+      }
+    } catch (error) {
+      res.status(500).send(`Error when getting projects by username: ${error}`);
+    }
   };
 
   /**
