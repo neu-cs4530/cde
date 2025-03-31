@@ -30,6 +30,9 @@ const mockOwnerUser: SafeDatabaseUser = {
 const mockOwnerCollab: Collaborator = {
   userId: mockOwnerUser._id,
   role: 'OWNER',
+  projects: [{
+    ...
+  }],
 };
 
 const mockEditorUser: SafeDatabaseUser = {

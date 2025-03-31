@@ -6,6 +6,7 @@ import express, { Response } from 'express';
 //   addProjectCollaborator,
 //   removeProjectCollaborator,
 //   getProjectById,
+//   revertProjectToState,
 // } from '../services/project/project.service';
 // import {
 //   saveProjectState,
@@ -260,6 +261,13 @@ const projectController = (socket: FakeSOSocket) => {
     
     return rv;
   };
+
+  /**
+   * Validates that a given state is saved in a given project.
+   * @param stateId The ID of the state.
+   * @param project The project response from the database.
+   * @returns `true` if the state is saved;
+   */
 
   /**
    * Creates a new project.
@@ -715,27 +723,108 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Creates a backup of the project's current state.
+   * Creates a backup of the project's current state.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either confirming backup or returning an error.
    * @returns A promise resolving to void.
    */
   const createBackupRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    
+    if (!isProjectReqValid(req)) {
+      res.status(400).send('Invalid project request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId;
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+      
+      // TODO: Figure out how to use updateProject to update currentState,
+      // savesStates without overwriting savedStates.
+      // IDEA: Reconstruct savedStates?
+      
+      result.status(500).send('Unimplemented');
+    } catch (error) {
+      res.status(50)).send(`Error when creating project backup: ${error}`);
+    }
   };
 
   /**
-   * TODO: Restores a project's state to a saved state.
+   * Restores a project's state to a saved state.
    * @param req The request containing the project and state IDs as route parameters.
    * @param The response, either confirming restoration or returning an error.
    * @returns A promise resolving to void.
    */
   const restoreStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
+    if (!isProjectStateReqValid(req)) {
+      res.status(400).send('Invalid project state request');
+      return;
+    }
     
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const stateId = req.params.stateId;
+      
+      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      if ('error' in state) {
+        throw new Error(state.error);
+      }
+
+      const validState = false;
+      if (project.savedStates !== undefined) {
+        for (const savedId of project.savedStates) {
+          validState |= savedId === stateId;
+        }
+      }
+      if (!validState) {
+        res.status(400).send('Requested state does not belong to project');
+        return;
+      }
+
+      const result: ProjectResponse = await revertProjectToState(projectId, stateId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error restoring project state: ${error}`);
+    }
   };
 
   /**
-   * TODO: Deletes a saved project state. 
+   * Deletes a saved project state. 
    * @param req The request containing the project and state IDs as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
