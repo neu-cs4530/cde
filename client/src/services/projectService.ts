@@ -208,20 +208,6 @@ const getFiles = async (projectId: string): Promise<DatabaseProjectFile[]> => {
 /**
  *
  * @param projectId
- * @param stateId
- * @returns
- */
-const updateStateById = async (projectId: string, stateId: string): Promise<DatabaseProject> => {
-  const res = await api.patch(`${PROJECT_API_URL}/${projectId}/updateStateById/${stateId}`);
-  if (res.status !== 200) {
-    throw new Error(`Error when updating state by id`);
-  }
-  return res.data;
-};
-
-/**
- *
- * @param projectId
  * @param fileDetails
  * @returns
  */
@@ -365,7 +351,6 @@ export {
   restoreStateById,
   deleteStateById,
   getFiles,
-  updateStateById,
   createFile,
   deleteFileById,
   updateFileById,
