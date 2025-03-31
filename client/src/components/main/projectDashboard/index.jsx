@@ -19,7 +19,6 @@ const ProjectDashboard = () => {
     name: '',
     type: 'doc',
     currentState: 'draft', // should all new projects have current/initial state being a draft?
-    language: 'javascript',
     sharedUsers: [],
     starred: false,
     inTrash: false,
@@ -28,7 +27,6 @@ const ProjectDashboard = () => {
     setNewProject({
       name: '',
       type: 'doc',
-      language: 'javascript',
       sharedUsers: [],
     });
     setSearchUsername('');
@@ -107,7 +105,6 @@ const ProjectDashboard = () => {
         starred: false,
         inTrash: false,
         type: 'doc',
-        language: newProject.language || 'javascript',
         sharedUsers: newProject.sharedUsers || [],
       };
       setProjects([project, ...projects]);
@@ -115,7 +112,6 @@ const ProjectDashboard = () => {
         id: Date.now(),
         name: '',
         type: 'doc',
-        language: 'javascript',
         sharedUsers: [],
       });
       setShowAddForm(false);
@@ -200,18 +196,6 @@ const ProjectDashboard = () => {
               />
             </div>
 
-            {/* Language Selection */}
-            <div className='form-group'>
-              <label className='form-label'>Project Language</label>
-              <select
-                value={newProject.language}
-                onChange={e => setNewProject({ ...newProject, language: e.target.value })}
-                className='form-input'>
-                <option value='javascript'>JavaScript</option>
-                <option value='python'>Python</option>
-                <option value='java'>Java</option>
-              </select>
-            </div>
             {/* User Search and Share */}
             <div className='form-group'>
               <label className='form-label'>Share Project</label>
