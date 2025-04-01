@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const [activeFile, setActiveFile] = useState('main.py');
+  const [newFileName, setNewFileName] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('python');
+  const [consoleOutput, setConsoleOutput] = useState('');
   const [fileLanguages, setFileLanguages] = useState({
     'main.py': 'python',
     'utils.py': 'python',
@@ -22,6 +26,8 @@ const ProjectEditor = () => {
   const [searchUsername, setSearchUsername] = useState('');
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
+  const consoleRef = useRef(null);
+
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
     if (fileName.endsWith('.js')) return 'javascript';
@@ -63,6 +69,12 @@ const ProjectEditor = () => {
       // eslint-disable-next-line no-console
       .catch(err => console.error('Error loading users', err));
   }, []);
+  useEffect(() => {
+    if (consoleRef.current) {
+      consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
+    }
+  }, [consoleOutput]);
+
   const handleUserSearch = e => {
     const input = e.target.value;
     setSearchUsername(input);
@@ -89,6 +101,62 @@ const ProjectEditor = () => {
     setSharedUsers(
       sharedUsers.map(user => (user.id === userId ? { ...user, permissions: permission } : user)),
     );
+  };
+
+  const handleAddFile = () => {
+    if (!newFileName.trim()) {
+      setConsoleOutput(prev => `${prev}Error: File name cannot be empty\n`);
+      return;
+    }
+    const fileExtension = getFileExtensionForLanguage(selectedLanguage);
+    const fullFileName = `${newFileName}${fileExtension}`;
+    if (Object.keys(fileContents).includes(fullFileName)) {
+      setConsoleOutput(prev => `${prev}Error: A file with this name already exists\n`);
+      return;
+    }
+    // making new file with appropriate starter content
+    const starterContent = getStarterContentForLanguage(selectedLanguage, newFileName);
+    setFileContents(prev => ({
+      ...prev,
+      [fullFileName]: starterContent,
+    }));
+    setFileLanguages(prev => ({
+      ...prev,
+      [fullFileName]: selectedLanguage,
+    }));
+    setActiveFile(fullFileName);
+    // Reset form and close modal
+    setNewFileName('');
+    setIsAddFileOpen(false);
+  };
+
+  const runJavaScript = () => {
+    try {
+      // capture console.log output
+      // eslint-disable-next-line no-console
+      const originalLog = console.log;
+      let output = '';
+      // eslint-disable-next-line no-console
+      console.log = (...args) => {
+        output += `${args.join(' ')}\n`;
+        originalLog(...args);
+      };
+      // Execute
+      // eslint-disable-next-line no-eval
+      eval(fileContents[activeFile]);
+
+      // restoring original console.log
+      // eslint-disable-next-line no-console
+      console.log = originalLog;
+      // updating console output
+      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n${output}\n`);
+    } catch (e) {
+      setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${e.message}\n`);
+    }
+  };
+
+  const clearConsole = () => {
+    setConsoleOutput('');
   };
 
   return (
@@ -139,42 +207,12 @@ const ProjectEditor = () => {
           ))}
         </ul>
 
-        {/* Add file button with language selection */}
+        {/* Add file button */}
         <button
-          onClick={() => {
-            // eslint-disable-next-line no-alert
-            const newFileName = prompt('Enter new file name (without extension)');
-            if (newFileName) {
-              // eslint-disable-next-line no-alert
-              const language = prompt(
-                'Select language (javascript, java, or python)',
-              ).toLowerCase();
-              const validLanguage = ['javascript', 'java', 'python'].includes(language)
-                ? language
-                : 'javascript';
-              const fileExtension = getFileExtensionForLanguage(validLanguage);
-              const fullFileName = `${newFileName}${fileExtension}`;
-              if (Object.keys(fileContents).includes(fullFileName)) {
-                // eslint-disable-next-line no-alert
-                alert('A file with this name already exists');
-                return;
-              }
-              // new file with appropriate starter content
-              const starterContent = getStarterContentForLanguage(validLanguage, newFileName);
-              setFileContents(prev => ({
-                ...prev,
-                [fullFileName]: starterContent,
-              }));
-              setFileLanguages(prev => ({
-                ...prev,
-                [fullFileName]: validLanguage,
-              }));
-              setActiveFile(fullFileName);
-            }
-          }}
+          onClick={() => setIsAddFileOpen(true)}
           className='btn btn-primary'
           style={{ marginTop: '1rem' }}>
-          + Add File
+          <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
         </button>
       </aside>
       {/* Main editor */}
@@ -190,44 +228,79 @@ const ProjectEditor = () => {
             <button className='btn' onClick={() => setIsShareOpen(true)}>
               Share
             </button>
-            {/* cannot directly run python or java  in the browser because they require runtime environments */}
+            {/* Run button only for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
-              <button
-                className='btn'
-                onClick={() => {
-                  try {
-                    // capturing console.log output
-                    // eslint-disable-next-line no-console
-                    const originalLog = console.log;
-                    let output = '';
-                    // eslint-disable-next-line no-console
-                    console.log = (...args) => {
-                      output += `${args.join(' ')}\n`;
-                    };
-                    // eslint-disable-next-line no-eval
-                    eval(fileContents[activeFile]);
-                    // eslint-disable-next-line no-console
-                    console.log = originalLog;
-                    // eslint-disable-next-line no-alert
-                    if (output) alert(output);
-                  } catch (e) {
-                    // eslint-disable-next-line no-alert
-                    alert(`Error running code: ${e.message}`);
-                  }
-                }}>
+              <button className='btn' onClick={runJavaScript}>
                 Run
               </button>
             )}
           </div>
         </div>
-        <Editor
-          height='calc(100vh - 3rem)'
-          language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
-          value={fileContents[activeFile]}
-          onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
-          theme={theme}
-        />
+        <div className='editor-wrapper'>
+          <Editor
+            height='calc(100vh - 150px - 3rem)'
+            language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
+            value={fileContents[activeFile]}
+            onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
+            theme={theme}
+          />
+          {/* Console output area */}
+          <div className='console-area'>
+            <div className='console-header'>
+              <span>Console</span>
+              <button onClick={clearConsole} className='console-clear'>
+                Clear
+              </button>
+            </div>
+            <div className='console-output' ref={consoleRef}>
+              {consoleOutput || '> Console output will appear here...'}
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Add File Modal */}
+      {isAddFileOpen && (
+        <div className='modal-overlay'>
+          <div className='modal-content'>
+            <div className='modal-header'>
+              <h3 className='modal-title'>Add New File</h3>
+              <button onClick={() => setIsAddFileOpen(false)} className='modal-close'>
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className='form-group'>
+              <label className='form-label'>File Name (without extension)</label>
+              <input
+                type='text'
+                value={newFileName}
+                onChange={e => setNewFileName(e.target.value)}
+                className='form-input'
+                placeholder='Enter file name'
+              />
+            </div>
+            <div className='form-group'>
+              <label className='form-label'>Language</label>
+              <select
+                value={selectedLanguage}
+                onChange={e => setSelectedLanguage(e.target.value)}
+                className='form-select'>
+                <option value='javascript'>JavaScript</option>
+                <option value='python'>Python</option>
+                <option value='java'>Java</option>
+              </select>
+            </div>
+            <div className='modal-footer'>
+              <button onClick={() => setIsAddFileOpen(false)} className='btn'>
+                Cancel
+              </button>
+              <button onClick={handleAddFile} className='btn btn-primary'>
+                Create File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Share Modal */}
       {isShareOpen && (
@@ -252,7 +325,7 @@ const ProjectEditor = () => {
                     <select
                       value={user.permissions}
                       onChange={e => handleUpdatePermission(user.id, e.target.value)}
-                      className='form-input mr-2'>
+                      className='form-select mr-2'>
                       <option value='viewer'>Viewer</option>
                       <option value='editor'>Editor</option>
                     </select>

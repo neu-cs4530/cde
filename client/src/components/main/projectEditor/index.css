@@ -46,8 +46,7 @@
   
   .editor-header {
     height: 3rem;
-    background-color: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
+
     padding: 0 1rem;
     display: flex;
     align-items: center;
@@ -89,8 +88,7 @@
     overflow-y: auto;
     width: 100%;
     z-index: 100;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
-                0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
   }
   
   .modal-header {
@@ -112,3 +110,68 @@
     color: #6b7280;
   }
   
+
+  .editor-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3rem);
+  }
+  
+  .console-area {
+    height: 150px;
+    background-color: #1e1e1e;
+    border-top: 1px solid #333;
+    color: #f0f0f0;
+  }
+  
+  .console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #333;
+  }
+  
+  .console-clear {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+  
+  .console-output {
+    padding: 10px;
+    font-family: monospace;
+    font-size: 13px;
+    overflow-y: auto;
+    height: 120px;
+    white-space: pre-wrap;
+  }
+  
+  .form-group {
+    margin-bottom: 15px;
+  }
+  
+  .form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  
+  .form-input, .form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+  
+  .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 15px;
+  }
