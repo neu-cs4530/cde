@@ -15,7 +15,10 @@ import express, { Response } from 'express';
 //   getProjectStateById,
 // } from '../services/project/projectState.service';
 // import {
-//   
+//  saveProjectFile,
+//  deleteProjectFileById,
+//  updateProjectFile,
+//  getProjectFile, 
 // } from '../services/project/projectFile.service';
 // import {
 //
@@ -341,7 +344,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(result.error);
       }
 
-      // TODO: Hook this up to client service
+      // TODO: Hook this up to client service?
       socket.emit('projectUpdate', {
         project: result,
         type: 'created',
@@ -830,57 +833,365 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const deleteStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
-    
+    if(!isProjectStateReqValid(req)) {
+      res.status(400).send('Invalid project state request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const stateId = req.params.stateId;
+      
+      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      if ('error' in state) {
+        throw new Error(state.error);
+      }
+
+      const validState = false;
+      if (project.savedStates !== undefined) {
+        for (const savedId of project.savedStates) {
+          validState |= savedId === stateId;
+        }
+      }
+      if (!validState) {
+        res.status(400).send('Requested state does not belong to project');
+        return;
+      }
+
+      const result: ProjectResponse = await deleteProjectStateById(stateId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+      
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error deleting project state: ${error}`);
+    }
   };
 
   /**
-   * TODO: Retrieves a project's files based on its current state.
+   * Retrieves a project's files based on its current state.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the files or returning an error.
    * @returns A promise resolving to void.
    */
   const getFilesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    
+    if (!isProjectReqValid(req)) {
+      res.status(400).send('Invalid project request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectCollaborator(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const stateId = project.currentState;
+
+      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      if ('error' in state) {
+        throw new Error(state.error);
+      }
+
+      const files = [];
+      if (state.files !== undefined) {
+        const projectFiles: DatabaseProjectFile[] = await Promise.all(
+          state.files.map(fileId => {
+            const file: ProjectFileResponse = await getProjectFile(fileId);
+            if ('error' in file) {
+              throw new Error(file.error);
+            }
+
+            return file;
+          })
+        );
+
+        files.push(...projectFiles);
+      }
+
+      res.status(200).json(files);
+    } catch (error) {
+      res.status(500).send(`Error when getting project files: ${error}`);
+    }
   };
 
   /**
-   * TODO: Creates a new file in a project.
+   * Creates a new file in a project.
    * @param req The request containing the project's ID as a route parameter and file data.
    * @param The response, either returning the created file or returning an error.
    * @returns A promise resolving to void.
    */
   const createFileRoute = async(req: CreateFileRequest, res: Response): Promise<void> => {
-    
+    if (!isCreateFileRequestValid(req)) {
+      res.status(400).send('Invalid create file request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectCollaborator(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      // Create a new file
+      const file: ProjectFile = {
+        name: req.body.name,
+        fileType: req.body.fileType,
+        contents: '',
+        comments: [],
+      };
+      const result: ProjectFileResponse = await saveProjectFile(file);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      // Add it to the current state
+      const currentStateId = project.currentState;
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      // TODO: Update state files without overwriting
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when creating project file: ${error}`);
+    }
   };
 
   /**
-   * TODO: Deletes a file in a project.
+   * Deletes a file in a project.
    * @param req The request containing the project and file IDs as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
   const deleteFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
-    
+    if (!isFileRequestValid(req)) {
+      res.status(400).send('Invalid file request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const currentStateId = project.currentState;
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      const fileId = req.params.fileId;
+
+      const validFile = false;
+      if (currentState.files !== undefined) {
+        for (const id of currentState.files) {
+          validFile |= fileId === id;
+        }
+      }
+      if (!validFile) {
+        res.status(400).send('Requested file is not part of the current project state');
+        return;
+      }
+
+      const result: ProjectFileResponse = await deleteProjectFileById(fileId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      // TODO: Remove it from the current state
+      // TODO: Update state files without overwriting
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when deleting project file: ${error}`);
+    }
   };
 
   /**
-   * TODO: Updates a file in a project.
+   * Updates a file in a project.
    * @param req The request containing the project and file IDs as route parameters.
    * @param The response, either confirming update or returning an error.
    * @returns A promise resolving to void.
    */
   const updateFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
-    
+    if (!isFileRequestValid(req)) {
+      res.status(400).send('Invalid file request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectOwner(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const currentStateId = project.currentState;
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      const fileId = req.params.fileId;
+
+      const validFile = false;
+      if (currentState.files !== undefined) {
+        for (const id of currentState.files) {
+          validFile |= fileId === id;
+        }
+      }
+      if (!validFile) {
+        res.status(400).send('Requested file is not part of the current project state');
+        return;
+      }
+      
+      // TODO: Construct updates from req.body.name and/or req.body.fileType.
+      const result: ProjectFileResponse = await updateProjectFile(fileId, {});
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      // TODO: Remove it from the current state
+      // TODO: Update state files without overwriting
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when updating project file: ${error}`);
+    }
   };
 
   /**
-   * TODO: Retrieves a file in a project.
+   * Retrieves a file in a project.
    * @param req The request containing the project and file IDs as route parameters.
    * @param The response, either containing the file or returning an error.
    * @returns A promise resolving to void.
    */
   const getFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
-    
+    if (!isFileRequestValid(req)) {
+      res.status(400).send('Invalid file request');
+      return;
+    }
+
+    try {
+      const projectId = req.params.projectId; 
+      
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+      
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const validActor = await isProjectCollaborator(actor._id, project);
+      if (!validActor) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const currentStateId = project.currentState;
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      const fileId = req.params.fileId;
+
+      const validFile = false;
+      if (currentState.files !== undefined) {
+        for (const id of currentState.files) {
+          validFile |= fileId === id;
+        }
+      }
+      if (!validFile) {
+        res.status(400).send('Requested file is not part of the current project state');
+        return;
+      }
+
+      const result: ProjectFileResponse = await getProjectFile(fileId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).send(`Error when updating project file: ${error}`);
+    }
   };
 
   /**
@@ -891,7 +1202,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const addFileCommentRoute = async(req: AddFileCommentRequest, res: Response): Promise<void> => {
-    
+    res.status(500).send('Unimplemented');
   };
 
   /**
@@ -903,7 +1214,7 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const deleteFileCommentsByLineRoute = async(req: DeleteFileCommentsByLineRequest, res: Response):
     Promise<void> => {
-    
+    res.status(500).send('Unimplemented');
   };
 
   /**
@@ -915,7 +1226,7 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const deleteFileCommentByIdRoute = async(req: DeleteFileCommentByIdRequest, res: Response):
     Promise<void> => {
-    
+    res.status(500).send('Unimplemented');
   };
 
 

@@ -76,6 +76,7 @@ export interface CreateFileRequest extends Request {
  * - `fileId`: The ID of the file provided as a route parameter.
  * - `actor`: The username of the actor submitted in the request (body).
  * - `name`: Optionally, a new name for the file.
+ * - `fileType`: Optionally, a new file type.
  */
 export interface FileRequest extends Request {
   params: {
@@ -85,5 +86,6 @@ export interface FileRequest extends Request {
   body: {
     actor: string;
     name?: string;
+    fileType?: ProjectFileType;
   };
 }

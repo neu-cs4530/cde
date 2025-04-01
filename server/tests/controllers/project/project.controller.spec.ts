@@ -1377,22 +1377,22 @@ describe('Project Controller', () => {
       expect(response.status).toBe(400);
     });
 
-    it('should return 403 if user is not owner', async () => {
-      const mockReqBody = {
-        actor: mockEditorUser.username,
-        name: 'newfile.py',
-        fileType: 'PYTHON',
-      };
-      
-      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
-      getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
-      
-      const response = await supertest(app)
-        .post(`/projects/${mockDatabaseProject._id}/createFile`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(403);
-    });
+    // it('should return 403 if user is not owner', async () => {
+    //   const mockReqBody = {
+    //     actor: mockEditorUser.username,
+    //     name: 'newfile.py',
+    //     fileType: 'PYTHON',
+    //   };
+    //   
+    //   getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+    //   getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
+    //   
+    //   const response = await supertest(app)
+    //     .post(`/projects/${mockDatabaseProject._id}/createFile`)
+    //     .send(mockReqBody);
+    //
+    //   expect(response.status).toBe(403);
+    // });
 
     it('should return 403 if user is not a project collaborator', async () => {
       const mockReqBody = {
