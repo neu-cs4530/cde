@@ -1,7 +1,4 @@
-import {
-  DatabaseProject,
-  CreateProjectRequest,
-} from '@fake-stack-overflow/shared/types/project';
+import { DatabaseProject, CreateProjectRequest } from '@fake-stack-overflow/shared/types/project';
 import { DatabaseProjectFile } from '@fake-stack-overflow/shared/types/projectFile';
 import { RequestCollaborator } from '@fake-stack-overflow/shared/types/collaborator';
 import api from './config';
@@ -39,8 +36,9 @@ const createProject = async (
  */
 // Delete a project by ID.
 const deleteProjectById = async (id: string, actor: string): Promise<DatabaseProject> => {
+  const data = { actor };
   const res = await api.delete(`${PROJECT_API_URL}/deleteProjectById/${id}`, {
-    data: { actor },
+    data,
   });
   if (res.status !== 200) {
     throw new Error(`Error when deleting project by id`);
@@ -85,9 +83,8 @@ const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
  * @returns
  */
 const getProjectById = async (projectId: string, actor: string): Promise<DatabaseProject> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}`, {
-    headers: { actor },
-  });
+  const data = { actor };
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting projects by id`);
   }
@@ -105,9 +102,8 @@ const addCollaboratorToProject = async (
   actor: string,
   collaborator: RequestCollaborator,
 ): Promise<DatabaseProject> => {
-  const res = await api.post(`${PROJECT_API_URL}/${projectId}/addCollaborator/`, {
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/addCollaborator/${collaborator}`, {
     actor,
-    collaborator,
   });
   if (res.status !== 200) {
     throw new Error(`Error when adding collaborators to the project`);
@@ -127,7 +123,7 @@ const removeCollaboratorFromProject = async (
   username: string, // user to be removed
 ): Promise<DatabaseProject> => {
   const res = await api.patch(`${PROJECT_API_URL}/${projectId}/removeCollaborator/${username}`, {
-    data: { actor },
+    actor,
   });
   if (res.status !== 200) {
     throw new Error(`Error when removing collaborators to the project`);
@@ -147,14 +143,12 @@ const updateCollaboratorRole = async (
   actor: string,
   username: string,
   role: string,
-  permissions?: string[],
 ): Promise<DatabaseProject> => {
   const res = await api.patch(
     `${PROJECT_API_URL}/${projectId}/updateCollaboratorRole/${username}`,
     {
       actor,
       role,
-      permissions,
     },
   );
   if (res.status !== 200) {
@@ -169,7 +163,8 @@ const updateCollaboratorRole = async (
  * @returns
  */
 const getProjectStates = async (projectId: string, actor: string): Promise<DatabaseProject> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getStates`, { headers: { actor } });
+  const data = { actor };
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getStates`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting project states`);
   }
@@ -221,8 +216,9 @@ const deleteStateById = async (
   stateId: string,
   actor: string,
 ): Promise<DatabaseProject> => {
+  const data = { actor };
   const res = await api.delete(`${PROJECT_API_URL}/${projectId}/deleteStateById/${stateId}`, {
-    data: { actor },
+    data,
   });
   if (res.status !== 200) {
     throw new Error(`Error when deleting state by id`);
@@ -236,7 +232,8 @@ const deleteStateById = async (
  * @returns
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, { headers: { actor } });
+  const data = { actor };
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting files`);
   }
@@ -253,12 +250,10 @@ const createFile = async (
   projectId: string,
   actor: string,
   name: string,
-  contents: string,
 ): Promise<DatabaseProjectFile> => {
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/createFile`, {
     actor,
     name,
-    contents,
   });
   if (res.status !== 200) {
     throw new Error(`Error when creating file`);
@@ -277,8 +272,9 @@ const deleteFileById = async (
   fileId: string,
   actor: string,
 ): Promise<DatabaseProjectFile> => {
+  const data = { actor };
   const res = await api.delete(`${PROJECT_API_URL}/${projectId}/deleteFileById/${fileId}`, {
-    data: { actor },
+    data,
   });
   if (res.status !== 200) {
     throw new Error(`Error when deleting file by id`);
@@ -320,9 +316,8 @@ const getFileById = async (
   fileId: string,
   actor: string,
 ): Promise<DatabaseProjectFile> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, {
-    headers: { actor },
-  });
+  const data = { actor };
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
   }
@@ -367,9 +362,10 @@ const deleteCommentsByLine = async (
   actor: string,
   lineNumber: number,
 ): Promise<DatabaseProjectFile> => {
+  const data = { actor };
   const res = await api.delete(
     `${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine?lineNumber=${lineNumber}`,
-    { data: { actor } },
+    { data },
   );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by line`);
@@ -390,9 +386,10 @@ const deleteCommentById = async (
   commentId: string,
   actor: string,
 ): Promise<DatabaseProjectFile> => {
+  const data = { actor };
   const res = await api.delete(
     `${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentById/${commentId}`,
-    { data: { actor } },
+    { data },
   );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by id`);
