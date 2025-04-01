@@ -1,5 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { ProjectFileComment, DatabaseProjectFileComment } from './comment';
+import { Request } from 'express';
 
 /**
  * Type representing a project file's type. Accounts for first-class supported
@@ -51,3 +52,19 @@ export interface PopulatedDatabaseProjectFile extends Omit<DatabaseProjectFile, 
  * - Either a `DatabaseProjectFile` object or an error message.
  */
 export type ProjectFileResponse = DatabaseProjectFile | { error: string };
+
+
+/**
+ * Request type for editing a project file via HTTP.
+ */
+export type FileEditRequest = Request<{}, any, {
+  fileID: string;
+  content: string;
+}>;
+
+/**
+ * Request type for joining a file editing session via HTTP.
+ */
+export type FileJoinRequest = Request<{}, any, {
+  fileID: string;
+}>;

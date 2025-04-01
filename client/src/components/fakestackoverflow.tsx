@@ -70,6 +70,7 @@ const FakeStackOverflow = ({ socket }: { socket: FakeSOSocket | null }) => {
             <Route path='/games/:gameID' element={<GamePage />} />
             <Route path='/projects' element={<ProjectDashboard />} />
             <Route path='/projects/:projectId' element={<ProjectEditor />} />
+            <Route path='/projects/:projectId/files/:fileID' element={<ProjectEditor />} />
           </Route>
         }
       </Routes>

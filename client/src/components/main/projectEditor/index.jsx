@@ -4,6 +4,9 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import { useParams } from 'react-router-dom';
+import useUserContext from '../../hooks/useUserContext';
+
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -53,6 +56,34 @@ const ProjectEditor = () => {
         return `// ${fileName} content`;
     }
   };
+  const { socket } = useUserContext();
+const { fileID } = useParams();
+
+useEffect(() => {
+  if (!socket || !fileID) return;
+
+  socket.emit('joinFile', { fileID });
+
+  socket.on('fileUpdate', ({ fileID: id, newContent }) => {
+    if (id === fileID) {
+      setFileContents(prev => ({
+        ...prev,
+        [activeFile]: newContent,
+      }));
+    }
+  });
+
+  socket.on('fileError', ({ message }) => {
+    console.error('Socket file error:', message);
+  });
+
+  return () => {
+    socket.emit('leaveFile', { fileID });
+    socket.off('fileUpdate');
+    socket.off('fileError');
+  };
+}, [socket, fileID, activeFile]);
+
 
   useEffect(() => {
     getUsers()
@@ -224,7 +255,16 @@ const ProjectEditor = () => {
           height='calc(100vh - 3rem)'
           language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
           value={fileContents[activeFile]}
-          onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
+          onChange={newValue => {
+            setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+            if (socket && fileID) {
+              socket.emit('editFile', {
+                fileID,
+                contentDelta: newValue,
+              });
+            }
+          }}
+          
           theme={theme}
         />
       </main>

@@ -94,6 +94,24 @@ export interface GameMovePayload {
 }
 
 /**
+ * Payload for a file update event.
+ * - `fileID`: The ID of the file being edited.
+ * - `newContent`: The updated content of the file.
+ */
+export interface FileUpdatePayload {
+  fileID: string;
+  newContent: string;
+}
+
+/**
+ * Payload for a file error event.
+ * - `message`: The error message.
+ */
+export interface FileErrorPayload {
+  message: string;
+}
+
+/**
  * Interface representing the events the client can emit to the server.
  * - `makeMove`: Client can emit a move in the game.
  * - `joinGame`: Client can join a game.
@@ -107,6 +125,9 @@ export interface ClientToServerEvents {
   leaveGame: (gameID: string) => void;
   joinChat: (chatID: string) => void;
   leaveChat: (chatID: string | undefined) => void;
+  joinFile: (fileId: { fileID: string }) => void;
+  leaveFile: (fileId: { fileID: string }) => void;
+  editFile: (file: { fileID: string; contentDelta: string }) => void;
 }
 
 /**
@@ -133,4 +154,6 @@ export interface ServerToClientEvents {
   gameUpdate: (game: GameUpdatePayload) => void;
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
+  fileUpdate: (update: FileUpdatePayload) => void;
+  fileError: (error: FileErrorPayload) => void;
 }
