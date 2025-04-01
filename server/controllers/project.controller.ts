@@ -5,6 +5,7 @@ import express, { Response } from 'express';
 //   updateProject,
 //   addProjectCollaborator,
 //   removeProjectCollaborator,
+//   updateProjectCollaboratorRole,
 //   getProjectById,
 //   revertProjectToState,
 // } from '../services/project/project.service';
@@ -320,22 +321,12 @@ const projectController = (socket: FakeSOSocket) => {
         collaborators.push(...invitedCollaborators);
       }
 
-      // Create a new project state for the project
-      const state: ProjectState = {
-        files: [],
-      };
-      
-      const stateResult: StateResponse = await saveProjectState(state);
-      if ('error' in stateResult) {
-        throw new Error(stateResult.error);
-      }
-      
       // Create a new project and save it to the database
-      const project: Project = {
+      // NOTE that currentState will be filled out by saveProject()
+      const project: Omit<Project, 'currentState'> = {
         name: requestProject.name,
         creator: requestProject.creator,
         collaborators: collaborators,
-        currentState: stateResult,
         savedStates: [],
       };
 
@@ -662,18 +653,16 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      const updatedCollaborators = project.collaborators
-        .filter(c => c.userId !== collaborator._id)
-        .push({
-          userId: collaborator._id,
-          role: req.body.role,
-        });
-      
-      const updatedProject: ProjectResponse = await updateProject(projectId, {
-        collaborators: updatedCollaborators,
-      });
+      const updatedProject: ProjectResponse = await updateProjectCollaboratorRole(
+        projectId,
+        collaborator._id,
+        req.body.role,
+      );
+      if ('error' in updatedProject) {
+        throw new Error(updatedProject.error);
+      }
 
-      res.status(500).json(updatedProject);
+      res.status(200).json(updatedProject);
     } catch (error) {
       res.status(500).send(`Error when updating collaborator role: ${error}`);
     }
@@ -733,7 +722,8 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * Creates a backup of the project's current state.
+   * TODO: Creates a backup of the project's current state.
+   * TODO: Need db service for this
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either confirming backup or returning an error.
    * @returns A promise resolving to void.
@@ -929,7 +919,8 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * Creates a new file in a project.
+   * TODO: Creates a new file in a project.
+   * TODO: Some db shit to correlate file id to current state
    * @param req The request containing the project's ID as a route parameter and file data.
    * @param The response, either returning the created file or returning an error.
    * @returns A promise resolving to void.
@@ -991,7 +982,8 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * Deletes a file in a project.
+   * TODO: Deletes a file in a project.
+   * TODO: Create a db service for this
    * @param req The request containing the project and file IDs as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.

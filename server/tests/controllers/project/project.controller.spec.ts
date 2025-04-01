@@ -150,6 +150,7 @@ const updateProjectSpy = jest.spyOn(projectService, 'updateProject');
 const getProjectByIdSpy = jest.spyOn(projectStateService, 'getProjectById');
 const addProjectCollaboratorSpy = jest.spyOn(projectService, 'addProjectCollaborator');
 const removeProjectCollaboratorSpy = jest.spyOn(projectService, 'removeProjectCollaborator');
+const updateProjectCollaboratorRoleSpy = jest.spyOn(projectService, 'updateProjectCollaboratorRole');
 const removeSavedStateByIdSpy = jest.spyOn(projectService, 'removeSavedStateById');
 const revertProjectToStateSpy = jest.spyOn(projectService, 'revertProjectToState');
 const saveProjectStateSpy = jest.spyOn(projectStateService, 'saveProjectState');
@@ -183,9 +184,6 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
-
-      saveProjectStateSpy.mockResolvedValueOnce(mockDatabaseProjectState);
-      
       saveProjectSpy.mockResolvedValueOnce(mockDatabaseProject);
 
       const response = await supertest(app)
@@ -256,22 +254,6 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce({ error: 'Error retrieving user' });
 
       const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
-
-      expect(response.status).toBe(500);
-    });
-
-    it('should return 500 on service error for state creation', async () => {
-      const mockReqBody = {
-        name: 'automatic test writer',
-        actor: mockOwnerUser.username,
-      };
-
-      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-      saveProjectStateSpy.mockResolvedValueOnce({ error: 'Error saving project state' });
-
-      const response = await supertest.app
         .post('/projects/createProject')
         .send(mockReqBody);
 
@@ -752,7 +734,7 @@ describe('Project Controller', () => {
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
-      updateProjectSpy.mockResolvedValueOnce({
+      updateProjectCollaboratorRoleSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
         collaborators: [
           mockDatabaseProject.collaborators.filter(c => {

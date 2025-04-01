@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongodb';
 import ProjectModel from '../../models/projects.model';
 import ProjectStateModel from '../../models/projectStates.model';
+import ProjectFileModel from '../../models/projectFiles.model';
 import UserModel from '../../models/users.model';
 import {
   Project,
@@ -9,19 +10,32 @@ import {
   DatabaseProject,
   SafeDatabaseUser,
   User,
+  DatabaseProjectState,
 } from '../../types/types';
 
 /**
  * Saves a new project to the database.
- * @param {Project} project - The project object to be saved containing full project data.
+ * @param {Omit<Project, 'currentState'>} project - The project object to be saved containing project data,
+ * except for currentState.
  * @returns {Promise<ProjectResponse>} - Resolves with the saved project object or an error message.
  */
-export const saveProject = async (project: Project): Promise<ProjectResponse> => {
+export const saveProject = async (project: Omit<Project, 'currentState'>): Promise<ProjectResponse> => {
   try {
-    const result: DatabaseProject = await ProjectModel.create(project);
+    const state: DatabaseProjectState | null = await ProjectStateModel.create(project.currentState);
+
+    if (!state) {
+      throw new Error('Failed to save project state');
+    }
+
+    const projectData: Project = {
+      ...project,
+      currentState: state._id,
+    };
+
+    const result: DatabaseProject | null = await ProjectModel.create(projectData);
 
     if (!result) {
-      throw Error('Failed to save project');
+      throw new Error('Failed to save project');
     }
 
     return result;
@@ -37,15 +51,35 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
  */
 export const deleteProjectById = async (projectId: string): Promise<ProjectResponse> => {
   try {
-    const deletedProject: DatabaseProject | null = await ProjectModel.findOneAndDelete({
-      _id: projectId,
-    });
+    const project: DatabaseProject | null = await ProjectModel.findById(projectId);
 
-    if (!deletedProject) {
-      throw Error('Error deleting project');
+    if (project) {
+      // We need to delete all associated states, their files, and their file comments.
+      const stateIds = [...project.savedStates, project.currentState];
+      
+      const projectStates = await ProjectStateModel.find({ _id: { $in: stateIds } });
+
+      const fileIds = []; 
+      projectStates.map(s => { fileIds.push(...s.files) });
+      
+      // TODO: Eventually, delete comments.
+
+      await ProjectFileModel.deleteMany({ _id: { $in: fileIds } });
+
+      await ProjectStateModel.deleteMany({ _id: { $in: stateIds } });
+
+      const deletedProject: DatabaseProject | null = await ProjectModel.findOneAndDelete({
+        _id: projectId,
+      });
+
+      if (!deletedProject) {
+        throw new Error('Error deleting project');
+      }
+
+      return deletedProject;
+    } else {
+      throw new Error('Error finding project');
     }
-
-    return deletedProject;
   } catch (error) {
     return { error: `Error occurred when finding project: ${error}` };
   }
@@ -101,7 +135,7 @@ export const updateProject = async (
     );
 
     if (!updatedProject) {
-      throw Error('Error updating project');
+      throw new Error('Error updating project');
     }
 
     return updatedProject;
@@ -126,7 +160,7 @@ export const addProjectCollaborator = async (
     const user: SafeDatabaseUser | null = await UserModel.findOne({ username }).select('-password');
 
     if (!user) {
-      throw Error('Error finding user');
+      throw new Error('Error finding user');
     }
 
     const projectUpdates: Partial<DatabaseProject> = {
@@ -143,7 +177,7 @@ export const addProjectCollaborator = async (
     );
 
     if (!updatedProject) {
-      throw Error('Error updating project collaborators');
+      throw new Error('Error updating project collaborators');
     }
 
     const objectId = new ObjectId(projectId);
@@ -158,7 +192,7 @@ export const addProjectCollaborator = async (
     ).select('-password');
 
     if (!updatedUser) {
-      throw Error('Error updating user');
+      throw new Error('Error updating user');
     }
 
     return updatedProject;
@@ -168,7 +202,7 @@ export const addProjectCollaborator = async (
 };
 
 /**
- * Removes a collaborator to a project and updates the user accordingly.
+ * Removes a collaborator from a project and updates the user accordingly.
  * @param {string} projectId - The ID of the project the collaborator is being added to.
  * @param {string} username - The username of the user to be added as a collaborator.
  * @returns {Promise<ProjectResponse>} - Resolves with the updated project object or an error message.
@@ -181,7 +215,7 @@ export const removeProjectCollaborator = async (
     const user: SafeDatabaseUser | null = await UserModel.findOne({ username }).select('-password');
 
     if (!user) {
-      throw Error('Error finding user');
+      throw new Error('Error finding user');
     }
 
     const updatedProject = await ProjectModel.findOneAndUpdate(
@@ -203,6 +237,35 @@ export const removeProjectCollaborator = async (
     return { error: `Error occurred when removing project collaborator: ${error}` };
   }
 };
+
+/**
+ * Updates a project collaborator's role by their ID.
+ * @param {string} projectId - The ID of the project being updated.
+ * @param {string} userId - The ID of the collaborator being updated.
+ * @param {CollaboratorRole} role - The new role of the collaborator.
+ * @returns {Promise<ProjectResponse>} - Resolves with the updated project object or an error message.
+ */
+export const updateProjectCollaboratorRole = async (
+  projectId: string,
+  userId: string,
+  role: CollaboratorRole,
+): Promise<ProjectResponse> => {
+  try {
+    const updatedProject = await ProjectModel.findOneAndUpdate(
+      { _id: projectId, 'collaborators.userId': userId },
+      { $set: { 'collaborators.$.role': role }},
+      { new: true },
+    );
+
+    if (!updatedProject) {
+      throw new Error('Error updating collaborators');
+    }
+
+    return updatedProject;
+  } catch (error) {
+    return { error: `Error occurred when updating collaborator role: ${error}` };
+  }
+}
 
 /**
  * Retrieves a project by its ID.
