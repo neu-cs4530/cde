@@ -552,7 +552,7 @@ const projectController = (socket: FakeSOSocket) => {
       const response: ProjectResponse = await addProjectCollaborator(
         projectId,
         collabName,
-        req.body.role
+        req.body.role,
       );
       if ('error' in response) {
         throw new Error(response.error);
@@ -627,8 +627,8 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const updateCollaboratorRoleRoute = async(req: CollaboratorRequest, res: Response):
     Promise<void> => {
-    if (!isCollaboratorReqValid(req)) {
-      res.status(400).send('Invalid collaborator request');
+    if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
+      res.status(400).send('Invalid update collaborator role request');
       return;
     }
 
@@ -662,11 +662,18 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      // TODO: Figure out how to do Partial<Project> for collaborator without
-      // removing all collaborators.
-      // IDEA: Maybe construct a new list and filter/update for collabName?
+      const updatedCollaborators = project.collaborators
+        .filter(c => c.userId !== collaborator._id)
+        .push({
+          userId: collaborator._id,
+          role: req.body.role,
+        });
+      
+      const updatedProject: ProjectResponse = await updateProject(projectId, {
+        collaborators: updatedCollaborators,
+      });
 
-      res.status(500).json('Unimplemented');
+      res.status(500).json(updatedProject);
     } catch (error) {
       res.status(500).send(`Error when updating collaborator role: ${error}`);
     }
@@ -755,12 +762,47 @@ const projectController = (socket: FakeSOSocket) => {
         res.status(403).send('Forbidden');
         return;
       }
+
+      const currentState: ProjectStateResponse = await getProjectStateById(project.currentState);
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      const files: ProjectFile[] = await Promise.all(
+        currentState.files.map(fileId => {
+          const result: ProjectFileResponse = await getProjectFile(fileId);
+          if ('error' in result) {
+            throw new Error(result.error);
+          }
+
+          const file: ProjectFile = {
+            name: result.name,
+            fileType: result.fileType,
+            contents: result.contents,
+            comments: [], // TODO: Add this
+          }
+          return file;
+        })
+      );
+
+      const newState: ProjectStateResponse = await saveProjectState({
+        files: files,
+      });
+      if ('error' in newState) {
+        throw new Error(newState.error);
+      }
+
+      const updatedStates = project.savedStates.push(currentState._id);
+
+      const updatedProject: ProjectResponse = await updateProject(projectId, {
+        currentState: newState._id,
+        savedStates: updatedStates,
+      });
+      if ('error' in updatedProject) {
+        throw new Error(updatedProject.error);
+      }
       
-      // TODO: Figure out how to use updateProject to update currentState,
-      // savesStates without overwriting savedStates.
-      // IDEA: Reconstruct savedStates?
-      
-      result.status(500).send('Unimplemented');
+      res.status(200).json(updatedProject);
     } catch (error) {
       res.status(50)).send(`Error when creating project backup: ${error}`);
     }
@@ -823,66 +865,6 @@ const projectController = (socket: FakeSOSocket) => {
       res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error restoring project state: ${error}`);
-    }
-  };
-
-  /**
-   * Deletes a saved project state. 
-   * @param req The request containing the project and state IDs as route parameters.
-   * @param The response, either confirming deletion or returning an error.
-   * @returns A promise resolving to void.
-   */
-  const deleteStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
-    if(!isProjectStateReqValid(req)) {
-      res.status(400).send('Invalid project state request');
-      return;
-    }
-
-    try {
-      const projectId = req.params.projectId; 
-      
-      const project: ProjectResponse = await getProjectById(projectId);
-      if ('error' in project) {
-        throw new Error(project.error);
-      }
-      
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
-      if ('error' in actor) {
-        throw new Error(actor.error);
-      }
-
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
-        res.status(403).send('Forbidden');
-        return;
-      }
-
-      const stateId = req.params.stateId;
-      
-      const state: ProjectStateResponse = await getProjectStateById(stateId);
-      if ('error' in state) {
-        throw new Error(state.error);
-      }
-
-      const validState = false;
-      if (project.savedStates !== undefined) {
-        for (const savedId of project.savedStates) {
-          validState |= savedId === stateId;
-        }
-      }
-      if (!validState) {
-        res.status(400).send('Requested state does not belong to project');
-        return;
-      }
-
-      const result: ProjectResponse = await deleteProjectStateById(stateId);
-      if ('error' in result) {
-        throw new Error(result.error);
-      }
-      
-      res.status(200).json(result);
-    } catch (error) {
-      res.status(500).send(`Error deleting project state: ${error}`);
     }
   };
 
@@ -997,6 +979,10 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       // TODO: Update state files without overwriting
+      const updatedStateId: ProjectStateResponse = await updateProjectState(currentStateId, {
+        files: file,
+      })
+      
 
       res.status(200).json(result);
     } catch (error) {
@@ -1243,7 +1229,6 @@ const projectController = (socket: FakeSOSocket) => {
   router.get('/:projectId/getStates', getStatesRoute);
   router.post('/:projectId/createBackup', createBackupRoute);
   router.patch('/:projectId/restoreStateById/:stateId', restoreStateRoute);
-  router.delete('/:projectId/deleteStateById/:stateId', deleteStateRoute);
   router.get('/:projectId/getFiles', getFilesRoute);
   router.post('/:projectId/createFile', createFileRoute);
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);

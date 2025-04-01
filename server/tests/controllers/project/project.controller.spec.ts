@@ -63,17 +63,6 @@ const mockOutsiderUser: SafeDatabaseUser = {
   dateJoined: new Date('2025-03-26'),
 };
 
-const mockProjectState: ProjectState = {
-  files: [],
-};
-
-const mockDatabaseProjectState: DatabaseProjectState = {
-  _id: new mongoose.Types.ObjectId(),
-  files: [],
-  createdAt: new Date('2025-03-26'),
-  updatedAt: new Date('2025-03-26'),
-};
-
 const mockProjectFileComment: ProjectFileComment = {
   text: 'phenomenal',
   commentBy: mockViewerUser.username,
@@ -102,6 +91,17 @@ const mockFileJSONResponse = {
   fileType: mockDatabaseProjectFile.fileType,
   contents: mockDatabaseProjectFile.contents,
   comments: [],
+};
+
+const mockProjectState: ProjectState = {
+  files: [],
+};
+
+const mockDatabaseProjectState: DatabaseProjectState = {
+  _id: new mongoose.Types.ObjectId(),
+  files: [],
+  createdAt: new Date('2025-03-26'),
+  updatedAt: new Date('2025-03-26'),
 };
 
 const mockSavedProjectState: ProjectState = {
@@ -150,11 +150,13 @@ const updateProjectSpy = jest.spyOn(projectService, 'updateProject');
 const getProjectByIdSpy = jest.spyOn(projectStateService, 'getProjectById');
 const addProjectCollaboratorSpy = jest.spyOn(projectService, 'addProjectCollaborator');
 const removeProjectCollaboratorSpy = jest.spyOn(projectService, 'removeProjectCollaborator');
+const removeSavedStateByIdSpy = jest.spyOn(projectService, 'removeSavedStateById');
 const revertProjectToStateSpy = jest.spyOn(projectService, 'revertProjectToState');
 const saveProjectStateSpy = jest.spyOn(projectStateService, 'saveProjectState');
 const deleteProjectStateByIdSpy = jest.spyOn(projectStateService, 'deleteProjectById');
 const updateProjectStateSpy = jest.spyOn(projectStateService, 'updateProject');
 const getProjectStateByIdSpy = jest.spyOn(projectStateService, 'getProjectStateById');
+const removeStateFileByIdSpy = jest.spyOn(projectStateService, 'removeStateFileById');
 const saveProjectFileSpy = jest.spyOn(projectFileService, 'saveProjectFile');
 const deleteProjectFileByIdSpy = jest.spyOn(projectFileService, 'deleteProjectFileById');
 const updateProjectFileSpy = jest.spyOn(projectFileService, 'updateProjectFile');
@@ -978,6 +980,7 @@ describe('Project Controller', () => {
       
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      getProjectStateByIdSpy.mockResolvedValueOnce(mockDatabaseProjectState);
       saveProjectStateSpy.mockResolvedValueOnce(mockSavedDatabaseProjectState);
       updateProjectSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
@@ -1156,107 +1159,6 @@ describe('Project Controller', () => {
     it('should return 404 if stateId not provided', async () => {
       const response = await supertest(app)
         .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/`);
-      expect(respose.status).toBe(404);
-    });
-  });
-
-  describe('DELETE /projects/:projectId/deleteStateById/:stateId', () => {
-    it('should successfully delete a project state', async () => {
-      const mockReqBody = {
-        actor: mockOwnerUser.username,
-      };
-
-      getProjectByIdSpy.mockResolvedValueOnce({
-        ...mockDatabaseProject,
-        savedStates: [mockSavedDatabaseProjectState._id], 
-      });
-      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-      deleteProjectStateByIdSpy.mockResolvedValueOnce(mockSavedDatabaseProjectState);
-      updateProjectSpy.mockResolvedValueOnce(mockDatabaseProject);
-
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/${mockSavedDatabaseProjectState._id}`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(200);
-      expect(response.body).toBe(mockProjectJSONResponse);
-    });
-
-    it('should return 400 if state is not a saved state', () => {
-      const mockReqBody = {
-        actor: mockOwnerUser.username,
-      };
-
-      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
-      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/${mockSavedDatabaseProjectState._id}`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(400);
-    });
-
-    it('should return 403 if user is not owner', async () => {
-      const mockReqBody = {
-        actor: mockEditorUser.username,
-      };
-
-      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
-      getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
-
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/${mockSavedDatabaseProjectState._id}`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(403);
-    });
-
-    it('should return 403 if user is not a project collaborator', async () => {
-      const mockReqBody = {
-        actor: mockOutsiderUser.username,
-      };
-
-      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
-      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
-
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/${mockSavedDatabaseProjectState._id}`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(403);
-    });
-
-    it('should return 500 on service error', async () => {
-      const mockReqBody = {
-        actor: mockOwnerUser.username,
-      };
-
-      getProjectByIdSpy.mockResolvedValueOnce({
-        ...mockDatabaseProject,
-        savedStates: [mockSavedDatabaseProjectState._id], 
-      });
-      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-      deleteProjectStateByIdSpy.mockResolvedValueOnce({
-        error: 'Error deleting project state'
-      });
-
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/${mockSavedDatabaseProjectState._id}`)
-        .send(mockReqBody);
-
-      expect(response.status).toBe(500);
-    });
-
-    it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects//deleteStateById/${mockSavedDatabaseProjectState._id}`);
-      expect(respose.status).toBe(404);
-    });
-
-    it('should return 404 if stateId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/deleteStateById/`);
       expect(respose.status).toBe(404);
     });
   });
