@@ -208,27 +208,6 @@ const restoreStateById = async (
 /**
  *
  * @param projectId
- * @param stateId
- * @returns
- */
-const deleteStateById = async (
-  projectId: string,
-  stateId: string,
-  actor: string,
-): Promise<DatabaseProject> => {
-  const data = { actor };
-  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/deleteStateById/${stateId}`, {
-    data,
-  });
-  if (res.status !== 200) {
-    throw new Error(`Error when deleting state by id`);
-  }
-  return res.data;
-};
-
-/**
- *
- * @param projectId
  * @returns
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
@@ -409,7 +388,6 @@ export {
   getProjectStates,
   createProjectBackup,
   restoreStateById,
-  deleteStateById,
   getFiles,
   createFile,
   deleteFileById,
