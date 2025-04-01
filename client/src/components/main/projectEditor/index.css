@@ -118,10 +118,14 @@
   }
   
   .console-area {
-    height: 150px;
+    height: 40%;
+    min-height: 200px;
     background-color: #1e1e1e;
     border-top: 1px solid #333;
     color: #f0f0f0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   
   .console-header {
@@ -141,16 +145,15 @@
     padding: 2px 8px;
     font-size: 12px;
   }
-  
+
   .console-output {
+    flex: 1;
+    overflow-y: auto;
     padding: 10px;
     font-family: monospace;
     font-size: 13px;
-    overflow-y: auto;
-    height: 120px;
     white-space: pre-wrap;
   }
-  
   .form-group {
     margin-bottom: 15px;
   }

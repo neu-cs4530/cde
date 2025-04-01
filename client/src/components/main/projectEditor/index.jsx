@@ -238,7 +238,7 @@ const ProjectEditor = () => {
         </div>
         <div className='editor-wrapper'>
           <Editor
-            height='calc(100vh - 150px - 3rem)'
+            height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
             onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
