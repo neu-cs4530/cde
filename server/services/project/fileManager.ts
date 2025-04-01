@@ -1,16 +1,15 @@
 class FileManager {
-    private files: Map<string, string> = new Map();
-  
-    getFileContent(fileID: string): string {
-      return this.files.get(fileID) ?? ''; // Default to empty string
-    }
-  
-    applyEdit(fileID: string, delta: string): string {
-      const updatedContent = delta; // TODO: Replace with merge logic
-      this.files.set(fileID, updatedContent);
-      return updatedContent;
-    }
+  private _files: Map<string, string> = new Map();
+
+  getFileContent(fileID: string): string {
+    return this._files.get(fileID) ?? '';
   }
-  
-  export default new FileManager();
-  
+
+  applyEdit(fileID: string, delta: string): string {
+    // TODO: For now, overwrite with full content.
+    this._files.set(fileID, delta);
+    return delta;
+  }
+}
+
+export default new FileManager();

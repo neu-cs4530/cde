@@ -1,22 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import useUserContext from './useUserContext';
-import { FileUpdatePayload } from '../types/types'; // from shared/types
-import axios from 'axios';
+import { FileUpdatePayload } from '../types/types';
 
 const useFileEditorPage = () => {
   const { socket } = useUserContext();
-  const { fileID } = useParams(); // assumes fileID is in the route
+  const { fileID } = useParams();
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!socket || !fileID) return;
+    if (!socket || !fileID) {
+      return;
+    }
 
-    // Join file room on mount
     socket.emit('joinFile', { fileID });
 
-    // Handle server push
     socket.on('fileUpdate', ({ fileID: id, newContent }: FileUpdatePayload) => {
       if (id === fileID) setContent(newContent);
     });
@@ -40,7 +39,7 @@ const useFileEditorPage = () => {
 
   return {
     content,
-    setContent: sendEdit, // external components call this to edit
+    setContent: sendEdit,
     error,
   };
 };
