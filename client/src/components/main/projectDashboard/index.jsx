@@ -1,61 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './index.css';
-import { FiSearch, FiPlus, FiX, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { getUserByUsername } from '../../../services/userService';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiX } from 'react-icons/fi';
+import { getUsers } from '../../../services/userService';
+import ProjectCard from '../projectCard';
+
+// import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [allUsers, setAllUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+
   const [searchUsername, setSearchUsername] = useState('');
-  const [userSearchResults, setUserSearchResults] = useState([]);
-  const [searchError, setSearchError] = useState('');
+
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
-    language: 'javascript',
+    currentState: 'draft', // should all new projects have current/initial state being a draft?
     sharedUsers: [],
+    starred: false,
+    inTrash: false,
   });
-
-  // searching for users
-  const handleUserSearch = async () => {
-    try {
-      // reset
-      setSearchError('');
-      setUserSearchResults([]);
-      if (!searchUsername.trim()) {
-        setSearchError('Please enter a username');
-        return;
-      }
-      // getUserByUsername can search by partial username
-      const user = await getUserByUsername(searchUsername);
-      // Check if user is valid
-      if (user) {
-        // user added to search results
-        setUserSearchResults([user]);
-      } else {
-        setSearchError('No user found');
-      }
-      setSearchUsername('');
-    } catch (error) {
-      setSearchError('Error searching for user');
-      setUserSearchResults([]);
-    }
+  const closeAndResetForm = () => {
+    setNewProject({
+      name: '',
+      type: 'doc',
+      sharedUsers: [],
+    });
+    setSearchUsername('');
+    setShowAddForm(false);
   };
-
-  // add a shared user with permissions
-  const handleAddSharedUser = user => {
-    // is user already added?
-    const isUserAlreadyAdded = newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id);
-    if (!isUserAlreadyAdded) {
-      setNewProject({
-        ...newProject,
-        sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
-      });
-      // Clear search results after adding
-      setUserSearchResults([]);
-      setSearchUsername('');
+  const handleInputChange = e => {
+    const inputValue = e.target.value;
+    setSearchUsername(inputValue);
+    // Filter users based on the input
+    const filtered = allUsers.filter(
+      user =>
+        user.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        // Exclude already added users
+        !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
+    );
+    setFilteredUsers(filtered);
+  };
+  useEffect(() => {
+    if (showAddForm && allUsers.length === 0) {
+      getUsers()
+        .then(data => {
+          setAllUsers(data);
+          setFilteredUsers(data);
+        })
+        // eslint-disable-next-line no-console
+        .catch(err => console.error('Failed to load users', err));
     }
+  }, [showAddForm, allUsers.length]);
+
+  // Filter users by username as input changes
+  useEffect(() => {
+    setFilteredUsers(
+      allUsers.filter(user => user.username.toLowerCase().includes(searchUsername.toLowerCase())),
+    );
+  }, [searchUsername, allUsers]);
+
+  const handleAddSharedUser = user => {
+    setNewProject({
+      ...newProject,
+      sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
+    });
+    // Update filtered users and search
+    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+    setSearchUsername('');
   };
 
   // update user permissions
@@ -70,39 +85,47 @@ const ProjectDashboard = () => {
 
   // remove a shared user
   const removeSharedUser = userId => {
+    const removedUser = newProject.sharedUsers.find(user => user.id === userId);
     setNewProject({
       ...newProject,
       sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
     });
+    // Add the removed user back to filteredUsers
+    setFilteredUsers(prev => [...prev, removedUser]);
   };
   const addProject = () => {
     if (newProject.name.trim()) {
       const project = {
         id: Date.now(),
         name: newProject.name,
+        createdAt: new Date(),
+        currentState: 'draft',
+        collaborators: [],
         lastEdited: 'Just now',
         starred: false,
+        inTrash: false,
         type: 'doc',
-        language: newProject.language,
-        sharedUsers: newProject.sharedUsers,
+        sharedUsers: newProject.sharedUsers || [],
       };
       setProjects([project, ...projects]);
       setNewProject({
+        id: Date.now(),
         name: '',
         type: 'doc',
-        language: 'javascript',
         sharedUsers: [],
       });
       setShowAddForm(false);
     }
   };
 
+  // star or unstar a project
   const toggleStar = id => {
     setProjects(projects.map(p => (p.id === id ? { ...p, starred: !p.starred } : p)));
   };
 
-  const removeProject = id => {
-    setProjects(projects.filter(p => p.id !== id));
+  // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
+  const trashProject = id => {
+    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
   };
 
   return (
@@ -145,10 +168,18 @@ const ProjectDashboard = () => {
       {/* Project modal */}
       {showAddForm && (
         <div className='modal-overlay'>
-          <div className='modal-content' style={{ maxWidth: '36rem' }}>
+          <div
+            className='modal-content'
+            style={{
+              maxWidth: '36rem',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              backgroundColor: '#ffffff',
+              zIndex: 100,
+            }}>
             <div className='modal-header'>
               <h3 className='modal-title'>Add New Project</h3>
-              <button onClick={() => setShowAddForm(false)} className='modal-close'>
+              <button onClick={closeAndResetForm} className='modal-close'>
                 <FiX size={20} />
               </button>
             </div>
@@ -165,41 +196,22 @@ const ProjectDashboard = () => {
               />
             </div>
 
-            {/* Language Selection */}
-            <div className='form-group'>
-              <label className='form-label'>Project Language</label>
-              <select
-                value={newProject.language}
-                onChange={e => setNewProject({ ...newProject, language: e.target.value })}
-                className='form-input'>
-                <option value='javascript'>JavaScript</option>
-                <option value='python'>Python</option>
-                <option value='java'>Java</option>
-              </select>
-            </div>
             {/* User Search and Share */}
             <div className='form-group'>
               <label className='form-label'>Share Project</label>
-              <div className='flex items-center'>
-                <input
-                  type='text'
-                  value={searchUsername}
-                  onChange={e => setSearchUsername(e.target.value)}
-                  className='form-input flex-grow'
-                  placeholder='Search username to share'
-                />
-                <button onClick={handleUserSearch} className='btn btn-primary ml-2'>
-                  <FiSearch size={16} />
-                </button>
-              </div>
-              {searchError && <p className='text-red-500 text-sm mt-1'>{searchError}</p>}
+              <input
+                type='text'
+                value={searchUsername}
+                onChange={handleInputChange}
+                className='form-input'
+                placeholder='Search username to share'
+              />
             </div>
 
-            {/* User Search Results */}
-            {userSearchResults.length > 0 && (
+            {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
               <div className='form-group'>
                 <label className='form-label'>User Search Results</label>
-                {userSearchResults.map(user => (
+                {filteredUsers.map(user => (
                   <div key={user.id} className='flex items-center justify-between mb-2'>
                     <div className='flex items-center'>
                       <FiUser className='mr-2' />
@@ -232,7 +244,7 @@ const ProjectDashboard = () => {
                         <option value='editor'>Editor</option>
                       </select>
                       <button onClick={() => removeSharedUser(user.id)} className='text-red-500'>
-                        <FiX />
+                        <FiTrash2 />
                       </button>
                     </div>
                   </div>
@@ -240,7 +252,7 @@ const ProjectDashboard = () => {
               </div>
             )}
             <div className='form-footer'>
-              <button onClick={() => setShowAddForm(false)} className='btn btn-cancel'>
+              <button onClick={closeAndResetForm} className='btn btn-cancel'>
                 Cancel
               </button>
               <button
@@ -281,15 +293,7 @@ const ProjectDashboard = () => {
               {projects
                 .filter(p => p.starred)
                 .map(project => (
-                  <div key={project.id} className='project-card'>
-                    <div className='card-icon'>
-                      <FiFile size={40} style={{ color: '#2563eb' }} />
-                    </div>
-                    <div className='card-content'>
-                      <h3 className='card-title'>{project.name}</h3>
-                      <p className='card-subtitle'>{project.lastEdited}</p>
-                    </div>
-                  </div>
+                  <ProjectCard key={project.id} project={project} />
                 ))}
             </div>
           ) : (
@@ -370,8 +374,8 @@ const ProjectDashboard = () => {
                 {projects
                   .filter(project => {
                     if (activeTab === 'starred') return project.starred;
-                    if (activeTab === 'trash') return false; // No trash implementation yet
-                    return true; // Recent tab shows all
+                    if (activeTab === 'trash') return project.inTrash; // No trash implementation yet
+                    return !project.inTrash; // Recent tab shows all
                   })
                   .map(project => (
                     <tr key={project.id} className='table-row'>
@@ -402,7 +406,7 @@ const ProjectDashboard = () => {
                       </td>
                       <td className='row-actions'>
                         <button
-                          onClick={() => removeProject(project.id)}
+                          onClick={() => trashProject(project.id)}
                           style={{
                             background: 'none',
                             border: 'none',
@@ -410,7 +414,7 @@ const ProjectDashboard = () => {
                             padding: '0.5rem',
                             color: '#9ca3af',
                           }}>
-                          <FiX size={20} />
+                          <FiTrash2 size={20} />
                         </button>
                       </td>
                     </tr>
