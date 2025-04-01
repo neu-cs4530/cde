@@ -246,7 +246,7 @@ const ProjectEditor = () => {
             theme={theme}
           />
           {/* Console output area */}
-          <div className='console-area'>
+          <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
             <div className='console-header'>
               <span>Console</span>
               <button onClick={clearConsole} className='console-clear'>
