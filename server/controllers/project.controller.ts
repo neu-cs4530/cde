@@ -215,13 +215,10 @@ const projectController = (socket: FakeSOSocket) => {
       return false;
     }
     
-    for (const collaborator of project.collaborators) {
-      if (collaborator.userId.equals(userId)) {
-        return true;
-      }
-    }
+    const result = project.collaborators
+      .reduce((acc, c) => acc || c.userId.equals(userId), false);
     
-    return false;
+    return result;
   };
 
   /**
@@ -235,13 +232,10 @@ const projectController = (socket: FakeSOSocket) => {
       return false;
     }
     
-    for (const collaborator of project.collaborators) {
-      if (collaborator.userId.toString() === userId.toString() && collaborator.role === 'OWNER') {
-        return true;
-      }
-    }
-    
-    return false;
+    const result = project.collaborators
+      .reduce((acc, c) => acc || (c.userId.equals(userId) && c.role === 'OWNER'), false);
+
+    return result;
   };
 
   /**
@@ -383,6 +377,7 @@ const projectController = (socket: FakeSOSocket) => {
       const validActor = isProjectOwner(actor._id, project);
       if (validActor === false) {
         res.status(403).send('Forbidden');
+        return;
       }
 
       const result: ProjectResponse = await updateProject(projectId, { name: req.body.name });
@@ -602,8 +597,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -614,8 +608,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(collaborator.error);
       }
 
-      const validCollab = isProjectCollaborator(collaborator._id, project);
-      if (!validCollab) {
+      if (!isProjectCollaborator(collaborator._id, project)) {
         res.status(400).send('Invalid collaborator');
         return;
       }
@@ -660,8 +653,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -727,7 +719,7 @@ const projectController = (socket: FakeSOSocket) => {
     }
     
     try {
-      const projectId = req.params.projectId; 
+      const { projectId, stateId } = req.params; 
       
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -745,22 +737,19 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      const stateId = new ObjectId(req.params.stateId);
-      console.log("String ID:", req.params.stateId, ", Object ID:", stateId);
-      
-      const state: ProjectStateResponse = await getProjectStateById(stateId.toString());
-      if ('error' in state) {
-        throw new Error(state.error);
-      }
-
       const validState = project.savedStates
-        .reduce((acc, id) => acc || stateId.toString() === id.toString(), false);
+        .reduce((acc, id) => acc || stateId === id.toString(), false);
       if (!validState) {
         res.status(400).send('Requested state does not belong to project');
         return;
       }
 
-      const result: ProjectResponse = await revertProjectToState(projectId, stateId.toString());
+      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      if ('error' in state) {
+        throw new Error(state.error);
+      }
+
+      const result: ProjectResponse = await revertProjectToState(projectId, stateId);
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -1025,7 +1014,7 @@ const projectController = (socket: FakeSOSocket) => {
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId, fileId } = req.params;
       
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -1040,30 +1029,22 @@ const projectController = (socket: FakeSOSocket) => {
       if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
-      } else {
-        console.log(req.body.actor, 'confirmed as collaborator');
-        console.log(req.body.actor, ', id:', actor._id.toString());
-        project.collaborators.map(c => console.log('collaborator id:', c.userId.toString()));
       }
 
-      const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
+      const currentStateId = project.currentState.toString();
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
-      const fileId = new ObjectId(req.params.fileId);
-
-      if (currentState.files !== null) {
-        const validFile = currentState.files
-          .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
-        if (!validFile) {
-          res.status(400).send('Requested file is not part of the current project state');
-          return;
-        }
+      const validFile = currentState.files
+        .reduce((acc, id) => acc || fileId === id.toString(), false);
+      if (!validFile) {
+        res.status(400).send('Requested file is not part of the current project state');
+        return;
       }
 
-      const result: ProjectFileResponse = await getProjectFile(fileId.toString());
+      const result: ProjectFileResponse = await getProjectFile(fileId);
       if ('error' in result) {
         throw new Error(result.error);
       }
