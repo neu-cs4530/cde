@@ -415,7 +415,7 @@ const ProjectDashboard = () => {
                 <FiFile size={32} style={{ color: '#2563eb' }} />
               </div>
               <h3 className='empty-title'>No projects yet</h3>
-              <p className='empty-text'>Add your first project to get started</p>
+              <p className='empty-text'>Add your first project here!</p>
               <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
                 Add Project
               </button>
