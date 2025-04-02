@@ -3,9 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
-import { getUsers } from '../../../services/userService';
 import { io } from 'socket.io-client';
-
+import { getUsers } from '../../../services/userService';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -78,24 +77,24 @@ const ProjectEditor = () => {
     }
   }, [consoleOutput]);
   useEffect(() => {
-    if (!activeFile) return;
-  
+    if (!activeFile) return undefined;
+
     socket.emit('joinFile', activeFile);
-  
+
     const handleRemoteEdit = ({ fileName, content }) => {
       setFileContents(prev => ({
         ...prev,
         [fileName]: content,
       }));
     };
-  
+
     socket.on('remoteEdit', handleRemoteEdit);
-  
+
     return () => {
       socket.emit('leaveFile', activeFile);
       socket.off('remoteEdit', handleRemoteEdit);
     };
-  }, [activeFile]);  
+  }, [activeFile]);
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -264,7 +263,7 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
-            onChange={(newValue) => {
+            onChange={newValue => {
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
               socket.emit('editFile', { fileName: activeFile, content: newValue });
             }}
