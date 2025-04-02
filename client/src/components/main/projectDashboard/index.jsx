@@ -150,18 +150,6 @@ const ProjectDashboard = () => {
             />
           </div>
           <div style={{ marginLeft: '1rem' }}>
-            <button
-              className='add-button-icon'
-              onClick={() => setShowAddForm(true)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0.5rem',
-                borderRadius: '9999px',
-                cursor: 'pointer',
-              }}>
-              <FiPlus size={20} />
-            </button>
           </div>
         </div>
       </header>
