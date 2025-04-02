@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { ObjectId } from 'mongodb';
 import { ProjectFileComment, DatabaseProjectFileComment } from './comment';
 
