@@ -4,6 +4,8 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import { io } from 'socket.io-client';
+
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -27,6 +29,7 @@ const ProjectEditor = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
+  const socket = io('https://cs4530-s25-508-backend.onrender.com');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -74,6 +77,25 @@ const ProjectEditor = () => {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
+  useEffect(() => {
+    if (!activeFile) return;
+  
+    socket.emit('joinFile', activeFile);
+  
+    const handleRemoteEdit = ({ fileName, content }) => {
+      setFileContents(prev => ({
+        ...prev,
+        [fileName]: content,
+      }));
+    };
+  
+    socket.on('remoteEdit', handleRemoteEdit);
+  
+    return () => {
+      socket.emit('leaveFile', activeFile);
+      socket.off('remoteEdit', handleRemoteEdit);
+    };
+  }, [activeFile]);  
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -242,7 +264,10 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
-            onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
+            onChange={(newValue) => {
+              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+              socket.emit('editFile', { fileName: activeFile, content: newValue });
+            }}
             theme={theme}
           />
           {/* Console output area */}
