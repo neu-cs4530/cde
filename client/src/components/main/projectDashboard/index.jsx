@@ -272,7 +272,7 @@ const ProjectDashboard = () => {
           <button
             className={`tab-button ${activeTab === 'recent' ? 'tab-selected' : ''}`}
             onClick={() => setActiveTab('recent')}>
-            Recently Opened
+            All Projects
           </button>
           <button
             className={`tab-button ${activeTab === 'starred' ? 'tab-selected' : ''}`}
@@ -287,18 +287,18 @@ const ProjectDashboard = () => {
         </div>
         {/* Recents */}
         <div style={{ marginBottom: '3rem' }}>
-          <h2 className='section-title'>Quick Access</h2>
-          {projects.filter(p => p.starred).length > 0 ? (
+          <h2 className='section-title'>All Projects</h2>
+          {projects.filter(p => !p.inTrash).length > 0 ? (
             <div className='project-grid'>
               {projects
-                .filter(p => p.starred)
+                .filter(p => !p.inTrash && (activeTab !== 'starred' || p.starred))
                 .map(project => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
             </div>
           ) : (
             <div className='empty-state'>
-              <div className='empty-text'>Star your important projects to see them here!</div>
+              <div className='empty-text'> See your important projects here!</div>
               <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
                 Add Your Project Here
               </button>
