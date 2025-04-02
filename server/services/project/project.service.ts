@@ -11,15 +11,16 @@ import {
   SafeDatabaseUser,
   User,
   DatabaseProjectState,
+  ProjectFile,
+  DatabaseProjectFile,
 } from '../../types/types';
 
 /**
  * Saves a new project to the database.
- * @param {Omit<Project, 'currentState'>} project - The project object to be saved containing project data,
- * except for currentState.
+ * @param {Project} project - The project object to be saved, containing project data.
  * @returns {Promise<ProjectResponse>} - Resolves with the saved project object or an error message.
  */
-export const saveProject = async (project: Omit<Project, 'currentState'>): Promise<ProjectResponse> => {
+export const saveProject = async (project: Project): Promise<ProjectResponse> => {
   try {
     const state: DatabaseProjectState | null = await ProjectStateModel.create(project.currentState);
 
@@ -27,12 +28,7 @@ export const saveProject = async (project: Omit<Project, 'currentState'>): Promi
       throw new Error('Failed to save project state');
     }
 
-    const projectData: Project = {
-      ...project,
-      currentState: state._id,
-    };
-
-    const result: DatabaseProject | null = await ProjectModel.create(projectData);
+    const result: DatabaseProject | null = await ProjectModel.create(project);
 
     if (!result) {
       throw new Error('Failed to save project');
@@ -59,7 +55,7 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
       
       const projectStates = await ProjectStateModel.find({ _id: { $in: stateIds } });
 
-      const fileIds = []; 
+      const fileIds: ObjectId[] = []; 
       projectStates.map(s => { fileIds.push(...s.files) });
       
       // TODO: Eventually, delete comments.
@@ -277,12 +273,83 @@ export const getProjectById = async (projectId: string): Promise<ProjectResponse
     const project: DatabaseProject | null = await ProjectModel.findOne({ _id: projectId });
 
     if (!project) {
-      throw Error('Project not found');
+      throw new Error('Project not found');
     }
 
     return project;
   } catch (error) {
     return { error: `Error occurred when finding project: ${error}` };
+  }
+};
+
+export const createProjectBackup = async (
+  projectId: string,
+): Promise<ProjectResponse> => {
+  try {
+    const project: DatabaseProject | null = await ProjectModel.findOne({ _id: projectId });
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    const currentState: DatabaseProjectState | null = await ProjectStateModel.findOne({
+      _id: project.currentState
+    });
+
+    if (!currentState) {
+      throw new Error('Current project state not found');
+    }
+    
+    const duplicateFiles = await Promise.all(
+      currentState.files.map(async (fileId) => {
+        const result: DatabaseProjectFile | null = await ProjectFileModel.findById(fileId);
+
+        if (!result) {
+          throw new Error('Project file not found');
+        }
+        
+        // TODO: Later, comments.
+        const file: ProjectFile = {
+          name: result.name,
+          fileType: result.fileType,
+          contents: result.contents,
+          comments: [],
+        };
+        
+        const duplicate: DatabaseProjectFile | null = await ProjectFileModel.create(file);
+
+        if (!duplicate) {
+          throw new Error('Error duplicating project file');
+        }
+
+        return duplicate;
+      })
+    );
+
+    const duplicateState: DatabaseProjectState | null = await ProjectStateModel.create({
+      files: duplicateFiles.map(f => f._id),
+    });
+
+    if (!duplicateState) {
+      throw new Error('Error duplicating project state');
+    }
+
+    const updatedProject: DatabaseProject | null = await ProjectModel.findOneAndUpdate(
+      { _id: projectId },
+      {
+        $set: { currentState: duplicateState._id },
+        $push: { savedStates: currentState._id } 
+      },
+      { new: true },
+    );
+
+    if (!updatedProject) {
+      throw new Error('Error updating project');
+    }
+
+    return updatedProject;
+  } catch (error) {
+    return { error: `Error occurred when creating backup: ${error}` };
   }
 };
 

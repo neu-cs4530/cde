@@ -1,26 +1,25 @@
 import express, { Response } from 'express';
-// import {
-//   saveProject,
-//   deleteProjectById,
-//   updateProject,
-//   addProjectCollaborator,
-//   removeProjectCollaborator,
-//   updateProjectCollaboratorRole,
-//   getProjectById,
-//   revertProjectToState,
-// } from '../services/project/project.service';
-// import {
-//   saveProjectState,
-//   deleteProjectStateById,
-//   updateProjectState,
-//   getProjectStateById,
-// } from '../services/project/projectState.service';
-// import {
-//  saveProjectFile,
-//  deleteProjectFileById,
-//  updateProjectFile,
-//  getProjectFile, 
-// } from '../services/project/projectFile.service';
+import { ObjectId } from 'mongodb';
+import {
+  saveProject,
+  deleteProjectById,
+  updateProject,
+  addProjectCollaborator,
+  removeProjectCollaborator,
+  updateProjectCollaboratorRole,
+  getProjectById,
+  createProjectBackup,
+  revertProjectToState,
+} from '../services/project/project.service';
+import {
+  getProjectStateById,
+  saveFileInState,
+  deleteFileInState,
+} from '../services/project/projectState.service';
+import {
+ updateProjectFile,
+ getProjectFile, 
+} from '../services/project/projectFile.service';
 // import {
 //
 // } from '../services/project/projectFileComment.service';
@@ -31,6 +30,9 @@ import { populateDocument } from '../utils/database.util';
 import {
   FakeSOSocket,
   User,
+  UserResponse,
+  Collaborator,
+  CollaboratorRole,
   Project,
   DatabaseProject,
   ProjectResponse,
@@ -38,6 +40,8 @@ import {
   DatabaseProjectState,
   ProjectStateResponse,
   ProjectFile,
+  DatabaseProjectFile,
+  ProjectFileResponse,
   ProjectFileComment,
   CreateProjectRequest,
   ProjectRequest,
@@ -102,14 +106,11 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectReqValid = (req: ProjectRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
-    req.body.name ? req.body.name !== undefined : true
-    req.body.name ? req.body.name !== '' : true;
+    (req.body.name ? req.body.name !== undefined : true) &&
+    (req.body.name ? req.body.name !== '' : true);
   
   /**
    * Validates that the request contains all required fields for a collaborator.
@@ -117,11 +118,6 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isCollaboratorReqValid = (req: CollaboratorRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.collaborator !== undefined &&
-    req.params.collaborator !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
@@ -134,11 +130,6 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.stateId !== undefined &&
-    req.params.stateId !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '';
@@ -149,14 +140,11 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isCreateFileRequestValid = (req: CreateFileRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
-    req.body.actor !== ''
+    req.body.actor !== '' &&
     req.body.name !== undefined &&
-    req.body.name !== ''
+    req.body.name !== '' &&
     req.body.fileType !== undefined &&
     isProjectFileTypeValid(req.body.fileType);
 
@@ -166,11 +154,6 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.fileId !== undefined &&
-    req.params.fileId !== '' &&
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '';
@@ -182,11 +165,6 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.fileId !== undefined &&
-    req.params.fileId !== '' &&
     req.body !== undefined &&
     req.body.comment !== undefined &&
     req.body.comment.text !== undefined &&
@@ -200,15 +178,15 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project and file IDs, and line number.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest): 
-    boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.fileId !== undefined &&
-    req.params.fileId !== '' &&
-    req.params.lineNumber !== undefined &&
-    req.params.lineNumber >= 0;
+  // const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest): 
+  //   boolean =>
+  //   req.params !== undefined &&
+  //   req.params.projectId !== undefined &&
+  //   req.params.projectId !== '' &&
+  //   req.params.fileId !== undefined &&
+  //   req.params.fileId !== '' &&
+  //   req.params.lineNumber !== undefined &&
+  //   req.params.lineNumber >= 0;
 
   /**
    * Validates that the request contains all required fields for deleting file
@@ -216,15 +194,15 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest): 
-    boolean =>
-    req.params !== undefined &&
-    req.params.projectId !== undefined &&
-    req.params.projectId !== '' &&
-    req.params.fileId !== undefined &&
-    req.params.fileId !== '' &&
-    req.params.commentId !== undefined &&
-    req.params.commentId !== '';
+  // const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest): 
+  //   boolean =>
+  //   req.params !== undefined &&
+  //   req.params.projectId !== undefined &&
+  //   req.params.projectId !== '' &&
+  //   req.params.fileId !== undefined &&
+  //   req.params.fileId !== '' &&
+  //   req.params.commentId !== undefined &&
+  //   req.params.commentId !== '';
 
   /**
    * Validates that a given user is a collaborator on a given project.
@@ -232,18 +210,18 @@ const projectController = (socket: FakeSOSocket) => {
    * @param project The project response from the database.
    * @returns `true` if the user is a project collaborator; otherwise, `false`.
    */
-  const isProjectCollaborator = async (userId: string, project: DatabaseProject): Promise<boolean> => {
+  const isProjectCollaborator = (userId: ObjectId, project: DatabaseProject): boolean => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
     
-    const rv = false;
-
     for (const collaborator of project.collaborators) {
-      rv |= collaborator.userId === userId;
+      if (collaborator.userId.equals(userId)) {
+        return true;
+      }
     }
     
-    return rv;
+    return false;
   };
 
   /**
@@ -252,26 +230,19 @@ const projectController = (socket: FakeSOSocket) => {
    * @param project The project response from the database.
    * @returns `true` if the user is a project owner; otherwise, `false`.
    */
-  const isProjectOwner = async (userId: string, project: DatabaseProject): Promise<boolean> => {
+  const isProjectOwner = (userId: ObjectId, project: DatabaseProject): boolean => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
     
-    const rv = false;
-
     for (const collaborator of project.collaborators) {
-      rv |= (collaborator.userId === userId && collaborator.role === 'OWNER');
+      if (collaborator.userId.toString() === userId.toString() && collaborator.role === 'OWNER') {
+        return true;
+      }
     }
     
-    return rv;
+    return false;
   };
-
-  /**
-   * Validates that a given state is saved in a given project.
-   * @param stateId The ID of the state.
-   * @param project The project response from the database.
-   * @returns `true` if the state is saved;
-   */
 
   /**
    * Creates a new project.
@@ -303,7 +274,7 @@ const projectController = (socket: FakeSOSocket) => {
       // Retrieve any potential invited collaborators from database 
       if (req.body.collaborators) {
         const invitedCollaborators: Collaborator[] = await Promise.all(
-          req.body.collaborators.map(c => {
+          req.body.collaborators.map(async (c) => {
             const user: UserResponse = await getUserByUsername(c.username);
             if ('error' in user) {
               throw new Error(user.error);
@@ -322,25 +293,21 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       // Create a new project and save it to the database
-      // NOTE that currentState will be filled out by saveProject()
-      const project: Omit<Project, 'currentState'> = {
+      // NOTE that currentState will be saved by saveProject()
+      const project: Project = {
         name: requestProject.name,
-        creator: requestProject.creator,
+        creator: requestProject.actor,
         collaborators: collaborators,
+        currentState: { files: [] },
         savedStates: [],
       };
 
-      const result = saveProject(project);
+      const result = await saveProject(project);
       if ('error' in result) {
-        throw new Error(result.error);
+        throw new Error('Error saving project');
       }
 
-      // TODO: Hook this up to client service?
-      socket.emit('projectUpdate', {
-        project: result,
-        type: 'created',
-      });
-      result.status(200).json(result);
+      res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error when saving project: ${error}`);
     }
@@ -371,8 +338,8 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -382,7 +349,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(result.error);
       }
       
-      result.status(200).json(result);
+      res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error when deleting project: ${error}`);
     }
@@ -401,7 +368,7 @@ const projectController = (socket: FakeSOSocket) => {
     }
 
     try {
-      const projectId = req.parans.projectId;
+      const projectId = req.params.projectId;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -413,17 +380,17 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
       
-      const validActor = await isProjectOwner(actor._id, project);
-      if ('error' in validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
       }
 
-      const result: ProjectResponse = await updateProjectById(projectId, { name: req.body.name });
+      const result: ProjectResponse = await updateProject(projectId, { name: req.body.name });
       if ('error' in result) {
         throw new Error(result.error);
       }
 
-      result.status(200).json(result);
+      res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error when updating project: ${error}`);
     }
@@ -447,8 +414,8 @@ const projectController = (socket: FakeSOSocket) => {
       const projects = [];
       if (user.projects !== undefined) {
         const userProjects: DatabaseProject[] = await Promise.all(
-          user.projects.map(projectId => {
-            const project: ProjectResponse = await getProjectById(projectId);
+          user.projects.map(async (projectId) => {
+            const project: ProjectResponse = await getProjectById(projectId.toString());
             if ('error' in project) {
               throw new Error(project.error);
             }
@@ -491,8 +458,8 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectCollaborator(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectCollaborator(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -528,13 +495,13 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      const collabName = req.params.collaborator;
+      const collabName = req.params.username;
       const collaborator: UserResponse = await getUserByUsername(collabName);
       if ('error' in collaborator) {
         throw new Error(collaborator.error);
@@ -580,19 +547,19 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      const collabName = req.params.collaborator;
+      const collabName = req.params.username;
       const collaborator: UserResponse = await getUserByUsername(collabName);
       if ('error' in collaborator) {
         throw new Error(collaborator.error);
       }
 
-      const validCollab = await isProjectCollaborator(collaborator._id, project);
+      const validCollab = isProjectCollaborator(collaborator._id, project);
       if (!validCollab) {
         res.status(400).send('Invalid collaborator');
         return;
@@ -635,19 +602,19 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      const collabName = req.params.collaborator;
+      const collabName = req.params.username;
       const collaborator: UserResponse = await getUserByUsername(collabName);
       if ('error' in collaborator) {
         throw new Error(collaborator.error);
       }
 
-      const validCollab = await isProjectCollaborator(collaborator._id, project);
+      const validCollab = isProjectCollaborator(collaborator._id, project);
       if (!validCollab) {
         res.status(400).send('Invalid collaborator');
         return;
@@ -655,7 +622,7 @@ const projectController = (socket: FakeSOSocket) => {
 
       const updatedProject: ProjectResponse = await updateProjectCollaboratorRole(
         projectId,
-        collaborator._id,
+        collaborator._id.toString(),
         req.body.role,
       );
       if ('error' in updatedProject) {
@@ -669,9 +636,9 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * Retrieves all saved states of a project.
+   * Retrieves all saved state IDs of a project.
    * @param req The request containing the project's ID as a route parameter.
-   * @param The response, either containing the saved states or returning an error.
+   * @param The response, either containing the saved state IDs or returning an error.
    * @returns A promise resolving to void.
    */
   const getStatesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
@@ -693,37 +660,20 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectCollaborator(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectCollaborator(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
-      
-      const states = [];
-      if (project.savedStates !== undefined) {
-        const projectStates: DatabaseProjectState[] = await Promise.all(
-          project.savedStates.map(stateId => {
-            const state: ProjectStateResponse = await getProjectStateById(stateId);
-            if ('error' in state) {
-              throw new Error(state.error);
-            }
-            
-            return state;
-          })
-        );
 
-        states.push(...projectStates);
-      }
-      
-      result.status(200).json(states);
+      res.status(200).json(project.savedStates);
     } catch (error) {
       res.status(500).send(`Error when getting project states: ${error}`);
     }
   };
 
   /**
-   * TODO: Creates a backup of the project's current state.
-   * TODO: Need db service for this
+   * Creates a backup of the project's current state.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either confirming backup or returning an error.
    * @returns A promise resolving to void.
@@ -747,54 +697,20 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      const currentState: ProjectStateResponse = await getProjectStateById(project.currentState);
-      if ('error' in currentState) {
-        throw new Error(currentState.error);
-      }
-
-      const files: ProjectFile[] = await Promise.all(
-        currentState.files.map(fileId => {
-          const result: ProjectFileResponse = await getProjectFile(fileId);
-          if ('error' in result) {
-            throw new Error(result.error);
-          }
-
-          const file: ProjectFile = {
-            name: result.name,
-            fileType: result.fileType,
-            contents: result.contents,
-            comments: [], // TODO: Add this
-          }
-          return file;
-        })
-      );
-
-      const newState: ProjectStateResponse = await saveProjectState({
-        files: files,
-      });
-      if ('error' in newState) {
-        throw new Error(newState.error);
-      }
-
-      const updatedStates = project.savedStates.push(currentState._id);
-
-      const updatedProject: ProjectResponse = await updateProject(projectId, {
-        currentState: newState._id,
-        savedStates: updatedStates,
-      });
+      const updatedProject: ProjectResponse = await createProjectBackup(projectId); 
       if ('error' in updatedProject) {
         throw new Error(updatedProject.error);
       }
       
       res.status(200).json(updatedProject);
     } catch (error) {
-      res.status(50)).send(`Error when creating project backup: ${error}`);
+      res.status(500).send(`Error when creating project backup: ${error}`);
     }
   };
 
@@ -823,31 +739,28 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      const stateId = req.params.stateId;
+      const stateId = new ObjectId(req.params.stateId);
+      console.log("String ID:", req.params.stateId, ", Object ID:", stateId);
       
-      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      const state: ProjectStateResponse = await getProjectStateById(stateId.toString());
       if ('error' in state) {
         throw new Error(state.error);
       }
 
-      const validState = false;
-      if (project.savedStates !== undefined) {
-        for (const savedId of project.savedStates) {
-          validState |= savedId === stateId;
-        }
-      }
+      const validState = project.savedStates
+        .reduce((acc, id) => acc || stateId.toString() === id.toString(), false);
       if (!validState) {
         res.status(400).send('Requested state does not belong to project');
         return;
       }
 
-      const result: ProjectResponse = await revertProjectToState(projectId, stateId);
+      const result: ProjectResponse = await revertProjectToState(projectId, stateId.toString());
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -883,15 +796,15 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectCollaborator(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectCollaborator(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
       const stateId = project.currentState;
 
-      const state: ProjectStateResponse = await getProjectStateById(stateId);
+      const state: ProjectStateResponse = await getProjectStateById(stateId.toString());
       if ('error' in state) {
         throw new Error(state.error);
       }
@@ -899,8 +812,8 @@ const projectController = (socket: FakeSOSocket) => {
       const files = [];
       if (state.files !== undefined) {
         const projectFiles: DatabaseProjectFile[] = await Promise.all(
-          state.files.map(fileId => {
-            const file: ProjectFileResponse = await getProjectFile(fileId);
+          state.files.map(async (fileId) => {
+            const file: ProjectFileResponse = await getProjectFile(fileId.toString());
             if ('error' in file) {
               throw new Error(file.error);
             }
@@ -919,8 +832,7 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Creates a new file in a project.
-   * TODO: Some db shit to correlate file id to current state
+   * Creates a new file in a project.
    * @param req The request containing the project's ID as a route parameter and file data.
    * @param The response, either returning the created file or returning an error.
    * @returns A promise resolving to void.
@@ -944,36 +856,29 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectCollaborator(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectCollaborator(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
-      // Create a new file
+      const currentStateId = project.currentState;
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
+      if ('error' in currentState) {
+        throw new Error(currentState.error);
+      }
+
+      // Create a new file in current state
       const file: ProjectFile = {
         name: req.body.name,
         fileType: req.body.fileType,
         contents: '',
         comments: [],
       };
-      const result: ProjectFileResponse = await saveProjectFile(file);
+      const result: ProjectFileResponse = await saveFileInState(currentStateId.toString(), file);
       if ('error' in result) {
         throw new Error(result.error);
       }
-
-      // Add it to the current state
-      const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
-      if ('error' in currentState) {
-        throw new Error(currentState.error);
-      }
-
-      // TODO: Update state files without overwriting
-      const updatedStateId: ProjectStateResponse = await updateProjectState(currentStateId, {
-        files: file,
-      })
-      
 
       res.status(200).json(result);
     } catch (error) {
@@ -982,8 +887,7 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Deletes a file in a project.
-   * TODO: Create a db service for this
+   * Deletes a file in a project.
    * @param req The request containing the project and file IDs as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
@@ -1007,38 +911,34 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
-      const fileId = req.params.fileId;
+      const fileId = new ObjectId(req.params.fileId);
 
-      const validFile = false;
-      if (currentState.files !== undefined) {
-        for (const id of currentState.files) {
-          validFile |= fileId === id;
-        }
-      }
+      const validFile = currentState.files
+        .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
       if (!validFile) {
         res.status(400).send('Requested file is not part of the current project state');
         return;
       }
 
-      const result: ProjectFileResponse = await deleteProjectFileById(fileId);
+      const result: ProjectFileResponse = await deleteFileInState(
+        currentStateId.toString(),
+        fileId.toString()
+      );
       if ('error' in result) {
         throw new Error(result.error);
       }
-
-      // TODO: Remove it from the current state
-      // TODO: Update state files without overwriting
 
       res.status(200).json(result);
     } catch (error) {
@@ -1071,39 +971,40 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectOwner(actor._id, project);
-      if (!validActor) {
+      const validActor = isProjectOwner(actor._id, project);
+      if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
-      const fileId = req.params.fileId;
+      const fileId = new ObjectId(req.params.fileId);
 
-      const validFile = false;
-      if (currentState.files !== undefined) {
-        for (const id of currentState.files) {
-          validFile |= fileId === id;
-        }
-      }
+      const validFile = currentState.files
+        .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
       if (!validFile) {
         res.status(400).send('Requested file is not part of the current project state');
         return;
       }
       
-      // TODO: Construct updates from req.body.name and/or req.body.fileType.
-      const result: ProjectFileResponse = await updateProjectFile(fileId, {});
+      // Construct updates from req.body.name and/or req.body.fileType.
+      const updates: Record<string, string> = {};
+      if (req.body.name !== undefined) {
+        updates.name = req.body.name;
+      }
+      if (req.body.fileType !== undefined) {
+        updates.fileType = req.body.fileType;
+      }
+
+      const result: ProjectFileResponse = await updateProjectFile(fileId.toString(), updates); 
       if ('error' in result) {
         throw new Error(result.error);
       }
-
-      // TODO: Remove it from the current state
-      // TODO: Update state files without overwriting
 
       res.status(200).json(result);
     } catch (error) {
@@ -1124,7 +1025,7 @@ const projectController = (socket: FakeSOSocket) => {
     }
 
     try {
-      const projectId = req.params.projectId; 
+      const projectId = req.params.projectId;
       
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -1136,32 +1037,33 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = await isProjectCollaborator(actor._id, project);
-      if (!validActor) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
+      } else {
+        console.log(req.body.actor, 'confirmed as collaborator');
+        console.log(req.body.actor, ', id:', actor._id.toString());
+        project.collaborators.map(c => console.log('collaborator id:', c.userId.toString()));
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId);
+      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
-      const fileId = req.params.fileId;
+      const fileId = new ObjectId(req.params.fileId);
 
-      const validFile = false;
-      if (currentState.files !== undefined) {
-        for (const id of currentState.files) {
-          validFile |= fileId === id;
+      if (currentState.files !== null) {
+        const validFile = currentState.files
+          .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
+        if (!validFile) {
+          res.status(400).send('Requested file is not part of the current project state');
+          return;
         }
       }
-      if (!validFile) {
-        res.status(400).send('Requested file is not part of the current project state');
-        return;
-      }
 
-      const result: ProjectFileResponse = await getProjectFile(fileId);
+      const result: ProjectFileResponse = await getProjectFile(fileId.toString());
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -1217,7 +1119,7 @@ const projectController = (socket: FakeSOSocket) => {
   // TODO: Change addCollaborator to inviteCollaborator
   router.post('/:projectId/addCollaborator/:username', addCollaboratorRoute);
   router.patch('/:projectId/removeCollaborator/:username', removeCollaboratorRoute);
-  router.patch(':/projectId/updateCollaboratorRole/:username', updateCollaboratorRoleRoute);
+  router.patch('/:projectId/updateCollaboratorRole/:username', updateCollaboratorRoleRoute);
   router.get('/:projectId/getStates', getStatesRoute);
   router.post('/:projectId/createBackup', createBackupRoute);
   router.patch('/:projectId/restoreStateById/:stateId', restoreStateRoute);
