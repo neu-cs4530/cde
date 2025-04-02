@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 
 const ProjectEditor = () => {
@@ -129,7 +129,25 @@ const ProjectEditor = () => {
     setNewFileName('');
     setIsAddFileOpen(false);
   };
-
+  const handleDuplicateFile = fileName => {
+    const baseName = fileName.replace(/\.[^/.]+$/, '');
+    const extension = fileName.slice(fileName.lastIndexOf('.'));
+    let duplicatedFileName = `${baseName}_copy${extension}`;
+    let counter = 1;
+    while (fileContents[duplicatedFileName]) {
+      duplicatedFileName = `${baseName}_copy_${counter}${extension}`;
+      counter++;
+    }
+    setFileContents(prev => ({
+      ...prev,
+      [duplicatedFileName]: prev[fileName],
+    }));
+    setFileLanguages(prev => ({
+      ...prev,
+      [duplicatedFileName]: prev[fileName],
+    }));
+    setActiveFile(duplicatedFileName);
+  };
   const runJavaScript = () => {
     try {
       // capture console.log output
@@ -169,10 +187,36 @@ const ProjectEditor = () => {
             <li
               key={file}
               className={`file-item ${file === activeFile ? 'active' : ''}`}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span onClick={() => setActiveFile(file)} style={{ flexGrow: 1 }}>
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                overflow: 'hidden',
+              }}>
+              <span
+                onClick={() => setActiveFile(file)}
+                title={file}
+                style={{
+                  flexGrow: 1,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                }}>
                 {file}
               </span>
+              <button
+                onClick={() => handleDuplicateFile(file)}
+                style={{
+                  flexShrink: 0,
+                  background: 'none',
+                  border: 'none',
+                  color: '#9ca3af',
+                  marginLeft: '0.5rem',
+                }}
+                title='Duplicate file'>
+                <FiCopy size={16} />
+              </button>
               <button
                 onClick={() => {
                   if (Object.keys(fileContents).length === 1) {
