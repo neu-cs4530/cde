@@ -28,7 +28,7 @@ const ProjectEditor = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
-  const socket = io('https://cs4530-s25-508-backend.onrender.com');
+  const socketRef = useRef(null);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -72,14 +72,22 @@ const ProjectEditor = () => {
       .catch(err => console.error('Error loading users', err));
   }, []);
   useEffect(() => {
+    socketRef.current = io('https://cs4530-s25-508-backend.onrender.com');
+
+    return () => {
+      socketRef.current.disconnect(); // clean up socket on unmount
+    };
+  }, []);
+
+  useEffect(() => {
     if (consoleRef.current) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
   useEffect(() => {
-    if (!activeFile) return undefined;
+    if (!activeFile || !socketRef.current) return undefined;
 
-    socket.emit('joinFile', activeFile);
+    socketRef.current.emit('joinFile', activeFile);
 
     const handleRemoteEdit = ({ fileName, content }) => {
       setFileContents(prev => ({
@@ -88,11 +96,11 @@ const ProjectEditor = () => {
       }));
     };
 
-    socket.on('remoteEdit', handleRemoteEdit);
+    socketRef.current.on('remoteEdit', handleRemoteEdit);
 
     return () => {
-      socket.emit('leaveFile', activeFile);
-      socket.off('remoteEdit', handleRemoteEdit);
+      socketRef.current.emit('leaveFile', activeFile);
+      socketRef.current.off('remoteEdit', handleRemoteEdit);
     };
   }, [activeFile]);
 
@@ -265,7 +273,7 @@ const ProjectEditor = () => {
             value={fileContents[activeFile]}
             onChange={newValue => {
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              socket.emit('editFile', { fileName: activeFile, content: newValue });
+              socketRef.current?.emit('editFile', { fileName: activeFile, content: newValue });
             }}
             theme={theme}
           />
