@@ -16,33 +16,23 @@ import {
   saveFileInState,
   deleteFileInState,
 } from '../services/project/projectState.service';
-import {
- updateProjectFile,
- getProjectFile, 
-} from '../services/project/projectFile.service';
+import { updateProjectFile, getProjectFile } from '../services/project/projectFile.service';
 // import {
 //
 // } from '../services/project/projectFileComment.service';
-import {
-  getUserByUsername,
-} from '../services/user.service';
-import { populateDocument } from '../utils/database.util';
+import { getUserByUsername } from '../services/user.service';
 import {
   FakeSOSocket,
-  User,
   UserResponse,
   Collaborator,
-  CollaboratorRole,
   Project,
   DatabaseProject,
   ProjectResponse,
-  ProjectState,
-  DatabaseProjectState,
   ProjectStateResponse,
   ProjectFile,
   DatabaseProjectFile,
   ProjectFileResponse,
-  ProjectFileComment,
+  // ProjectFileComment,
   CreateProjectRequest,
   ProjectRequest,
   UserByUsernameRequest,
@@ -50,9 +40,9 @@ import {
   ProjectStateRequest,
   CreateFileRequest,
   FileRequest,
-  AddFileCommentRequest,
-  DeleteFileCommentsByLineRequest,
-  DeleteFileCommentByIdRequest,
+  // AddFileCommentRequest,
+  // DeleteFileCommentsByLineRequest,
+  // DeleteFileCommentByIdRequest,
 } from '../types/types';
 
 /**
@@ -70,9 +60,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the role is `OWNER`, `EDITOR`, or `VIEWER`; otherwise `false`.
    */
   const isCollaboratorRoleValid = (role: string): boolean =>
-    role === 'OWNER' ||
-    role === 'EDITOR' ||
-    role === 'VIEWER';
+    role === 'OWNER' || role === 'EDITOR' || role === 'VIEWER';
 
   /**
    * Validates that a string is a valid ProjectFileType.
@@ -85,7 +73,6 @@ const projectController = (socket: FakeSOSocket) => {
     fileType === 'JAVA' ||
     fileType === 'JAVASCRIPT' ||
     fileType === 'OTHER';
-
 
   /**
    * Validates that the request body contains all required fields for creating a project.
@@ -111,7 +98,7 @@ const projectController = (socket: FakeSOSocket) => {
     req.body.actor !== '' &&
     (req.body.name ? req.body.name !== undefined : true) &&
     (req.body.name ? req.body.name !== '' : true);
-  
+
   /**
    * Validates that the request contains all required fields for a collaborator.
    * @param req The incoming request containing project ID, collaborator, and actor.
@@ -130,9 +117,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    req.body !== undefined &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '';
+    req.body !== undefined && req.body.actor !== undefined && req.body.actor !== '';
 
   /**
    * Validates that the request contains all required fields for file creation.
@@ -154,31 +139,29 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
-    req.body !== undefined &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '';
+    req.body !== undefined && req.body.actor !== undefined && req.body.actor !== '';
 
   /**
-   * Validates that the request contains all required fields for creating 
+   * Validates that the request contains all required fields for creating
    * a file comment.
    * @param req The incoming request containing project and file IDs, and comment data.
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
-  const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
-    req.body !== undefined &&
-    req.body.comment !== undefined &&
-    req.body.comment.text !== undefined &&
-    req.body.comment.commentBy !== undefined &&
-    req.body.comment.commentBy !== '' &&
-    req.body.comment.commentDateTime !== undefined;
+  // const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
+  //   req.body !== undefined &&
+  //   req.body.comment !== undefined &&
+  //   req.body.comment.text !== undefined &&
+  //   req.body.comment.commentBy !== undefined &&
+  //   req.body.comment.commentBy !== '' &&
+  //   req.body.comment.commentDateTime !== undefined;
 
   /**
-   * Validates that the request contains all required fields for deleting file 
+   * Validates that the request contains all required fields for deleting file
    * comments by line.
    * @param req The incoming request containing project and file IDs, and line number.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  // const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest): 
+  // const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest):
   //   boolean =>
   //   req.params !== undefined &&
   //   req.params.projectId !== undefined &&
@@ -194,7 +177,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  // const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest): 
+  // const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest):
   //   boolean =>
   //   req.params !== undefined &&
   //   req.params.projectId !== undefined &&
@@ -214,10 +197,9 @@ const projectController = (socket: FakeSOSocket) => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
-    
-    const result = project.collaborators
-      .reduce((acc, c) => acc || c.userId.equals(userId), false);
-    
+
+    const result = project.collaborators.reduce((acc, c) => acc || c.userId.equals(userId), false);
+
     return result;
   };
 
@@ -231,9 +213,11 @@ const projectController = (socket: FakeSOSocket) => {
     if ('error' in project || project.collaborators === undefined) {
       return false;
     }
-    
-    const result = project.collaborators
-      .reduce((acc, c) => acc || (c.userId.equals(userId) && c.role === 'OWNER'), false);
+
+    const result = project.collaborators.reduce(
+      (acc, c) => acc || (c.userId.equals(userId) && c.role === 'OWNER'),
+      false,
+    );
 
     return result;
   };
@@ -252,37 +236,39 @@ const projectController = (socket: FakeSOSocket) => {
 
     try {
       const requestProject = req.body;
-      
+
       // Retrieve project creator's User document from database
       const owner: UserResponse = await getUserByUsername(requestProject.actor);
       if ('error' in owner) {
         throw new Error(owner.error);
       }
-      
-      // Initialize list of collaborators as just owner
-      const collaborators: Collaborator[] = [{
-        userId: owner._id,
-        role: 'OWNER',
-      }]; 
 
-      // Retrieve any potential invited collaborators from database 
+      // Initialize list of collaborators as just owner
+      const collaborators: Collaborator[] = [
+        {
+          userId: owner._id,
+          role: 'OWNER',
+        },
+      ];
+
+      // Retrieve any potential invited collaborators from database
       if (req.body.collaborators) {
         const invitedCollaborators: Collaborator[] = await Promise.all(
-          req.body.collaborators.map(async (c) => {
+          req.body.collaborators.map(async c => {
             const user: UserResponse = await getUserByUsername(c.username);
             if ('error' in user) {
               throw new Error(user.error);
             }
-            
+
             const collaborator: Collaborator = {
               userId: user._id,
               role: c.role,
-            }
+            };
 
             return collaborator;
-          })
+          }),
         );
-        
+
         collaborators.push(...invitedCollaborators);
       }
 
@@ -291,7 +277,7 @@ const projectController = (socket: FakeSOSocket) => {
       const project: Project = {
         name: requestProject.name,
         creator: requestProject.actor,
-        collaborators: collaborators,
+        collaborators,
         currentState: { files: [] },
         savedStates: [],
       };
@@ -313,14 +299,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+  const deleteProjectRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
     if (!isProjectReqValid(req)) {
       res.status(400).send('Invalid project reqeust');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -337,12 +323,12 @@ const projectController = (socket: FakeSOSocket) => {
         res.status(403).send('Forbidden');
         return;
       }
-      
+
       const result: ProjectResponse = await deleteProjectById(projectId);
       if ('error' in result) {
         throw new Error(result.error);
       }
-      
+
       res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error when deleting project: ${error}`);
@@ -355,14 +341,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either confirming the update or returning an error.
    * @returns A promise resolving to void.
    */
-  const updateProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+  const updateProjectRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
     if (!isProjectReqValid(req) || req.body.name === undefined) {
       res.status(400).send('Invalid update project request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -373,7 +359,7 @@ const projectController = (socket: FakeSOSocket) => {
       if ('error' in actor) {
         throw new Error(actor.error);
       }
-      
+
       const validActor = isProjectOwner(actor._id, project);
       if (validActor === false) {
         res.status(403).send('Forbidden');
@@ -397,7 +383,10 @@ const projectController = (socket: FakeSOSocket) => {
    * @param res The response, either containing the user's projects or returning an error.
    * @returns A promise resolving to void.
    */
-  const getProjectsByUserRoute = async(req: UserByUsernameRequest, res: Response): Promise<void> => {
+  const getProjectsByUserRoute = async (
+    req: UserByUsernameRequest,
+    res: Response,
+  ): Promise<void> => {
     try {
       const { username } = req.params;
 
@@ -409,19 +398,19 @@ const projectController = (socket: FakeSOSocket) => {
       const projects = [];
       if (user.projects !== undefined) {
         const userProjects: DatabaseProject[] = await Promise.all(
-          user.projects.map(async (projectId) => {
+          user.projects.map(async projectId => {
             const project: ProjectResponse = await getProjectById(projectId.toString());
             if ('error' in project) {
               throw new Error(project.error);
             }
 
             return project;
-          })
+          }),
         );
 
         projects.push(...userProjects);
       }
-      
+
       res.status(200).json(projects);
     } catch (error) {
       res.status(500).send(`Error when getting projects by username: ${error}`);
@@ -434,14 +423,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the project or returning an error.
    * @returns A promise resolving to void.
    */
-  const getProjectRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+  const getProjectRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
     if (!isProjectReqValid(req)) {
       res.status(400).send('Invalid project reqeust');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -472,14 +461,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming addition or returning an error.
    * @returns A promise resolving to void.
    */
-  const addCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
+  const addCollaboratorRoute = async (req: CollaboratorRequest, res: Response): Promise<void> => {
     if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
       res.status(400).send('Invalid add collaborator request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
@@ -524,14 +513,17 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming removal or returning an error.
    * @returns A promise resolving to void.
    */
-  const removeCollaboratorRoute = async(req: CollaboratorRequest, res: Response): Promise<void> => {
+  const removeCollaboratorRoute = async (
+    req: CollaboratorRequest,
+    res: Response,
+  ): Promise<void> => {
     if (!isCollaboratorReqValid(req)) {
       res.status(400).send('Invalid collaborator request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
@@ -578,15 +570,17 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming update or returning an error.
    * @returns A promise resolving to void.
    */
-  const updateCollaboratorRoleRoute = async(req: CollaboratorRequest, res: Response):
-    Promise<void> => {
+  const updateCollaboratorRoleRoute = async (
+    req: CollaboratorRequest,
+    res: Response,
+  ): Promise<void> => {
     if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
       res.status(400).send('Invalid update collaborator role request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
@@ -634,14 +628,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the saved state IDs or returning an error.
    * @returns A promise resolving to void.
    */
-  const getStatesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
-    if(!isProjectReqValid(req)) {
+  const getStatesRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
+    if (!isProjectReqValid(req)) {
       res.status(400).send('Invalid project reqeust');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -670,14 +664,14 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming backup or returning an error.
    * @returns A promise resolving to void.
    */
-  const createBackupRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+  const createBackupRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
     if (!isProjectReqValid(req)) {
       res.status(400).send('Invalid project request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId;
+      const { projectId } = req.params;
 
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
@@ -695,11 +689,11 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      const updatedProject: ProjectResponse = await createProjectBackup(projectId); 
+      const updatedProject: ProjectResponse = await createProjectBackup(projectId);
       if ('error' in updatedProject) {
         throw new Error(updatedProject.error);
       }
-      
+
       res.status(200).json(updatedProject);
     } catch (error) {
       res.status(500).send(`Error when creating project backup: ${error}`);
@@ -712,20 +706,20 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming restoration or returning an error.
    * @returns A promise resolving to void.
    */
-  const restoreStateRoute = async(req: ProjectStateRequest, res: Response): Promise<void> => {
+  const restoreStateRoute = async (req: ProjectStateRequest, res: Response): Promise<void> => {
     if (!isProjectStateReqValid(req)) {
       res.status(400).send('Invalid project state request');
       return;
     }
-    
+
     try {
-      const { projectId, stateId } = req.params; 
-      
+      const { projectId, stateId } = req.params;
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -737,8 +731,10 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      const validState = project.savedStates
-        .reduce((acc, id) => acc || stateId === id.toString(), false);
+      const validState = project.savedStates.reduce(
+        (acc, id) => acc || stateId === id.toString(),
+        false,
+      );
       if (!validState) {
         res.status(400).send('Requested state does not belong to project');
         return;
@@ -766,20 +762,20 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the files or returning an error.
    * @returns A promise resolving to void.
    */
-  const getFilesRoute = async(req: ProjectRequest, res: Response): Promise<void> => {
+  const getFilesRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
     if (!isProjectReqValid(req)) {
       res.status(400).send('Invalid project request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId; 
-      
+      const { projectId } = req.params;
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -801,14 +797,14 @@ const projectController = (socket: FakeSOSocket) => {
       const files = [];
       if (state.files !== undefined) {
         const projectFiles: DatabaseProjectFile[] = await Promise.all(
-          state.files.map(async (fileId) => {
+          state.files.map(async fileId => {
             const file: ProjectFileResponse = await getProjectFile(fileId.toString());
             if ('error' in file) {
               throw new Error(file.error);
             }
 
             return file;
-          })
+          }),
         );
 
         files.push(...projectFiles);
@@ -826,20 +822,20 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either returning the created file or returning an error.
    * @returns A promise resolving to void.
    */
-  const createFileRoute = async(req: CreateFileRequest, res: Response): Promise<void> => {
+  const createFileRoute = async (req: CreateFileRequest, res: Response): Promise<void> => {
     if (!isCreateFileRequestValid(req)) {
       res.status(400).send('Invalid create file request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId; 
-      
+      const { projectId } = req.params;
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -852,7 +848,9 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
+      const currentState: ProjectStateResponse = await getProjectStateById(
+        currentStateId.toString(),
+      );
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
@@ -881,20 +879,20 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+  const deleteFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
     if (!isFileRequestValid(req)) {
       res.status(400).send('Invalid file request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId; 
-      
+      const { projectId } = req.params;
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -907,15 +905,19 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
+      const currentState: ProjectStateResponse = await getProjectStateById(
+        currentStateId.toString(),
+      );
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
       const fileId = new ObjectId(req.params.fileId);
 
-      const validFile = currentState.files
-        .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
+      const validFile = currentState.files.reduce(
+        (acc, id) => acc || fileId.toString() === id.toString(),
+        false,
+      );
       if (!validFile) {
         res.status(400).send('Requested file is not part of the current project state');
         return;
@@ -923,7 +925,7 @@ const projectController = (socket: FakeSOSocket) => {
 
       const result: ProjectFileResponse = await deleteFileInState(
         currentStateId.toString(),
-        fileId.toString()
+        fileId.toString(),
       );
       if ('error' in result) {
         throw new Error(result.error);
@@ -941,20 +943,20 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming update or returning an error.
    * @returns A promise resolving to void.
    */
-  const updateFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+  const updateFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
     if (!isFileRequestValid(req)) {
       res.status(400).send('Invalid file request');
       return;
     }
 
     try {
-      const projectId = req.params.projectId; 
-      
+      const { projectId } = req.params;
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -967,20 +969,24 @@ const projectController = (socket: FakeSOSocket) => {
       }
 
       const currentStateId = project.currentState;
-      const currentState: ProjectStateResponse = await getProjectStateById(currentStateId.toString());
+      const currentState: ProjectStateResponse = await getProjectStateById(
+        currentStateId.toString(),
+      );
       if ('error' in currentState) {
         throw new Error(currentState.error);
       }
 
       const fileId = new ObjectId(req.params.fileId);
 
-      const validFile = currentState.files
-        .reduce((acc, id) => acc || fileId.toString() === id.toString(), false);
+      const validFile = currentState.files.reduce(
+        (acc, id) => acc || fileId.toString() === id.toString(),
+        false,
+      );
       if (!validFile) {
         res.status(400).send('Requested file is not part of the current project state');
         return;
       }
-      
+
       // Construct updates from req.body.name and/or req.body.fileType.
       const updates: Record<string, string> = {};
       if (req.body.name !== undefined) {
@@ -990,7 +996,7 @@ const projectController = (socket: FakeSOSocket) => {
         updates.fileType = req.body.fileType;
       }
 
-      const result: ProjectFileResponse = await updateProjectFile(fileId.toString(), updates); 
+      const result: ProjectFileResponse = await updateProjectFile(fileId.toString(), updates);
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -1007,7 +1013,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the file or returning an error.
    * @returns A promise resolving to void.
    */
-  const getFileRoute = async(req: FileRequest, res: Response): Promise<void> => {
+  const getFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
     if (!isFileRequestValid(req)) {
       res.status(400).send('Invalid file request');
       return;
@@ -1015,12 +1021,12 @@ const projectController = (socket: FakeSOSocket) => {
 
     try {
       const { projectId, fileId } = req.params;
-      
+
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      
+
       const actor: UserResponse = await getUserByUsername(req.body.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
@@ -1037,8 +1043,10 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(currentState.error);
       }
 
-      const validFile = currentState.files
-        .reduce((acc, id) => acc || fileId === id.toString(), false);
+      const validFile = currentState.files.reduce(
+        (acc, id) => acc || fileId === id.toString(),
+        false,
+      );
       if (!validFile) {
         res.status(400).send('Requested file is not part of the current project state');
         return;
@@ -1062,34 +1070,37 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the created comment or returning an error.
    * @returns A promise resolving to void.
    */
-  const addFileCommentRoute = async(req: AddFileCommentRequest, res: Response): Promise<void> => {
+  const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
     res.status(500).send('Unimplemented');
   };
 
   /**
    * TODO: Deletes all comments on a line in a file.
-   * @param req The request containing the project and file IDs, and line number 
+   * @param req The request containing the project and file IDs, and line number
    * as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteFileCommentsByLineRoute = async(req: DeleteFileCommentsByLineRequest, res: Response):
-    Promise<void> => {
+  const deleteFileCommentsByLineRoute = async (
+    req: DeleteFileCommentsByLineRequest,
+    res: Response,
+  ): Promise<void> => {
     res.status(500).send('Unimplemented');
   };
 
   /**
    * TODO: Deletes a comment on a project file.
-   * @param req The request containing the project, file, and comment IDs 
+   * @param req The request containing the project, file, and comment IDs
    * as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteFileCommentByIdRoute = async(req: DeleteFileCommentByIdRequest, res: Response):
-    Promise<void> => {
+  const deleteFileCommentByIdRoute = async (
+    req: DeleteFileCommentByIdRequest,
+    res: Response,
+  ): Promise<void> => {
     res.status(500).send('Unimplemented');
   };
-
 
   // Register the routes
   router.post('/createProject', createProjectRoute);
@@ -1110,8 +1121,14 @@ const projectController = (socket: FakeSOSocket) => {
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
   router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
-  router.delete('/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber', deleteFileCommentsByLineRoute);
-  router.delete('/:projectId/file/:fileId/deleteCommentById/:commentId', deleteFileCommentByIdRoute);
+  router.delete(
+    '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',
+    deleteFileCommentsByLineRoute,
+  );
+  router.delete(
+    '/:projectId/file/:fileId/deleteCommentById/:commentId',
+    deleteFileCommentByIdRoute,
+  );
 
   return router;
 };

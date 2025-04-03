@@ -2,8 +2,6 @@ import { ObjectId } from 'mongodb';
 import {
   ProjectState,
   DatabaseProjectState,
-  PopulatedDatabaseProjectState,
-  ProjectFile,
   PopulatedDatabaseProjectFile,
   ProjectStateResponse,
 } from '@fake-stack-overflow/shared/types/types';

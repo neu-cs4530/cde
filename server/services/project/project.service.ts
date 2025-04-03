@@ -52,14 +52,14 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
     if (project) {
       // We need to delete all associated states, their files, and their file comments.
       const stateIds = [...project.savedStates, project.currentState];
-      
+
       const projectStates = await ProjectStateModel.find({ _id: { $in: stateIds } });
 
-      const fileIds: ObjectId[] = []; 
+      const fileIds: ObjectId[] = [];
       if (project.savedStates !== undefined && project.savedStates.length > 0) {
-        projectStates.map(s => { fileIds.push(...s.files) });
+        fileIds.push(...projectStates.map(s => s.files));
       }
-      
+
       // TODO: Eventually, delete comments.
 
       await ProjectFileModel.deleteMany({ _id: { $in: fileIds } });
@@ -75,9 +75,8 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
       }
 
       return deletedProject;
-    } else {
-      throw new Error('Error finding project');
     }
+    throw new Error('Error finding project');
   } catch (error) {
     return { error: `Error occurred when finding project: ${error}` };
   }
@@ -250,8 +249,8 @@ export const updateProjectCollaboratorRole = async (
 ): Promise<ProjectResponse> => {
   try {
     const updatedProject = await ProjectModel.findOneAndUpdate(
-      { _id: projectId, 'collaborators.userId': userId },
-      { $set: { 'collaborators.$.role': role }},
+      { '_id': projectId, 'collaborators.userId': userId },
+      { $set: { 'collaborators.$.role': role } },
       { new: true },
     );
 
@@ -263,7 +262,7 @@ export const updateProjectCollaboratorRole = async (
   } catch (error) {
     return { error: `Error occurred when updating collaborator role: ${error}` };
   }
-}
+};
 
 /**
  * Retrieves a project by its ID.
@@ -284,9 +283,7 @@ export const getProjectById = async (projectId: string): Promise<ProjectResponse
   }
 };
 
-export const createProjectBackup = async (
-  projectId: string,
-): Promise<ProjectResponse> => {
+export const createProjectBackup = async (projectId: string): Promise<ProjectResponse> => {
   try {
     const project: DatabaseProject | null = await ProjectModel.findOne({ _id: projectId });
 
@@ -295,21 +292,21 @@ export const createProjectBackup = async (
     }
 
     const currentState: DatabaseProjectState | null = await ProjectStateModel.findOne({
-      _id: project.currentState
+      _id: project.currentState,
     });
 
     if (!currentState) {
       throw new Error('Current project state not found');
     }
-    
+
     const duplicateFiles = await Promise.all(
-      currentState.files.map(async (fileId) => {
+      currentState.files.map(async fileId => {
         const result: DatabaseProjectFile | null = await ProjectFileModel.findById(fileId);
 
         if (!result) {
           throw new Error('Project file not found');
         }
-        
+
         // TODO: Later, comments.
         const file: ProjectFile = {
           name: result.name,
@@ -317,7 +314,7 @@ export const createProjectBackup = async (
           contents: result.contents,
           comments: [],
         };
-        
+
         const duplicate: DatabaseProjectFile | null = await ProjectFileModel.create(file);
 
         if (!duplicate) {
@@ -325,7 +322,7 @@ export const createProjectBackup = async (
         }
 
         return duplicate;
-      })
+      }),
     );
 
     const duplicateState: DatabaseProjectState | null = await ProjectStateModel.create({
@@ -340,7 +337,7 @@ export const createProjectBackup = async (
       { _id: projectId },
       {
         $set: { currentState: duplicateState._id },
-        $push: { savedStates: currentState._id } 
+        $push: { savedStates: currentState._id },
       },
       { new: true },
     );

@@ -1,11 +1,10 @@
-import mongoose from 'mongoose';
 import { ObjectId } from 'mongodb';
 import supertest from 'supertest';
 import { app } from '../../../app';
 import * as projectService from '../../../services/project/project.service';
 import * as projectStateService from '../../../services/project/projectState.service';
 import * as projectFileService from '../../../services/project/projectFile.service';
-import * as projectFileCommentService from '../../../services/project/projectFileComment.service';
+// import * as projectFileCommentService from '../../../services/project/projectFileComment.service';
 import * as userService from '../../../services/user.service';
 import {
   Project,
@@ -14,8 +13,8 @@ import {
   DatabaseProjectState,
   ProjectFile,
   DatabaseProjectFile,
-  ProjectFileComment,
-  DatabaseProjectFileComment,
+  // ProjectFileComment,
+  // DatabaseProjectFileComment,
   Collaborator,
   SafeDatabaseUser,
 } from '../../../types/types';
@@ -59,12 +58,12 @@ const mockOutsiderUser: SafeDatabaseUser = {
   dateJoined: new Date('2025-03-26'),
 };
 
-const mockProjectFileComment: ProjectFileComment = {
-  text: 'phenomenal',
-  commentBy: mockViewerUser.username,
-  commentDateTime: new Date('2025-03-26'),
-  lineNumber: 1,
-};
+// const mockProjectFileComment: ProjectFileComment = {
+//   text: 'phenomenal',
+//   commentBy: mockViewerUser.username,
+//   commentDateTime: new Date('2025-03-26'),
+//   lineNumber: 1,
+// };
 
 const mockProjectFile: ProjectFile = {
   name: 'hello.py',
@@ -100,10 +99,6 @@ const mockDatabaseProjectState: DatabaseProjectState = {
   updatedAt: new Date('2025-03-26'),
 };
 
-const mockSavedProjectState: ProjectState = {
-  files: [],
-};
-
 const mockSavedDatabaseProjectState: DatabaseProjectState = {
   _id: new ObjectId(32),
   files: [],
@@ -129,7 +124,7 @@ const mockDatabaseProject: DatabaseProject = {
   createdAt: new Date('2025-03-26'),
 };
 
-const mockCollaboratorsJSON = mockProject.collaborators.map(c => ({
+const MOCK_COLLABORATORS_JSON = mockProject.collaborators.map(c => ({
   userId: c.userId.toString(),
   role: c.role,
 }));
@@ -138,7 +133,7 @@ const mockProjectJSONResponse = {
   _id: mockDatabaseProject._id.toString(),
   name: mockDatabaseProject.name,
   creator: mockDatabaseProject.creator,
-  collaborators: mockCollaboratorsJSON, 
+  collaborators: MOCK_COLLABORATORS_JSON,
   currentState: mockDatabaseProjectState._id.toString(),
   savedStates: [],
   createdAt: mockDatabaseProject.createdAt.toISOString(),
@@ -150,17 +145,16 @@ const updateProjectSpy = jest.spyOn(projectService, 'updateProject');
 const getProjectByIdSpy = jest.spyOn(projectService, 'getProjectById');
 const addProjectCollaboratorSpy = jest.spyOn(projectService, 'addProjectCollaborator');
 const removeProjectCollaboratorSpy = jest.spyOn(projectService, 'removeProjectCollaborator');
-const updateProjectCollaboratorRoleSpy = jest.spyOn(projectService, 'updateProjectCollaboratorRole');
+const updateProjectCollaboratorRoleSpy = jest.spyOn(
+  projectService,
+  'updateProjectCollaboratorRole',
+);
 const createProjectBackupSpy = jest.spyOn(projectService, 'createProjectBackup');
 const revertProjectToStateSpy = jest.spyOn(projectService, 'revertProjectToState');
 const saveProjectStateSpy = jest.spyOn(projectStateService, 'saveProjectState');
-const deleteProjectStateByIdSpy = jest.spyOn(projectStateService, 'deleteProjectStateById');
-const updateProjectStateSpy = jest.spyOn(projectStateService, 'updateProjectState');
 const getProjectStateByIdSpy = jest.spyOn(projectStateService, 'getProjectStateById');
 const saveFileInStateSpy = jest.spyOn(projectStateService, 'saveFileInState');
 const deleteFileInStateSpy = jest.spyOn(projectStateService, 'deleteFileInState');
-const saveProjectFileSpy = jest.spyOn(projectFileService, 'saveProjectFile');
-const deleteProjectFileByIdSpy = jest.spyOn(projectFileService, 'deleteProjectFileById');
 const updateProjectFileSpy = jest.spyOn(projectFileService, 'updateProjectFile');
 const getProjectFileByIdSpy = jest.spyOn(projectFileService, 'getProjectFile');
 const getUserByUsernameSpy = jest.spyOn(userService, 'getUserByUsername');
@@ -171,25 +165,25 @@ describe('Project Controller', () => {
       const mockReqBody = {
         name: mockProject.name,
         actor: mockOwnerUser.username,
-        collaborators: [{
-          username: mockEditorUser.username,
-          role: 'EDITOR', 
-        },
-        {
-          username: mockViewerUser.username,
-          role: 'VIEWER', 
-        }],
+        collaborators: [
+          {
+            username: mockEditorUser.username,
+            role: 'EDITOR',
+          },
+          {
+            username: mockViewerUser.username,
+            role: 'VIEWER',
+          },
+        ],
       };
-      
+
       // The server sequentially retrieves user IDs with getUserByUsername()
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       saveProjectSpy.mockResolvedValueOnce(mockDatabaseProject);
 
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual(mockProjectJSONResponse);
@@ -202,9 +196,7 @@ describe('Project Controller', () => {
         // Request body missing necessary actor field
       };
 
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(400);
     });
@@ -213,15 +205,15 @@ describe('Project Controller', () => {
       const mockReqBody = {
         name: 'python homework solver',
         actor: 'harry',
-        collaborators: [{
-          username: 'ariel',
-          role: 'PYTHON ENGINEER',  // Not a real CollaboratorRole
-        }],
+        collaborators: [
+          {
+            username: 'ariel',
+            role: 'PYTHON ENGINEER', // Not a real CollaboratorRole
+          },
+        ],
       };
-      
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(400);
     });
@@ -234,9 +226,7 @@ describe('Project Controller', () => {
 
       getUserByUsernameSpy.mockResolvedValueOnce({ error: 'Error retrieving user' });
 
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
@@ -245,18 +235,18 @@ describe('Project Controller', () => {
       const mockReqBody = {
         name: 'the best project ever',
         actor: mockOwnerUser.username,
-        collaborators: [{
-          username: 'boingo',
-          role: 'EDITOR',
-        }],
+        collaborators: [
+          {
+            username: 'boingo',
+            role: 'EDITOR',
+          },
+        ],
       };
 
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce({ error: 'Error retrieving user' });
 
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
@@ -271,9 +261,7 @@ describe('Project Controller', () => {
       saveProjectStateSpy.mockResolvedValueOnce(mockDatabaseProjectState);
       saveProjectSpy.mockResolvedValueOnce({ error: 'Error saving project' });
 
-      const response = await supertest(app)
-        .post('/projects/createProject')
-        .send(mockReqBody);
+      const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
@@ -358,7 +346,10 @@ describe('Project Controller', () => {
 
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-      updateProjectSpy.mockResolvedValueOnce({ ...mockDatabaseProject, name: 'best test project ever' });
+      updateProjectSpy.mockResolvedValueOnce({
+        ...mockDatabaseProject,
+        name: 'best test project ever',
+      });
 
       const response = await supertest(app)
         .patch(`/projects/updateProjectById/${mockDatabaseProject._id}`)
@@ -419,12 +410,16 @@ describe('Project Controller', () => {
   });
 
   describe('GET /projects/getProjectsByUser/:username', () => {
-    it('should return all of a user\'s projects', async () => {
-      getUserByUsernameSpy.mockResolvedValueOnce({ ...mockOwnerUser, projects: [mockDatabaseProject._id] });
+    it("should return all of a user's projects", async () => {
+      getUserByUsernameSpy.mockResolvedValueOnce({
+        ...mockOwnerUser,
+        projects: [mockDatabaseProject._id],
+      });
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
 
-      const response = await supertest(app)
-        .get(`/projects/getProjectsByUser/${mockOwnerUser.username}`);
+      const response = await supertest(app).get(
+        `/projects/getProjectsByUser/${mockOwnerUser.username}`,
+      );
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([mockProjectJSONResponse]);
@@ -433,8 +428,9 @@ describe('Project Controller', () => {
     it('should return 500 if database error while searching username', async () => {
       getUserByUsernameSpy.mockResolvedValueOnce({ error: 'Error finding user' });
 
-      const response = await supertest(app)
-        .get(`/projects/getProjectsByUser/${mockOwnerUser.username}`);
+      const response = await supertest(app).get(
+        `/projects/getProjectsByUser/${mockOwnerUser.username}`,
+      );
 
       expect(response.status).toBe(500);
     });
@@ -518,8 +514,8 @@ describe('Project Controller', () => {
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ 
-        ...mockProjectJSONResponse, 
+      expect(response.body).toEqual({
+        ...mockProjectJSONResponse,
         collaborators: [
           ...mockProjectJSONResponse.collaborators,
           {
@@ -538,7 +534,7 @@ describe('Project Controller', () => {
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/addCollaborator/${mockOutsiderUser.username}`)
         .send(mockReqBody);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -551,7 +547,7 @@ describe('Project Controller', () => {
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/addCollaborator/${mockOutsiderUser.username}`)
         .send(mockReqBody);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -597,7 +593,7 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
       addProjectCollaboratorSpy.mockResolvedValueOnce({
-        error: 'Error adding collaborator'
+        error: 'Error adding collaborator',
       });
 
       const response = await supertest(app)
@@ -608,14 +604,16 @@ describe('Project Controller', () => {
     });
 
     it('should return 404 if username not provided', async () => {
-      const response = await supertest(app)
-        .post(`/projects/${mockDatabaseProject._id}/addCollaborator/`);
+      const response = await supertest(app).post(
+        `/projects/${mockDatabaseProject._id}/addCollaborator/`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .post(`/projects//addCollaborator/${mockOutsiderUser.username}`);
+      const response = await supertest(app).post(
+        `/projects//addCollaborator/${mockOutsiderUser.username}`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -631,8 +629,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       removeProjectCollaboratorSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
-        collaborators: mockDatabaseProject.collaborators
-          .filter(c => c.userId !== mockViewerUser._id),
+        collaborators: mockDatabaseProject.collaborators.filter(
+          c => c.userId !== mockViewerUser._id,
+        ),
       });
 
       const response = await supertest(app)
@@ -642,8 +641,9 @@ describe('Project Controller', () => {
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
         ...mockProjectJSONResponse,
-        collaborators: mockProjectJSONResponse.collaborators
-          .filter(c => c.userId !== mockViewerUser._id.toString()),
+        collaborators: mockProjectJSONResponse.collaborators.filter(
+          c => c.userId !== mockViewerUser._id.toString(),
+        ),
       });
     });
 
@@ -657,7 +657,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/removeCollaborator/${mockOutsiderUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/removeCollaborator/${mockOutsiderUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(400);
@@ -702,7 +704,7 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       removeProjectCollaboratorSpy.mockResolvedValueOnce({
-        error: 'Error removing collaborator'
+        error: 'Error removing collaborator',
       });
 
       const response = await supertest(app)
@@ -713,14 +715,16 @@ describe('Project Controller', () => {
     });
 
     it('should return 404 if username not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/removeCollaborator/`);
+      const response = await supertest(app).patch(
+        `/projects/${mockDatabaseProject._id}/removeCollaborator/`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects//removeCollaborator/${mockOutsiderUser.username}`);
+      const response = await supertest(app).patch(
+        `/projects//removeCollaborator/${mockOutsiderUser.username}`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -738,27 +742,27 @@ describe('Project Controller', () => {
       updateProjectCollaboratorRoleSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
         collaborators: [
-          ...(mockDatabaseProject.collaborators.filter(c => 
-            c.userId !== mockViewerUser._id
-          )),
+          ...mockDatabaseProject.collaborators.filter(c => c.userId !== mockViewerUser._id),
           {
             userId: mockViewerUser._id,
             role: 'EDITOR',
           },
-        ]
+        ],
       });
-      
+
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual({
         ...mockProjectJSONResponse,
         collaborators: [
-          ...(mockProjectJSONResponse.collaborators.filter(c => 
-            c.userId !== mockViewerUser._id.toString()
-          )),
+          ...mockProjectJSONResponse.collaborators.filter(
+            c => c.userId !== mockViewerUser._id.toString(),
+          ),
           {
             userId: mockViewerUser._id.toString(),
             role: 'EDITOR',
@@ -767,7 +771,7 @@ describe('Project Controller', () => {
       });
     });
 
-    it('should return 400 if collaborator is invalid', async() => {
+    it('should return 400 if collaborator is invalid', async () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
         role: 'EDITOR',
@@ -778,7 +782,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(400);
@@ -790,9 +796,11 @@ describe('Project Controller', () => {
       };
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`,
+        )
         .send(mockReqBody);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -803,9 +811,11 @@ describe('Project Controller', () => {
       };
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockOutsiderUser.username}`,
+        )
         .send(mockReqBody);
-      
+
       expect(response.status).toBe(400);
     });
 
@@ -819,7 +829,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -835,7 +847,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -851,25 +865,29 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       updateProjectCollaboratorRoleSpy.mockResolvedValueOnce({
-        error: 'Error updating project'
+        error: 'Error updating project',
       });
-      
+
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/${mockViewerUser.username}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
 
     it('should return 404 if username not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateCollaboratorRole/`);
+      const response = await supertest(app).patch(
+        `/projects/${mockDatabaseProject._id}/updateCollaboratorRole/`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects//updateCollaboratorRole/${mockViewerUser.username}`);
+      const response = await supertest(app).patch(
+        `/projects//updateCollaboratorRole/${mockViewerUser.username}`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -936,7 +954,7 @@ describe('Project Controller', () => {
       };
 
       getProjectByIdSpy.mockResolvedValueOnce({
-        error: 'Error retrieving project'
+        error: 'Error retrieving project',
       });
 
       const response = await supertest(app)
@@ -957,7 +975,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
       };
-      
+
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       createProjectBackupSpy.mockResolvedValueOnce({
@@ -982,7 +1000,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockViewerUser.username,
       };
-      
+
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
 
@@ -997,7 +1015,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOutsiderUser.username,
       };
-      
+
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
 
@@ -1012,11 +1030,11 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
       };
-      
+
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       createProjectBackupSpy.mockResolvedValueOnce({
-        error: 'Error updating project'
+        error: 'Error updating project',
       });
 
       const response = await supertest(app)
@@ -1040,7 +1058,7 @@ describe('Project Controller', () => {
 
       getProjectByIdSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
-        savedStates: [mockSavedDatabaseProjectState._id], 
+        savedStates: [mockSavedDatabaseProjectState._id],
       });
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce(mockSavedDatabaseProjectState);
@@ -1048,9 +1066,11 @@ describe('Project Controller', () => {
         ...mockDatabaseProject,
         currentState: mockSavedDatabaseProjectState._id,
       });
-      
+
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
@@ -1086,7 +1106,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockEditorUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -1101,7 +1123,9 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -1114,30 +1138,34 @@ describe('Project Controller', () => {
 
       getProjectByIdSpy.mockResolvedValueOnce({
         ...mockDatabaseProject,
-        savedStates: [mockSavedDatabaseProjectState._id], 
+        savedStates: [mockSavedDatabaseProjectState._id],
       });
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce(mockSavedDatabaseProjectState);
       revertProjectToStateSpy.mockResolvedValueOnce({
-        error: 'Error reverting project state'
+        error: 'Error reverting project state',
       });
-      
+
       const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`)
+        .patch(
+          `/projects/${mockDatabaseProject._id}/restoreStateById/${mockSavedDatabaseProjectState._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects//restoreStateById/${mockSavedDatabaseProjectState._id}`);
+      const response = await supertest(app).patch(
+        `/projects//restoreStateById/${mockSavedDatabaseProjectState._id}`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if stateId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/restoreStateById/`);
+      const response = await supertest(app).patch(
+        `/projects/${mockDatabaseProject._id}/restoreStateById/`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -1155,7 +1183,7 @@ describe('Project Controller', () => {
         files: [mockDatabaseProjectFile._id],
       });
       getProjectFileByIdSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
-      
+
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/getFiles`)
         .send(mockReqBody);
@@ -1171,7 +1199,7 @@ describe('Project Controller', () => {
 
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
-      
+
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/getFiles`)
         .send(mockReqBody);
@@ -1191,9 +1219,9 @@ describe('Project Controller', () => {
         files: [mockDatabaseProjectFile._id],
       });
       getProjectFileByIdSpy.mockResolvedValueOnce({
-        error: 'Error retrieving file'
+        error: 'Error retrieving file',
       });
-      
+
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/getFiles`)
         .send(mockReqBody);
@@ -1214,7 +1242,7 @@ describe('Project Controller', () => {
         name: 'newfile.py',
         fileType: 'PYTHON',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce(mockDatabaseProjectState);
@@ -1233,7 +1261,7 @@ describe('Project Controller', () => {
         actor: mockOwnerUser.username,
         fileType: 'PYTHON',
       };
-      
+
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/createFile`)
         .send(mockReqBody);
@@ -1246,7 +1274,7 @@ describe('Project Controller', () => {
         actor: mockOwnerUser.username,
         fileType: 'RACKET',
       };
-      
+
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/createFile`)
         .send(mockReqBody);
@@ -1260,10 +1288,10 @@ describe('Project Controller', () => {
         name: 'newfile.py',
         fileType: 'PYTHON',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
-      
+
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/createFile`)
         .send(mockReqBody);
@@ -1277,12 +1305,12 @@ describe('Project Controller', () => {
         name: 'newfile.py',
         fileType: 'PYTHON',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce(mockDatabaseProjectState);
       saveFileInStateSpy.mockResolvedValueOnce({
-        error: 'Error saving file'
+        error: 'Error saving file',
       });
 
       const response = await supertest(app)
@@ -1304,7 +1332,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce({
@@ -1314,7 +1342,9 @@ describe('Project Controller', () => {
       deleteFileInStateSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
 
       const response = await supertest(app)
-        .delete(`/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`)
+        .delete(
+          `/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
@@ -1325,12 +1355,14 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockViewerUser.username,
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
 
       const response = await supertest(app)
-        .delete(`/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`)
+        .delete(
+          `/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -1340,12 +1372,14 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOutsiderUser.username,
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
       const response = await supertest(app)
-        .delete(`/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`)
+        .delete(
+          `/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -1355,7 +1389,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce({
@@ -1363,25 +1397,29 @@ describe('Project Controller', () => {
         files: [mockDatabaseProjectFile._id],
       });
       deleteFileInStateSpy.mockResolvedValueOnce({
-        error: 'Error deleting file'
+        error: 'Error deleting file',
       });
 
       const response = await supertest(app)
-        .delete(`/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`)
+        .delete(
+          `/projects/${mockDatabaseProject._id}/deleteFileById/${mockDatabaseProjectFile._id}`,
+        )
         .send(mockReqBody);
 
       expect(response.status).toBe(500);
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .delete(`/projects//deleteFileById/${mockDatabaseProjectFile._id}`);
+      const response = await supertest(app).delete(
+        `/projects//deleteFileById/${mockDatabaseProjectFile._id}`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if fileId not provided', async () => {
-      const response = await supertest(app)
-        .delete(`/projects/${mockDatabaseProject._id}/deleteFileById/`);
+      const response = await supertest(app).delete(
+        `/projects/${mockDatabaseProject._id}/deleteFileById/`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -1393,7 +1431,7 @@ describe('Project Controller', () => {
         actor: mockOwnerUser.username,
         name: newName,
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce({
@@ -1421,7 +1459,7 @@ describe('Project Controller', () => {
         actor: mockViewerUser.username,
         name: 'goodbye.py',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
 
@@ -1437,7 +1475,7 @@ describe('Project Controller', () => {
         actor: mockOutsiderUser.username,
         name: 'goodbye.py',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
 
@@ -1453,7 +1491,7 @@ describe('Project Controller', () => {
         actor: mockOwnerUser.username,
         name: 'goodbye.py',
       };
-      
+
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectStateByIdSpy.mockResolvedValueOnce({
@@ -1461,7 +1499,7 @@ describe('Project Controller', () => {
         files: [mockDatabaseProjectFile._id],
       });
       updateProjectFileSpy.mockResolvedValueOnce({
-        error: 'Error updating file'
+        error: 'Error updating file',
       });
 
       const response = await supertest(app)
@@ -1472,14 +1510,16 @@ describe('Project Controller', () => {
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects//updateFileById/${mockDatabaseProjectFile._id}`);
+      const response = await supertest(app).patch(
+        `/projects//updateFileById/${mockDatabaseProjectFile._id}`,
+      );
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if fileId not provided', async () => {
-      const response = await supertest(app)
-        .patch(`/projects/${mockDatabaseProject._id}/updateFileById/`);
+      const response = await supertest(app).patch(
+        `/projects/${mockDatabaseProject._id}/updateFileById/`,
+      );
       expect(response.status).toBe(404);
     });
   });
@@ -1496,7 +1536,7 @@ describe('Project Controller', () => {
         ...mockDatabaseProjectState,
         files: [mockDatabaseProjectFile._id],
       });
-      getProjectFileByIdSpy.mockResolvedValueOnce(mockDatabaseProjectFile); 
+      getProjectFileByIdSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
 
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/file/${mockDatabaseProjectFile._id}`)
@@ -1510,7 +1550,7 @@ describe('Project Controller', () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
       };
-      
+
       const paramId = new ObjectId();
 
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
@@ -1558,8 +1598,8 @@ describe('Project Controller', () => {
         files: [mockDatabaseProjectFile._id],
       });
       getProjectFileByIdSpy.mockResolvedValueOnce({
-        error: 'Error retrieving file'
-      }); 
+        error: 'Error retrieving file',
+      });
 
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/file/${mockDatabaseProjectFile._id}`)
@@ -1569,14 +1609,12 @@ describe('Project Controller', () => {
     });
 
     it('should return 404 if projectId not provided', async () => {
-      const response = await supertest(app)
-        .get(`/projects//file/${mockDatabaseProjectFile._id}`);
+      const response = await supertest(app).get(`/projects//file/${mockDatabaseProjectFile._id}`);
       expect(response.status).toBe(404);
     });
 
     it('should return 404 if fileId not provided', async () => {
-      const response = await supertest(app)
-        .get(`/projects/${mockDatabaseProject._id}/file/`);
+      const response = await supertest(app).get(`/projects/${mockDatabaseProject._id}/file/`);
       expect(response.status).toBe(404);
     });
   });

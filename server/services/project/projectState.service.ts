@@ -3,7 +3,6 @@ import ProjectFileModel from '../../models/projectFiles.model';
 import {
   ProjectState,
   ProjectStateResponse,
-  PopulatedDatabaseProjectState,
   DatabaseProjectState,
   ProjectFile,
   ProjectFileResponse,
@@ -183,9 +182,9 @@ export const deleteFileInState = async (
       throw new Error('Project state not found');
     }
 
-    const file: DatabaseProjectFile | null = await ProjectFileModel.findOneAndDelete(
-      { _id: fileId }
-    );
+    const file: DatabaseProjectFile | null = await ProjectFileModel.findOneAndDelete({
+      _id: fileId,
+    });
 
     if (!file) {
       throw new Error('Error creating project file');

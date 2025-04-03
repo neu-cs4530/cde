@@ -7,7 +7,6 @@ import {
   ProjectResponse,
   ProjectState,
   DatabaseProjectState,
-  ProjectFile,
   DatabaseProjectFile,
 } from '@fake-stack-overflow/shared/types/types';
 import ProjectModel from '../../../models/projects.model';
@@ -30,7 +29,6 @@ jest.mock(`../../../models/projectFiles.model`);
 jest.mock('../../../models/users.model');
 
 const FAKE_PROJECT_ID = new ObjectId().toHexString();
-const fakeObjectId = new ObjectId();
 
 const fakeProjectFile: DatabaseProjectFile = {
   _id: new ObjectId(),
