@@ -1070,9 +1070,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the created comment or returning an error.
    * @returns A promise resolving to void.
    */
-  const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
-    res.status(500).send('Unimplemented');
-  };
+  // const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
+  //   res.status(500).send('Unimplemented');
+  // };
 
   /**
    * TODO: Deletes all comments on a line in a file.
@@ -1081,12 +1081,12 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteFileCommentsByLineRoute = async (
-    req: DeleteFileCommentsByLineRequest,
-    res: Response,
-  ): Promise<void> => {
-    res.status(500).send('Unimplemented');
-  };
+  // const deleteFileCommentsByLineRoute = async (
+  //   req: DeleteFileCommentsByLineRequest,
+  //   res: Response,
+  // ): Promise<void> => {
+  //   res.status(500).send('Unimplemented');
+  // };
 
   /**
    * TODO: Deletes a comment on a project file.
@@ -1095,12 +1095,12 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const deleteFileCommentByIdRoute = async (
-    req: DeleteFileCommentByIdRequest,
-    res: Response,
-  ): Promise<void> => {
-    res.status(500).send('Unimplemented');
-  };
+  // const deleteFileCommentByIdRoute = async (
+  //   req: DeleteFileCommentByIdRequest,
+  //   res: Response,
+  // ): Promise<void> => {
+  //   res.status(500).send('Unimplemented');
+  // };
 
   // Register the routes
   router.post('/createProject', createProjectRoute);
@@ -1120,15 +1120,15 @@ const projectController = (socket: FakeSOSocket) => {
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
-  router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
-  router.delete(
-    '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',
-    deleteFileCommentsByLineRoute,
-  );
-  router.delete(
-    '/:projectId/file/:fileId/deleteCommentById/:commentId',
-    deleteFileCommentByIdRoute,
-  );
+  // router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
+  // router.delete(
+  //   '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',
+  //   deleteFileCommentsByLineRoute,
+  // );
+  // router.delete(
+  //   '/:projectId/file/:fileId/deleteCommentById/:commentId',
+  //   deleteFileCommentByIdRoute,
+  // );
 
   return router;
 };
