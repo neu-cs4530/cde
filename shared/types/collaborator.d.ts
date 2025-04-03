@@ -38,7 +38,7 @@ export interface RequestCollaborator {
 }
 
 /**
- * Express request for adding or removing project collaborators, containing 
+ * Express request for adding or removing project collaborators, containing
  * project ID and collaborator username as route parameters, and username of
  * the actor.
  * - `projectId`: The ID of the project provided as a route parameter

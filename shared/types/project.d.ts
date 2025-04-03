@@ -69,7 +69,7 @@ export interface CreateProjectRequest extends Request {
 }
 
 /**
- * Express request for updating or deleting a project, containing project ID and 
+ * Express request for updating or deleting a project, containing project ID and
  * username of deleter.
  * - `projectId`: The ID of the project provided as a route parameter.
  * - `actor`: The username of the actor submitted in the request (body).
