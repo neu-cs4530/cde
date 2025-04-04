@@ -3,18 +3,21 @@ import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiX } from 'react-i
 import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
+import { getProjectsByUser } from '../../../services/projectService';
+import useUserContext from '../../../hooks/useUserContext';
+
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
+  const { userC, socket } = useUserContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-
   const [searchUsername, setSearchUsername] = useState('');
 
   const [newProject, setNewProject] = useState({
@@ -50,6 +53,16 @@ const ProjectDashboard = () => {
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
   };
+
+  // get all projects by user use effect
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+    const fetchData = async () => {
+      const allProj = await getProjectsByUser(userC.username);
+      setProjects(allProj);
+    };
+    fetchData();
+  }, []);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
