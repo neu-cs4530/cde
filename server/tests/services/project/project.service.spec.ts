@@ -1,13 +1,17 @@
 import { ObjectId } from 'mongodb';
 import {
-  CollaboratorRole,
-  DatabaseProject,
   SafeDatabaseUser,
+  CollaboratorRole,
   Project,
+  DatabaseProject,
   ProjectResponse,
+  ProjectState,
+  DatabaseProjectState,
+  DatabaseProjectFile,
 } from '@fake-stack-overflow/shared/types/types';
 import ProjectModel from '../../../models/projects.model';
 import ProjectStateModel from '../../../models/projectStates.model';
+import ProjectFileModel from '../../../models/projectFiles.model';
 import UserModel from '../../../models/users.model';
 import {
   saveProject,
@@ -21,23 +25,42 @@ import * as projectService from '../../../services/project/project.service';
 
 jest.mock('../../../models/projects.model');
 jest.mock('../../../models/projectStates.model');
+jest.mock(`../../../models/projectFiles.model`);
 jest.mock('../../../models/users.model');
 
 const FAKE_PROJECT_ID = new ObjectId().toHexString();
-const fakeObjectId = new ObjectId();
+
+const fakeProjectFile: DatabaseProjectFile = {
+  _id: new ObjectId(),
+  name: 'main.py',
+  fileType: 'PYTHON',
+  contents: 'print("Hello")',
+  comments: [],
+};
+
+const fakeState: ProjectState = {
+  files: [],
+};
+
+const fakeDatabaseState: DatabaseProjectState = {
+  _id: new ObjectId(),
+  files: [fakeProjectFile._id],
+  createdAt: new Date(),
+  updatedAt: new Date(),
+};
 
 const fakeProject: DatabaseProject = {
-  _id: fakeObjectId,
+  _id: new ObjectId(),
   name: 'Fake Project',
   creator: 'testuser',
   collaborators: [],
-  currentState: fakeObjectId,
+  currentState: fakeDatabaseState._id,
   savedStates: [],
   createdAt: new Date(),
 };
 
 const fakeUser: SafeDatabaseUser = {
-  _id: fakeObjectId,
+  _id: new ObjectId(),
   username: 'testuser',
   dateJoined: new Date(),
 };
@@ -50,12 +73,13 @@ describe('Project Service', () => {
 
   describe('saveProject', () => {
     it('should return the saved project', async () => {
+      (ProjectStateModel.create as jest.Mock).mockResolvedValue(fakeState);
       (ProjectModel.create as jest.Mock).mockResolvedValue(fakeProject);
       const projectInput = {
         name: fakeProject.name,
         creator: fakeProject.creator,
         collaborators: [],
-        currentState: { _id: new ObjectId(), files: [] },
+        currentState: fakeState,
         savedStates: [],
       } as unknown as Project;
       const result = await saveProject(projectInput);
@@ -78,19 +102,31 @@ describe('Project Service', () => {
 
   describe('deleteProjectById', () => {
     it('should delete and return the project', async () => {
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findById as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.deleteMany as jest.Mock).mockResolvedValue([]);
+      (ProjectStateModel.deleteMany as jest.Mock).mockResolvedValue([fakeDatabaseState]);
       (ProjectModel.findOneAndDelete as jest.Mock).mockResolvedValue(fakeProject);
       const result = await deleteProjectById(FAKE_PROJECT_ID);
-      if ('error' in result) throw new Error('Unexpected error');
+      if ('error' in result) throw new Error(result.error);
       expect(result).toEqual(fakeProject);
     });
 
     it('should return an error if deletion fails', async () => {
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findById as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.deleteMany as jest.Mock).mockResolvedValue([]);
+      (ProjectStateModel.deleteMany as jest.Mock).mockResolvedValue([fakeDatabaseState]);
       (ProjectModel.findOneAndDelete as jest.Mock).mockResolvedValue(null);
       const result = await deleteProjectById(FAKE_PROJECT_ID);
       expect('error' in result).toBe(true);
     });
 
     it('should return an error if exception is thrown', async () => {
+      (ProjectModel.findById as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findById as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.deleteMany as jest.Mock).mockResolvedValue([]);
+      (ProjectStateModel.deleteMany as jest.Mock).mockResolvedValue([fakeDatabaseState]);
       (ProjectModel.findOneAndDelete as jest.Mock).mockRejectedValue(new Error('delete error'));
       const result = await deleteProjectById(FAKE_PROJECT_ID);
       expect('error' in result).toBe(true);
@@ -278,3 +314,7 @@ describe('Project Service', () => {
     });
   });
 });
+
+// TODO: removeProjectCollaborator
+// TODO: updateProjectCollaboratorRole
+// TODO: createProjectBackup

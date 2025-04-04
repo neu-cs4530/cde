@@ -62,14 +62,48 @@ export interface AddCommentRequest extends Request {
 }
 
 /**
- * Interface extending the request body for adding a comment to a project file.
- * - `id`: The unique identifier of the project file being commented on.
+ * Express request for adding a comment to a project file.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
  * - `comment`: The project file comment object being added.
  */
-export interface AddProjectFileCommentRequest extends Request {
+export interface AddFileCommentRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+  };
   body: {
-    id: string;
     comment: ProjectFileComment;
+  };
+}
+
+/**
+ * Express request for deleting a project file line's comments, containing
+ * project and file IDs, and line number.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `lineNumber`: The line number provided as a route parameter.
+ */
+export interface DeleteFileCommentsByLineRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+    lineNumber: number;
+  };
+}
+
+/**
+ * Express request for deleting a project file comment, containing
+ * project, file, and comment IDs.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `commentId`: The ID of the comment provided as a route parameter.
+ */
+export interface DeleteFileCommentByIdRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+    commentId: string;
   };
 }
 
