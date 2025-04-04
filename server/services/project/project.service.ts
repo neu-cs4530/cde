@@ -56,12 +56,10 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
       const projectStates = await ProjectStateModel.find({ _id: { $in: stateIds } });
 
       if (project.savedStates !== undefined && project.savedStates.length > 0) {
-        const fileIds: ObjectId[] = projectStates.reduce(
-          (acc: ObjectId[], s) => { 
-            acc.push(...s.files); 
-            return acc; 
-          }, [] as ObjectId[]
-        );
+        const fileIds: ObjectId[] = projectStates.reduce((acc: ObjectId[], s) => {
+          acc.push(...s.files);
+          return acc;
+        }, [] as ObjectId[]);
 
         // TODO: Eventually, delete comments.
 
