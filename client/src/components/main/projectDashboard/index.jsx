@@ -59,10 +59,10 @@ const ProjectDashboard = () => {
     if (!userC || !userC.username) return;
     const fetchData = async () => {
       const allProj = await getProjectsByUser(userC.username);
-      setProjects(allProj);
+      socket(allProj);
     };
     fetchData();
-  }, []);
+  }, [userC?.username]);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
