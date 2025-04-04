@@ -63,7 +63,6 @@ const ProjectDashboard = () => {
     }
   }, [showAddForm, allUsers.length]);
 
-  // Lock/unlock body scroll when modal is shown/hidden
   useEffect(() => {
     if (showAddForm) {
       document.body.style.overflow = 'hidden';
@@ -76,7 +75,6 @@ const ProjectDashboard = () => {
     };
   }, [showAddForm]);
 
-  // Filter users by username as input changes
   useEffect(() => {
     setFilteredUsers(
       allUsers.filter(user => user.username.toLowerCase().includes(searchUsername.toLowerCase())),
@@ -88,7 +86,6 @@ const ProjectDashboard = () => {
       ...newProject,
       sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
     });
-    // Update filtered users and search
     setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
     setSearchUsername('');
   };
@@ -262,7 +259,8 @@ const ProjectDashboard = () => {
                           <select
                             value={user.permissions}
                             onChange={e => updateUserPermissions(user.id, e.target.value)}
-                            className='form-select form-select-sm me-2'>
+                            className='form-select form-select-sm me-2'
+                            style={{ minWidth: '90px' }}>
                             <option value='viewer'>Viewer</option>
                             <option value='editor'>Editor</option>
                           </select>
@@ -397,7 +395,7 @@ const ProjectDashboard = () => {
                           <FiStar
                             size={20}
                             fill={project.starred ? 'currentColor' : 'none'}
-                            style={{ color: project.starred ? '#ffc107' : '#dee2e6' }}
+                            style={{ color: project.starred ? '#f59e0b' : '#d1d5db' }}
                           />
                         </button>
                       </td>
