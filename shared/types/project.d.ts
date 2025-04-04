@@ -1,6 +1,7 @@
+import { Request } from 'express';
 import { ObjectId } from 'mongodb';
 import { ProjectState, PopulatedDatabaseProjectState } from './projectState';
-import { Collaborator, PopulatedCollaborator } from './collaborator';
+import { Collaborator, PopulatedCollaborator, RequestCollaborator } from './collaborator';
 
 /**
  * Represents a collaborative project.
@@ -52,3 +53,34 @@ export interface PopulatedDatabaseProject
  * - Either a `DatabaseProject` object or an error message.
  */
 export type ProjectResponse = DatabaseProject | { error: string };
+
+/**
+ * Express request for project creation, containing project details.
+ * - `name`: The name of the project submitted in the request (body).
+ * - `actor`: The username of the project actor submitted in the request (body).
+ * - `collaborators`: Optional field for additional collaborators (body).
+ */
+export interface CreateProjectRequest extends Request {
+  body: {
+    name: string;
+    actor: string;
+    collaborators?: RequestCollaborator[];
+  };
+}
+
+/**
+ * Express request for updating or deleting a project, containing project ID and
+ * username of deleter.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `actor`: The username of the actor submitted in the request (body).
+ * - `name`: Optionally, a new name for the project.
+ */
+export interface ProjectRequest extends Request {
+  params: {
+    projectId: string;
+  };
+  body: {
+    actor: string;
+    name?: string;
+  };
+}
