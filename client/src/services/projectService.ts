@@ -307,9 +307,12 @@ const deleteCommentsByLine = async (
   fileId: string,
   lineNumber: number,
 ): Promise<DatabaseProjectFile> => {
-  const res = await api.delete(`${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine`, {
-    data: { lineNumber },
-  });
+  const res = await api.delete(
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine`,
+    {
+      data: { lineNumber },
+    },
+  );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by line`);
   }
