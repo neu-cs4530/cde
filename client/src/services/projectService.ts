@@ -1,7 +1,33 @@
 import { DatabaseProject, CreateProjectRequest } from '@fake-stack-overflow/shared/types/project';
 import { DatabaseProjectFile } from '@fake-stack-overflow/shared/types/projectFile';
-import { RequestCollaborator } from '@fake-stack-overflow/shared/types/collaborator';
+import {
+  RequestCollaborator,
+  PopulatedCollaborator,
+} from '@fake-stack-overflow/shared/types/collaborator';
+import { ProjectResponse } from '@fake-stack-overflow/shared/types/project';
+import { PopulatedDatabaseProject } from '@fake-stack-overflow/shared/types/project';
+import {
+  ProjectFileType,
+  ProjectFileResponse,
+} from '@fake-stack-overflow/shared/types/projectFile';
+//import { CollaboratorRole } from '@fake-stack-overflow/shared/types/collaborator';
+import {
+  ProjectFileComment,
+  ProjectFileCommentResponse,
+} from '@fake-stack-overflow/shared/types/comment';
+import {
+  ProjectStateResponse,
+  PopulatedDatabaseProjectState,
+} from '@fake-stack-overflow/shared/types/projectState';
+
 import api from './config';
+
+//** IMPORTANT: should get requests have the query in the form of
+// const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`);
+// where the query is at the end, rather than sending it like this?
+//  const data = { actor };
+//  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
+// ** isnt it the case that get reqs we can send a body?*/
 
 // project api url
 const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
@@ -15,7 +41,7 @@ const createProject = async (
   name: string,
   actor: string,
   collaborators?: RequestCollaborator[],
-): Promise<DatabaseProject> => {
+): Promise<ProjectResponse> => {
   const projectData: CreateProjectRequest['body'] = {
     name,
     actor,
@@ -56,12 +82,30 @@ const updateProjectById = async (
   projectId: string,
   actor: string,
   name?: string,
+  fileType?: ProjectFileType,
 ): Promise<DatabaseProject> => {
-  const res = await api.patch(`${PROJECT_API_URL}/updateProjectById/${projectId}`, { actor, name });
+  const res = await api.patch(`${PROJECT_API_URL}/updateProjectById/${projectId}`, {
+    actor,
+    name,
+    fileType,
+  });
   if (res.status !== 200) {
     throw new Error(`Error when updating project by id`);
   }
   return res.data;
+};
+
+const updateProjectState = async (
+  projectId: string,
+  stateId: string,
+  actor: string,
+): Promise<ProjectStateResponse> => {
+  try {
+    const res = await api.put(`${PROJECT_API_URL}/${projectId}/state/${stateId}`, { actor });
+    return res.data;
+  } catch (error) {
+    return { error: 'Error updating project state' };
+  }
 };
 
 /**
@@ -82,9 +126,13 @@ const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
  * @param projectId
  * @returns
  */
-const getProjectById = async (projectId: string, actor: string): Promise<DatabaseProject> => {
+const getProjectById = async (
+  projectId: string,
+  actor: string,
+  fileId: string,
+): Promise<PopulatedDatabaseProject> => {
   const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting projects by id`);
   }
@@ -162,9 +210,13 @@ const updateCollaboratorRole = async (
  * @param projectId
  * @returns
  */
-const getProjectStates = async (projectId: string, actor: string): Promise<DatabaseProject> => {
+const getProjectStates = async (
+  projectId: string,
+  stateId: string,
+  actor: string,
+): Promise<PopulatedDatabaseProjectState> => {
   const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getStates`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/state/${stateId}`, { data });
   if (res.status !== 200) {
     throw new Error(`Error when getting project states`);
   }
@@ -229,10 +281,12 @@ const createFile = async (
   projectId: string,
   actor: string,
   name: string,
-): Promise<DatabaseProjectFile> => {
+  fileType: ProjectFileType,
+): Promise<ProjectFileResponse> => {
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/createFile`, {
     actor,
     name,
+    fileType,
   });
   if (res.status !== 200) {
     throw new Error(`Error when creating file`);
@@ -297,6 +351,7 @@ const getFileById = async (
 ): Promise<DatabaseProjectFile> => {
   const data = { actor };
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
+  // const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`); query instead?
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
   }
@@ -316,8 +371,8 @@ const addCommentToFile = async (
   fileId: string,
   actor: string,
   lineNumber: number,
-  commentContent: string,
-): Promise<DatabaseProjectFile> => {
+  commentContent: ProjectFileComment,
+): Promise<ProjectFileCommentResponse> => {
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
     actor,
     lineNumber,
@@ -376,6 +431,25 @@ const deleteCommentById = async (
   return res.data;
 };
 
+const getCollaborators = async (projectId: string): Promise<PopulatedCollaborator[]> => {
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/collaborators`);
+  if (res.status !== 200) {
+    throw new Error(`Error getting all collaborators.`);
+  }
+  return res.data;
+};
+
+const saveProjectState = async (
+  projectId: string,
+  actor: string,
+): Promise<ProjectStateResponse> => {
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/state`, { actor });
+  if (res.status !== 200) {
+    throw new Error(`Error saving project state.`);
+  }
+  return res.data;
+};
+
 export {
   createProject,
   deleteProjectById,
@@ -396,4 +470,6 @@ export {
   addCommentToFile,
   deleteCommentsByLine,
   deleteCommentById,
+  getCollaborators,
+  saveProjectState,
 };
