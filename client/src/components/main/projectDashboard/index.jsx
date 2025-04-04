@@ -142,7 +142,7 @@ const ProjectDashboard = () => {
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
   const trashProject = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
+    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true, starred: false } : p)));
   };
 
   // Handle backdrop click to close modal
@@ -324,11 +324,20 @@ const ProjectDashboard = () => {
 
         {/* All Projects */}
         <div className='mb-5'>
-          <h2 className='mb-3'>All Projects</h2>
+          <div className='d-flex justify-content-between align-items-center mb-3'>
+            <h2 className='mb-0'>All Projects</h2>
+            <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
+              Add Project
+            </button>
+          </div>
           {projects.filter(p => !p.inTrash).length > 0 ? (
             <div className='row row-cols-1 row-cols-md-3 g-4'>
               {projects
-                .filter(p => !p.inTrash && (activeTab !== 'starred' || p.starred))
+                .filter(project => {
+                  if (activeTab === 'starred') return project.starred;
+                  if (activeTab === 'trash') return project.inTrash;
+                  return !project.inTrash; // Recent tab shows all
+                })
                 .map(project => (
                   <div className='col' key={project.id}>
                     <ProjectCard project={project} />
