@@ -1,16 +1,18 @@
-import { DatabaseProject, CreateProjectRequest } from '@fake-stack-overflow/shared/types/project';
-import { DatabaseProjectFile } from '@fake-stack-overflow/shared/types/projectFile';
 import {
   RequestCollaborator,
   PopulatedCollaborator,
 } from '@fake-stack-overflow/shared/types/collaborator';
-import { ProjectResponse } from '@fake-stack-overflow/shared/types/project';
-import { PopulatedDatabaseProject } from '@fake-stack-overflow/shared/types/project';
+import {
+  ProjectResponse,
+  PopulatedDatabaseProject,
+  DatabaseProject,
+  CreateProjectRequest,
+} from '@fake-stack-overflow/shared/types/project';
 import {
   ProjectFileType,
   ProjectFileResponse,
+  DatabaseProjectFile,
 } from '@fake-stack-overflow/shared/types/projectFile';
-//import { CollaboratorRole } from '@fake-stack-overflow/shared/types/collaborator';
 import {
   ProjectFileComment,
   ProjectFileCommentResponse,
@@ -472,4 +474,5 @@ export {
   deleteCommentById,
   getCollaborators,
   saveProjectState,
+  updateProjectState,
 };
