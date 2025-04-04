@@ -24,7 +24,7 @@ import {
 
 import api from './config';
 
-//** IMPORTANT: should get requests have the query in the form of
+// ** IMPORTANT: should get requests have the query in the form of
 // const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`);
 // where the query is at the end, rather than sending it like this?
 //  const data = { actor };
