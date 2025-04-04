@@ -55,14 +55,18 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
 
       const projectStates = await ProjectStateModel.find({ _id: { $in: stateIds } });
 
-      const fileIds: ObjectId[] = [];
       if (project.savedStates !== undefined && project.savedStates.length > 0) {
-        fileIds.push(...projectStates.map(s => s.files));
+        const fileIds: ObjectId[] = projectStates.reduce(
+          (acc: ObjectId[], s) => { 
+            acc.push(...s.files); 
+            return acc; 
+          }, [] as ObjectId[]
+        );
+
+        // TODO: Eventually, delete comments.
+
+        await ProjectFileModel.deleteMany({ _id: { $in: fileIds } });
       }
-
-      // TODO: Eventually, delete comments.
-
-      await ProjectFileModel.deleteMany({ _id: { $in: fileIds } });
 
       await ProjectStateModel.deleteMany({ _id: { $in: stateIds } });
 
