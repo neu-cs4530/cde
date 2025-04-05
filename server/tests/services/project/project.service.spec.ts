@@ -18,7 +18,10 @@ import {
   deleteProjectById,
   updateProject,
   addProjectCollaborator,
+  removeProjectCollaborator,
+  updateProjectCollaboratorRole,
   getProjectById,
+  createProjectBackup,
   revertProjectToState,
 } from '../../../services/project/project.service';
 import * as projectService from '../../../services/project/project.service';
@@ -286,14 +289,12 @@ describe('Project Service', () => {
       (UserModel.findOne as jest.Mock).mockReturnValue({
         select: jest.fn().mockResolvedValue(fakeUser),
       });
-      jest
-        .spyOn(projectService, 'updateProject')
-        .mockResolvedValue(null as unknown as ProjectResponse);
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
 
       const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
 
       expect(result).toEqual({
-        error: expect.stringContaining('Error updating project collaborators'),
+        error: expect.stringContaining('Error updating project'),
       });
     });
 
@@ -301,10 +302,8 @@ describe('Project Service', () => {
       (UserModel.findOne as jest.Mock).mockReturnValue({
         select: jest.fn().mockResolvedValue(fakeUser),
       });
-
-      (UserModel.findOneAndUpdate as jest.Mock).mockReturnValue({
-        select: jest.fn().mockResolvedValue(null),
-      });
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
+      (UserModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
 
       const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
 
