@@ -4,6 +4,7 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import { runProjectFile } from '../../../services/projectService';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -57,6 +58,23 @@ const ProjectEditor = () => {
         return `// ${fileName} content\n// Start coding in Java...`;
       default:
         return `// ${fileName} content`;
+    }
+  };
+  const runPythonFile = async () => {
+    try {
+      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
+      // get the fileId for the current file
+      const fileId = activeFile;
+      const result = await runProjectFile(fileId, activeFile, fileContents[activeFile]);
+      if (result.error) {
+        setConsoleOutput(prev => `${prev}${result.error}\n`);
+      }
+      if (result.output) {
+        setConsoleOutput(prev => `${prev}${result.output}\n`);
+      }
+      setConsoleOutput(prev => `${prev}> Execution complete\n`);
+    } catch (error) {
+      setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
 
@@ -272,10 +290,15 @@ const ProjectEditor = () => {
             <button className='btn' onClick={() => setIsShareOpen(true)}>
               Share
             </button>
-            {/* cannot directly run python or java  in the browser because they require runtime environments */}
-            {/* Run button only for JavaScript files */}
+            {/* Run button for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
+                Run
+              </button>
+            )}
+            {/* Run button for Python files */}
+            {fileLanguages[activeFile] === 'python' && (
+              <button className='btn' onClick={runPythonFile}>
                 Run
               </button>
             )}
