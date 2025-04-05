@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import './index.css';
-import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiX } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
+import { getProjectsByUser } from '../../../services/projectService';
+import useUserContext from '../../../hooks/useUserContext';
+
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 // import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
+  const { userC, socket } = useUserContext();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
-
   const [searchUsername, setSearchUsername] = useState('');
 
   const [newProject, setNewProject] = useState({
@@ -44,6 +49,21 @@ const ProjectDashboard = () => {
     );
     setFilteredUsers(filtered);
   };
+
+  const handleClick = project => {
+    navigate(`/projects/${project._id}`);
+  };
+
+  // get all projects by user use effect
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+    const fetchData = async () => {
+      const allProj = await getProjectsByUser(userC.username);
+      socket(allProj);
+    };
+    fetchData();
+  }, [userC, socket]);
+
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
       getUsers()
@@ -56,7 +76,18 @@ const ProjectDashboard = () => {
     }
   }, [showAddForm, allUsers.length]);
 
-  // Filter users by username as input changes
+  useEffect(() => {
+    if (showAddForm) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [showAddForm]);
+
   useEffect(() => {
     setFilteredUsers(
       allUsers.filter(user => user.username.toLowerCase().includes(searchUsername.toLowerCase())),
@@ -68,7 +99,6 @@ const ProjectDashboard = () => {
       ...newProject,
       sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
     });
-    // Update filtered users and search
     setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
     setSearchUsername('');
   };
@@ -125,248 +155,243 @@ const ProjectDashboard = () => {
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
   const trashProject = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true } : p)));
+    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true, starred: false } : p)));
+  };
+
+  // Handle backdrop click to close modal
+  const handleBackdropClick = e => {
+    if (e.target.classList.contains('modal')) {
+      closeAndResetForm();
+    }
   };
 
   return (
-    <div className='project-dashboard'>
+    <div className='container-fluid py-4'>
       {/* Header */}
-      <header className='project-header'>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div className='project-logo'>FSO</div>
-          <span style={{ fontSize: '1.25rem', color: '#1f2937' }}>Projects</span>
+      <header className='mb-4 justify-content-between'>
+        <div className='d-flex align-items-center justify-content-between'>
+          <div className='d-flex align-items-center'>
+            <div className='bg-primary text-white p-2 rounded me-2 d-flex align-items-center'>
+              FSO
+            </div>
+            <span className='fs-5 text-dark'>Projects</span>
+          </div>
           {/* Search Bar */}
-          <div className='project-search'>
-            <input type='text' placeholder='Search projects' className='search-input' />
-            <FiSearch
-              style={{
-                position: 'absolute',
-                left: '0.75rem',
-                top: '0.625rem',
-                width: '1.25rem',
-                height: '1.25rem',
-                color: '#6b7280',
-              }}
-            />
+          <div className='d-flex justify-content-center align-items-center'>
+            <div className='position-relative align-items-right'>
+              <input
+                type='text'
+                placeholder='Search projects'
+                className='form-control ps-5 align-items-right'
+              />
+              <FiSearch
+                className='position-absolute'
+                style={{
+                  left: '0.75rem',
+                  top: '0.625rem',
+                  width: '1.25rem',
+                  height: '1.25rem',
+                  color: '#6c757d',
+                }}
+              />
+            </div>
           </div>
-          <div style={{ marginLeft: '1rem' }}>
-            <button
-              className='add-button-icon'
-              onClick={() => setShowAddForm(true)}
-              style={{
-                background: 'none',
-                border: 'none',
-                padding: '0.5rem',
-                borderRadius: '9999px',
-                cursor: 'pointer',
-              }}>
-              <FiPlus size={20} />
-            </button>
-          </div>
+          <div className='ms-3'></div>
         </div>
       </header>
+
       {/* Project modal */}
       {showAddForm && (
-        <div className='modal-overlay'>
-          <div
-            className='modal-content'
-            style={{
-              maxWidth: '36rem',
-              maxHeight: '80vh',
-              overflowY: 'auto',
-              backgroundColor: '#ffffff',
-              zIndex: 100,
-            }}>
-            <div className='modal-header'>
-              <h3 className='modal-title'>Add New Project</h3>
-              <button onClick={closeAndResetForm} className='modal-close'>
-                <FiX size={20} />
-              </button>
-            </div>
-
-            {/* Project Name Input */}
-            <div className='form-group'>
-              <label className='form-label'>Project Name</label>
-              <input
-                type='text'
-                value={newProject.name}
-                onChange={e => setNewProject({ ...newProject, name: e.target.value })}
-                className='form-input'
-                placeholder='Enter project name'
-              />
-            </div>
-
-            {/* User Search and Share */}
-            <div className='form-group'>
-              <label className='form-label'>Share Project</label>
-              <input
-                type='text'
-                value={searchUsername}
-                onChange={handleInputChange}
-                className='form-input'
-                placeholder='Search username to share'
-              />
-            </div>
-
-            {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
-              <div className='form-group'>
-                <label className='form-label'>User Search Results</label>
-                {filteredUsers.map(user => (
-                  <div key={user.id} className='flex items-center justify-between mb-2'>
-                    <div className='flex items-center'>
-                      <FiUser className='mr-2' />
-                      <span>{user.username}</span>
-                    </div>
-                    <button onClick={() => handleAddSharedUser(user)} className='btn btn-primary'>
-                      Add
-                    </button>
-                  </div>
-                ))}
+        <div className='modal show d-block' tabIndex='-1' onClick={handleBackdropClick}>
+          <div className='modal-dialog' onClick={e => e.stopPropagation()}>
+            <div className='modal-content'>
+              <div className='modal-header'>
+                <h5 className='modal-title'>Add New Project</h5>
+                <button type='button' className='btn-close' onClick={closeAndResetForm}></button>
               </div>
-            )}
 
-            {/* Shared Users List */}
-            {newProject.sharedUsers.length > 0 && (
-              <div className='form-group'>
-                <label className='form-label'>Shared Users</label>
-                {newProject.sharedUsers.map(user => (
-                  <div key={user.id} className='flex items-center justify-between mb-2'>
-                    <div className='flex items-center'>
-                      <FiUser className='mr-2' />
-                      <span>{user.username}</span>
-                    </div>
-                    <div className='flex items-center'>
-                      <select
-                        value={user.permissions}
-                        onChange={e => updateUserPermissions(user.id, e.target.value)}
-                        className='form-input mr-2'>
-                        <option value='viewer'>Viewer</option>
-                        <option value='editor'>Editor</option>
-                      </select>
-                      <button onClick={() => removeSharedUser(user.id)} className='text-red-500'>
-                        <FiTrash2 />
-                      </button>
-                    </div>
+              <div className='modal-body'>
+                {/* Project Name Input */}
+                <div className='mb-3'>
+                  <label className='form-label'>Project Name</label>
+                  <input
+                    type='text'
+                    value={newProject.name}
+                    onChange={e => setNewProject({ ...newProject, name: e.target.value })}
+                    className='form-control'
+                    placeholder='Enter project name'
+                  />
+                </div>
+
+                {/* User Search and Share */}
+                <div className='mb-3'>
+                  <label className='form-label'>Share Project</label>
+                  <input
+                    type='text'
+                    value={searchUsername}
+                    onChange={handleInputChange}
+                    className='form-control'
+                    placeholder='Search username to share'
+                  />
+                </div>
+
+                {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
+                  <div className='mb-3'>
+                    <label className='form-label'>User Search Results</label>
+                    {filteredUsers.map(user => (
+                      <div
+                        key={user.id}
+                        className='d-flex align-items-center justify-content-between mb-2'>
+                        <div className='d-flex align-items-center'>
+                          <FiUser className='me-2' />
+                          <span>{user.username}</span>
+                        </div>
+                        <button
+                          onClick={() => handleAddSharedUser(user)}
+                          className='btn btn-sm btn-primary'>
+                          Add
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
+
+                {/* Shared Users List */}
+                {newProject.sharedUsers.length > 0 && (
+                  <div className='mb-3'>
+                    <label className='form-label'>Shared Users</label>
+                    {newProject.sharedUsers.map(user => (
+                      <div
+                        key={user.id}
+                        className='d-flex align-items-center justify-content-between mb-2'>
+                        <div className='d-flex align-items-center'>
+                          <FiUser className='me-2' />
+                          <span>{user.username}</span>
+                        </div>
+                        <div className='d-flex align-items-center'>
+                          <select
+                            value={user.permissions}
+                            onChange={e => updateUserPermissions(user.id, e.target.value)}
+                            className='form-select form-select-sm me-2'
+                            style={{ minWidth: '90px' }}>
+                            <option value='viewer'>Viewer</option>
+                            <option value='editor'>Editor</option>
+                          </select>
+                          <button
+                            onClick={() => removeSharedUser(user.id)}
+                            className='btn btn-sm text-danger'>
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-            <div className='form-footer'>
-              <button onClick={closeAndResetForm} className='btn btn-cancel'>
-                Cancel
-              </button>
-              <button
-                onClick={addProject}
-                className='btn btn-primary'
-                disabled={!newProject.name.trim()}>
-                Add Project
-              </button>
+
+              <div className='modal-footer'>
+                <button onClick={closeAndResetForm} className='btn btn-secondary'>
+                  Cancel
+                </button>
+                <button
+                  onClick={addProject}
+                  className='btn btn-primary'
+                  disabled={!newProject.name.trim()}>
+                  Add Project
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
-      {/* main */}
-      <main className='project-content'>
-        {/* tabs */}
-        <div className='project-tabs'>
-          <button
-            className={`tab-button ${activeTab === 'recent' ? 'tab-selected' : ''}`}
-            onClick={() => setActiveTab('recent')}>
-            Recently Opened
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'starred' ? 'tab-selected' : ''}`}
-            onClick={() => setActiveTab('starred')}>
-            Starred
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'trash' ? 'tab-selected' : ''}`}
-            onClick={() => setActiveTab('trash')}>
-            Trash
-          </button>
-        </div>
-        {/* Recents */}
-        <div style={{ marginBottom: '3rem' }}>
-          <h2 className='section-title'>Quick Access</h2>
-          {projects.filter(p => p.starred).length > 0 ? (
-            <div className='project-grid'>
+
+      {/* Modal backdrop */}
+      {showAddForm && <div className='modal-backdrop fade show' onClick={closeAndResetForm}></div>}
+
+      {/* Main content */}
+      <main>
+        {/* Tabs */}
+        <ul className='nav nav-tabs mb-4'>
+          <li className='nav-item'>
+            <button
+              className={`nav-link ${activeTab === 'recent' ? 'active' : ''}`}
+              onClick={() => setActiveTab('recent')}>
+              All Projects
+            </button>
+          </li>
+          <li className='nav-item'>
+            <button
+              className={`nav-link ${activeTab === 'starred' ? 'active' : ''}`}
+              onClick={() => setActiveTab('starred')}>
+              Starred
+            </button>
+          </li>
+          <li className='nav-item'>
+            <button
+              className={`nav-link ${activeTab === 'trash' ? 'active' : ''}`}
+              onClick={() => setActiveTab('trash')}>
+              Trash
+            </button>
+          </li>
+        </ul>
+
+        {/* All Projects */}
+        <div className='mb-5'>
+          <div className='d-flex justify-content-between align-items-center mb-3'>
+            <h2 className='mb-0'>All Projects</h2>
+            <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
+              Add Project
+            </button>
+          </div>
+          {projects.filter(p => !p.inTrash).length > 0 ? (
+            <div className='row row-cols-1 row-cols-md-3 g-4'>
               {projects
-                .filter(p => p.starred)
+                .filter(project => {
+                  if (activeTab === 'starred') return project.starred;
+                  if (activeTab === 'trash') return project.inTrash;
+                  return !project.inTrash; // Recent tab shows all
+                })
                 .map(project => (
-                  <ProjectCard key={project.id} project={project} />
+                  <div className='col' key={project.id}>
+                    <ProjectCard project={project} />
+                  </div>
                 ))}
             </div>
           ) : (
-            <div className='empty-state'>
-              <div className='empty-text'>Star your important projects to see them here!</div>
+            <div className='text-center py-5 bg-light rounded'>
+              <div className='mb-3'>See your important projects here!</div>
               <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
                 Add Your Project Here
               </button>
             </div>
           )}
         </div>
-        {/* Projects */}
+
+        {/* Projects Table */}
         <div>
-          <div className='section-header'>
-            <h2 className='section-title'>
+          <div className='d-flex justify-content-between align-items-center mb-3'>
+            <h2>
               {activeTab === 'recent' && 'Recent Projects'}
               {activeTab === 'starred' && 'Starred Projects'}
               {activeTab === 'trash' && 'Trash'}
             </h2>
-            <button onClick={() => setShowAddForm(true)} className='add-button'>
-              <FiPlus className='add-button-icon' />
+            <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
+              <FiPlus className='me-1' />
               New Project
             </button>
           </div>
+
           {projects.length > 0 ? (
-            <table className='projects-table'>
-              <thead className='table-header'>
+            <table className='table table-hover'>
+              <thead>
                 <tr>
-                  <th
-                    style={{
-                      padding: '0.75rem 1.5rem 0.75rem 1.5rem',
-                      textAlign: 'left',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      textTransform: 'uppercase',
-                      color: '#6b7280',
-                      width: '1.5rem',
-                    }}>
-                    <span className='sr-only'>Star</span>
+                  <th style={{ width: '50px' }}>
+                    <span className='visually-hidden'>Star</span>
                   </th>
-                  <th
-                    style={{
-                      padding: '0.75rem 0.75rem',
-                      textAlign: 'left',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      textTransform: 'uppercase',
-                      color: '#6b7280',
-                    }}>
-                    Name
-                  </th>
-                  <th
-                    style={{
-                      padding: '0.75rem 0.75rem',
-                      textAlign: 'left',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      textTransform: 'uppercase',
-                      color: '#6b7280',
-                    }}>
-                    Last Modified
-                  </th>
-                  <th
-                    style={{
-                      padding: '0.75rem 1.5rem 0.75rem 0.75rem',
-                      textAlign: 'right',
-                      fontSize: '0.75rem',
-                      fontWeight: '500',
-                      textTransform: 'uppercase',
-                      color: '#6b7280',
-                      width: '2.5rem',
-                    }}>
-                    <span className='sr-only'>Actions</span>
+                  <th>Name</th>
+                  <th>Last Modified</th>
+                  <th style={{ width: '80px' }}>
+                    <span className='visually-hidden'>Actions</span>
                   </th>
                 </tr>
               </thead>
@@ -374,20 +399,21 @@ const ProjectDashboard = () => {
                 {projects
                   .filter(project => {
                     if (activeTab === 'starred') return project.starred;
-                    if (activeTab === 'trash') return project.inTrash; // No trash implementation yet
+                    if (activeTab === 'trash') return project.inTrash;
                     return !project.inTrash; // Recent tab shows all
                   })
                   .map(project => (
-                    <tr key={project.id} className='table-row'>
-                      <td className='row-icon'>
+                    <tr
+                      key={project.id}
+                      onClick={() => handleClick(project)}
+                      style={{ cursor: 'pointer' }}>
+                      <td>
                         <button
-                          onClick={() => toggleStar(project.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                          }}>
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleStar(project.id);
+                          }}
+                          className='btn btn-link p-0'>
                           <FiStar
                             size={20}
                             fill={project.starred ? 'currentColor' : 'none'}
@@ -395,26 +421,21 @@ const ProjectDashboard = () => {
                           />
                         </button>
                       </td>
-                      <td style={{ padding: '1rem 0.75rem' }}>
-                        <div className='row-title'>
-                          <FiFile size={20} style={{ color: '#2563eb', marginRight: '0.75rem' }} />
+                      <td>
+                        <div className='d-flex align-items-center'>
+                          <FiFile size={20} className='text-primary me-2' />
                           <span>{project.name}</span>
                         </div>
                       </td>
-                      <td style={{ padding: '1rem 0.75rem' }} className='row-subtitle'>
-                        {project.lastEdited}
-                      </td>
-                      <td className='row-actions'>
+                      <td className='text-muted'>{project.lastEdited}</td>
+                      <td>
                         <button
-                          onClick={() => trashProject(project.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            padding: '0.5rem',
-                            color: '#9ca3af',
-                          }}>
-                          <FiTrash2 size={20} />
+                          onClick={e => {
+                            e.stopPropagation();
+                            trashProject(project.id);
+                          }}
+                          className='btn btn-link text-secondary p-1'>
+                          <FiTrash2 size={18} />
                         </button>
                       </td>
                     </tr>
@@ -422,12 +443,10 @@ const ProjectDashboard = () => {
               </tbody>
             </table>
           ) : (
-            <div className='empty-state'>
-              <div className='empty-icon'>
-                <FiFile size={32} style={{ color: '#2563eb' }} />
-              </div>
-              <h3 className='empty-title'>No projects yet</h3>
-              <p className='empty-text'>Add your first project to get started</p>
+            <div className='text-center py-5 bg-light rounded'>
+              <FiFile size={32} className='text-primary mb-3' />
+              <h3>No projects yet</h3>
+              <p className='text-muted'>Add your first project here!</p>
               <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
                 Add Project
               </button>
