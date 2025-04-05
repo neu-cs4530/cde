@@ -62,7 +62,7 @@ const ProjectDashboard = () => {
       socket(allProj);
     };
     fetchData();
-  }, [userC, socket]);
+  }, []);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
