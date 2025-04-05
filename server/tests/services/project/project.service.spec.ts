@@ -387,7 +387,7 @@ describe('Project Service', () => {
         currentState: dupState._id,
         savedStates: [fakeDatabaseState._id],
       });
-      
+
       const result = await createProjectBackup(FAKE_PROJECT_ID);
       if ('error' in result) {
         throw new Error(`Unexpected error: ${result.error}`);
@@ -403,7 +403,7 @@ describe('Project Service', () => {
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Project not found'),
       });
@@ -414,7 +414,7 @@ describe('Project Service', () => {
       (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Current project state not found'),
       });
@@ -426,7 +426,7 @@ describe('Project Service', () => {
       (ProjectFileModel.findById as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Project file not found'),
       });
@@ -439,7 +439,7 @@ describe('Project Service', () => {
       (ProjectFileModel.create as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Error duplicating project file'),
       });
@@ -458,7 +458,7 @@ describe('Project Service', () => {
       (ProjectStateModel.create as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Error duplicating project state'),
       });
@@ -484,7 +484,7 @@ describe('Project Service', () => {
       (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
 
       const result = await createProjectBackup(FAKE_PROJECT_ID);
-      
+
       expect(result).toEqual({
         error: expect.stringContaining('Error updating project'),
       });
