@@ -291,6 +291,11 @@ export const getProjectById = async (projectId: string): Promise<ProjectResponse
   }
 };
 
+/**
+ * Saves a backup of the current project state.
+ * @param {string} projectId - The ID of the project being backed up.
+ * @returns {Promise<ProjectResponse>} - Resolves with the updated project object or an error message.
+ */
 export const createProjectBackup = async (projectId: string): Promise<ProjectResponse> => {
   try {
     const project: DatabaseProject | null = await ProjectModel.findOne({ _id: projectId });
