@@ -314,13 +314,37 @@ describe('Project Service', () => {
   });
 
   describe('updateProjectCollaboratorRole', () => {
-    it('', () => {
+    it('should update the collaborator role', async () => {
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
 
+      const result = await updateProjectCollaboratorRole(
+        FAKE_PROJECT_ID,
+        fakeUser._id.toString(),
+        'EDITOR',
+      );
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toEqual(fakeProject);
+    });
+
+    it('should throw an error if project update fails', async () => {
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result = await updateProjectCollaboratorRole(
+        FAKE_PROJECT_ID,
+        fakeUser._id.toString(),
+        'EDITOR',
+      );
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating collaborators'),
+      });
     });
   });
 
   describe('createProjectBackup', () => {
-    it('', () => {
+    it('', async () => {
 
     });
   });
