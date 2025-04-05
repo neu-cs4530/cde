@@ -219,17 +219,23 @@ export const removeProjectCollaborator = async (
 
     const updatedProject = await ProjectModel.findOneAndUpdate(
       { _id: projectId },
-      {
-        $pull: { collaborators: { user: user._id } },
-      },
+      { $pull: { collaborators: { user: user._id } } },
       { new: true },
     );
 
     if (!updatedProject) {
-      throw Error('Error finding project');
+      throw Error('Error updating project');
     }
 
-    await UserModel.updateOne({ _id: user._id }, { $pull: { projects: new ObjectId(projectId) } });
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      { $pull: { projects: new ObjectId(projectId) } },
+      { new: true },
+    );
+
+    if (!updatedUser) {
+      throw Error('Error updating user');
+    }
 
     return updatedProject;
   } catch (error) {

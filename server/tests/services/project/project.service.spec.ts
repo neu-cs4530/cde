@@ -25,7 +25,7 @@ import * as projectService from '../../../services/project/project.service';
 
 jest.mock('../../../models/projects.model');
 jest.mock('../../../models/projectStates.model');
-jest.mock(`../../../models/projectFiles.model`);
+jest.mock('../../../models/projectFiles.model');
 jest.mock('../../../models/users.model');
 
 const FAKE_PROJECT_ID = new ObjectId().toHexString();
@@ -258,6 +258,74 @@ describe('Project Service', () => {
     });
   });
 
+  describe('removeProjectCollaborator', () => {
+    it('should remove a collaborator from a project and update the user', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
+      (UserModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toEqual(fakeProject);
+    });
+
+    it('should return error if user not found', async () => {
+      (UserModel.findOne as jest.Mock).mockResolvedValue(null);
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+      expect('error' in result).toBe(true);
+    });
+
+    it('should throw an error if project update fails', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+      jest
+        .spyOn(projectService, 'updateProject')
+        .mockResolvedValue(null as unknown as ProjectResponse);
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating project collaborators'),
+      });
+    });
+
+    it('should throw an error if user update fails', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+
+      (UserModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(null),
+      });
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating user'),
+      });
+    });
+  });
+
+  describe('updateProjectCollaboratorRole', () => {
+    it('', () => {
+
+    });
+  });
+
+  describe('createProjectBackup', () => {
+    it('', () => {
+
+    });
+  });
+
   describe('getProjectById', () => {
     it('should return a project by ID', async () => {
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
@@ -314,7 +382,3 @@ describe('Project Service', () => {
     });
   });
 });
-
-// TODO: removeProjectCollaborator
-// TODO: updateProjectCollaboratorRole
-// TODO: createProjectBackup
