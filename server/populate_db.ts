@@ -58,6 +58,8 @@ import {
 } from './data/posts_strings';
 import CommentModel from './models/comments.model';
 import UserModel from './models/users.model';
+import ProjectModel from './models/projects.model';
+import ProjectFileModel from './models/projectFiles.model';
 
 // Pass URL of your mongoDB instance as first argument(e.g., mongodb://127.0.0.1:27017/fake_so)
 const userArgs = process.argv.slice(2);
@@ -204,6 +206,33 @@ async function userCreate(
   return await UserModel.create(userDetail);
 }
 
+async function projectCreate(
+  name: string,
+  creator: string,
+  createdAt: Date, // if you want to track this locally
+  collaborators: { userId: mongoose.Types.ObjectId; role: string }[] = [],
+): Promise<mongoose.Document> {
+  return await ProjectModel.create({
+    name,
+    creator,
+    collaborators,
+  });
+}
+
+async function projectFileCreate(
+  name: string,
+  fileType: 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER',
+  contents: string,
+): Promise<mongoose.Document> {
+  return await ProjectFileModel.create({
+    name,
+    fileType,
+    contents,
+    comments: [],
+  });
+}
+
+
 /**
  * Populates the database with predefined data.
  * Logs the status of the operation to the console.
@@ -342,6 +371,24 @@ const populate = async () => {
       [],
       [c12],
     );
+    // adding hardcoded project for testing
+    const creator = await UserModel.findOne({ username: 'sana' });
+
+    if (!creator) {
+      throw new Error('User "sana" not found. Cannot create test project.');
+    }
+
+    const testProject = await projectCreate(
+      'Hardcoded Test Project',
+      creator.username,
+      new Date(),
+      [{ userId: creator._id, role: 'owner' }]
+    );
+
+    await projectFileCreate('main.py', 'PYTHON', 'print("Hello from main")');
+    await projectFileCreate('helper.java', 'JAVA', 'public class Helper {}');
+    await projectFileCreate('script.js', 'JAVASCRIPT', 'console.log("Test")');
+
 
     console.log('Database populated');
   } catch (err) {
