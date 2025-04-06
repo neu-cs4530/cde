@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
-import { getProjectsByUser } from '../../../services/projectService';
+import { getProjectsByUser, createProject } from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -19,6 +19,9 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
+  const { pid } = useParams();
+  // const [textErr, setTextErr] = useState('');
+  // const [projectID, setprojectID] = useState('');
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -57,11 +60,8 @@ const ProjectDashboard = () => {
   // get all projects by user use effect
   useEffect(() => {
     if (!userC || !userC.username) return;
-    const fetchData = async () => {
-      const allProj = await getProjectsByUser(userC.username);
-      socket(allProj);
-    };
-    fetchData();
+
+    socket(userC);
   }, [userC, socket]);
 
   useEffect(() => {
@@ -113,6 +113,15 @@ const ProjectDashboard = () => {
     });
   };
 
+  // useEffect(() => {
+  //   if (!pid) {
+  //     setTextErr('project ID is missing.');
+  //     navigate('/home');
+  //     return;
+  //   }
+  //   setprojectID(pid);
+  // }, [pid, navigate]);
+
   // remove a shared user
   const removeSharedUser = userId => {
     const removedUser = newProject.sharedUsers.find(user => user.id === userId);
@@ -123,7 +132,7 @@ const ProjectDashboard = () => {
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
   };
-  const addProject = () => {
+  const addProject = async () => {
     if (newProject.name.trim()) {
       const project = {
         id: Date.now(),
@@ -135,16 +144,39 @@ const ProjectDashboard = () => {
         starred: false,
         inTrash: false,
         type: 'doc',
-        sharedUsers: newProject.sharedUsers || [],
+        sharedUsers: newProject.sharedUsers.map(user => ({
+          username: user.username,
+          role: user.role || 'EDITOR', // or default role
+        })),
       };
-      setProjects([project, ...projects]);
-      setNewProject({
-        id: Date.now(),
-        name: '',
-        type: 'doc',
-        sharedUsers: [],
-      });
-      setShowAddForm(false);
+      try {
+        const requestBody = {
+          name: project.name,
+          actor: userC?.username,
+          collaborators: project.sharedUsers,
+        };
+
+        console.log('Creating project with request body:', requestBody);
+
+        const addedProject = await createProject(
+          requestBody.name,
+          requestBody.actor,
+          requestBody.collaborators,
+        );
+
+        console.log(addedProject);
+        setProjects([addedProject, ...projects]);
+        setNewProject({
+          id: Date.now(),
+          name: '',
+          type: 'doc',
+          sharedUsers: [],
+        });
+        closeAndResetForm();
+      } catch (err) {
+        throw new Error(`Error when adding project ${err}`);
+      }
+      // setShowAddForm(false);
     }
   };
 

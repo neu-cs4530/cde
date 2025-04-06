@@ -1,6 +1,7 @@
 import {
   RequestCollaborator,
   PopulatedCollaborator,
+  CollaboratorRequest,
 } from '@fake-stack-overflow/shared/types/collaborator';
 import {
   ProjectResponse,
@@ -32,7 +33,7 @@ import api from './config';
 // ** isnt it the case that get reqs we can send a body?*/
 
 // project api url
-const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
+const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/projects`;
 
 // Create a new project.
 /**
@@ -43,14 +44,13 @@ const createProject = async (
   name: string,
   actor: string,
   collaborators?: RequestCollaborator[],
-): Promise<ProjectResponse> => {
+): Promise<DatabaseProject> => {
   const projectData: CreateProjectRequest['body'] = {
     name,
     actor,
     collaborators,
   };
-
-  const res = await api.post(`${PROJECT_API_URL}/createProject`, projectData);
+  const res = await api.post(`${PROJECT_API_URL}/createProject`, { data: { projectData } });
   if (res.status !== 200) {
     throw new Error(`Error when creating project`);
   }
