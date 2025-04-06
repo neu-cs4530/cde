@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { DatabaseProject } from '../../../types/types';
 import { getMetaData } from '../../../tool';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import UserContext from '../../../contexts/UserContext';
+import { useContext } from 'react';
 
 /**
  * ProjectCard component displays a single project with all of its associated fields such as its name, creation data, current state, and all collaborators.
@@ -12,6 +14,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ProjectCard = ({ project }: { project: DatabaseProject }) => {
   const navigate = useNavigate();
+  const user = useContext(UserContext);
 
   const handleClick = () => {
     navigate(`/projects/${project._id}`);

@@ -46,6 +46,12 @@ export interface PopulatedDatabaseProjectFile extends Omit<DatabaseProjectFile, 
   comments: DatabaseProjectFileComment[];
 }
 
+export interface ProjectFileByIdRequest extends Request {
+  body: {
+    id: string;
+  };
+}
+
 /**
  * A type representing the possible responses for a ProjectFile operation.
  * - Either a `DatabaseProjectFile` object or an error message.

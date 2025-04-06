@@ -83,7 +83,7 @@ app.use('/messaging', messageController(socket));
 app.use('/user', userController(socket));
 app.use('/chat', chatController(socket));
 app.use('/games', gameController(socket));
-projectFileController(socket);
+app.use('/project', projectFileController(socket));
 
 // Export the app instance
 export { app, server, startServer };

@@ -1,38 +1,39 @@
 import { FakeSOSocket } from '../types/types';
-import { updateProjectFile } from '../services/project/projectFile.service'; // adjust path if needed
+import { updateProjectFile } from '../services/project/projectFile.service';
+import express, { Router } from 'express';
 
 const projectFileController = (socket: FakeSOSocket) => {
+  const router: Router = express.Router();
   socket.on('connection', conn => {
-    // console.log('File collaboration socket connected:', conn.id);
 
-    conn.on('joinFile', (fileId: string) => {
-      conn.join(fileId);
+    conn.on('joinProject', (projectId: string) => {
+      conn.join(projectId);
     });
 
-    conn.on('leaveFile', (fileId: string) => {
-      conn.leave(fileId);
+    conn.on('leaveProject', (projectId: string) => {
+      conn.leave(projectId);
     });
 
-    conn.on('editFile', async ({ fileId, content }) => {
+    conn.on('editFile', async ({ fileName, content }) => {
       try {
-        const result = await updateProjectFile(fileId, { contents: content });
+        const result = await updateProjectFile(fileName, { contents: content });
 
         if ('error' in result) {
-          //   console.error('Failed to update project file:', result.error);
           throw new Error(result.error);
         } else {
-          conn.to(fileId).emit('remoteEdit', { fileId, content: result.contents });
+          conn.to(fileName).emit('remoteEdit', { fileName, content: result.contents });
         }
       } catch (error) {
-        // console.error('Unexpected error updating file:', error);
         throw new Error();
       }
     });
 
     conn.on('disconnect', () => {
-      //   console.log('File collaboration socket disconnected:', conn.id);
+        // save file in database
     });
   });
+
+  return router
 };
 
 export default projectFileController;

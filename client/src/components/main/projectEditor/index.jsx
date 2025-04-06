@@ -3,8 +3,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
-import { io } from 'socket.io-client';
 import { getUsers } from '../../../services/userService';
+import UserContext from '../../../contexts/UserContext';
+import { useContext } from 'react';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -28,7 +29,7 @@ const ProjectEditor = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
-  const socketRef = useRef(null);
+  const user = useContext(UserContext);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -71,13 +72,6 @@ const ProjectEditor = () => {
       // eslint-disable-next-line no-console
       .catch(err => console.error('Error loading users', err));
   }, []);
-  useEffect(() => {
-    socketRef.current = io('https://cs4530-s25-508-backend.onrender.com');
-
-    return () => {
-      socketRef.current.disconnect(); // clean up socket on unmount
-    };
-  }, []);
 
   useEffect(() => {
     if (consoleRef.current) {
@@ -85,9 +79,9 @@ const ProjectEditor = () => {
     }
   }, [consoleOutput]);
   useEffect(() => {
-    if (!activeFile || !socketRef.current) return undefined;
+    if (!activeFile) return undefined;
 
-    socketRef.current.emit('joinFile', activeFile);
+    user?.socket.current.emit('joinProject', activeFile);
 
     const handleRemoteEdit = ({ fileName, content }) => {
       setFileContents(prev => ({
@@ -96,11 +90,11 @@ const ProjectEditor = () => {
       }));
     };
 
-    socketRef.current.on('remoteEdit', handleRemoteEdit);
+    user?.socket.current.on('remoteEdit', handleRemoteEdit);
 
     return () => {
-      socketRef.current.emit('leaveFile', activeFile);
-      socketRef.current.off('remoteEdit', handleRemoteEdit);
+      user?.socket.current.off('remoteEdit', handleRemoteEdit);
+      user?.socket.current.emit('leaveProject', activeFile);
     };
   }, [activeFile]);
 
@@ -273,7 +267,7 @@ const ProjectEditor = () => {
             value={fileContents[activeFile]}
             onChange={newValue => {
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              socketRef.current?.emit('editFile', { fileName: activeFile, content: newValue });
+              socketRef.current?.emit('editFile', { fileId: activeFile, content: newValue });
             }}
             theme={theme}
           />
