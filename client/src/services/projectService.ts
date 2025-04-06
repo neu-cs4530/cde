@@ -50,7 +50,7 @@ const createProject = async (
     actor,
     collaborators,
   };
-  const res = await api.post(`${PROJECT_API_URL}/createProject`, { data: { projectData } });
+  const res = await api.post(`${PROJECT_API_URL}/createProject`, projectData);
   if (res.status !== 200) {
     throw new Error(`Error when creating project`);
   }

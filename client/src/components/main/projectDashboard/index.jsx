@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
-import { getProjectsByUser, createProject } from '../../../services/projectService';
+import { createProject } from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
+import UserContext from '../../../contexts/UserContext';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -12,6 +13,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ProjectDashboard = () => {
   const { userC, socket } = useUserContext();
+  const context = useContext(UserContext);
+  const username = context?.user?.username;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
@@ -56,13 +59,6 @@ const ProjectDashboard = () => {
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
   };
-
-  // get all projects by user use effect
-  useEffect(() => {
-    if (!userC || !userC.username) return;
-
-    socket(userC);
-  }, [userC, socket]);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -152,7 +148,7 @@ const ProjectDashboard = () => {
       try {
         const requestBody = {
           name: project.name,
-          actor: userC?.username,
+          actor: username,
           collaborators: project.sharedUsers,
         };
 
@@ -179,6 +175,12 @@ const ProjectDashboard = () => {
       // setShowAddForm(false);
     }
   };
+
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+
+    socket(userC);
+  }, [userC, socket]);
 
   // star or unstar a project
   const toggleStar = id => {
