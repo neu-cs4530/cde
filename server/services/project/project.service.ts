@@ -37,12 +37,12 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
     }
 
     const projectToAdd: Partial<User> = {
-        projects: [result._id],
-    }
-    const user: UserResponse | null = await addProjectToUser(result.creator, projectToAdd)
+      projects: [result._id],
+    };
+    const user: UserResponse | null = await addProjectToUser(result.creator, projectToAdd);
 
     if (!user) {
-        throw new Error('Failed to add project to user')
+      throw new Error('Failed to add project to user');
     }
 
     return result;
