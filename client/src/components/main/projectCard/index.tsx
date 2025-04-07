@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+// import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DatabaseProject } from '../../../types/types';
-import { getMetaData } from '../../../tool';
+// import { getMetaData } from '../../../tool';
 // import { createProjectBackup } from '../../../services/projectService';
 import 'bootstrap/dist/css/bootstrap.min.css';
 

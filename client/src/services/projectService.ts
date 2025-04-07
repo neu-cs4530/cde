@@ -1,10 +1,8 @@
 import {
   RequestCollaborator,
   PopulatedCollaborator,
-  CollaboratorRequest,
 } from '@fake-stack-overflow/shared/types/collaborator';
 import {
-  ProjectResponse,
   PopulatedDatabaseProject,
   DatabaseProject,
   CreateProjectRequest,
