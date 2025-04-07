@@ -1172,7 +1172,7 @@ const projectController = (socket: FakeSOSocket) => {
           conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
         }
       } catch (error) {
-        throw new Error()
+        throw new Error();
       }
     });
 
@@ -1190,7 +1190,7 @@ const projectController = (socket: FakeSOSocket) => {
 
         await saveProject(project);
       } catch (error) {
-        throw new Error()
+        throw new Error();
       }
     });
   });
