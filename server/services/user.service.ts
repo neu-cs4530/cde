@@ -149,3 +149,31 @@ export const updateUser = async (
     return { error: `Error occurred when updating user: ${error}` };
   }
 };
+
+/**
+ * Adds project to user.
+ *
+ * @param {string} username - The username of the user to update.
+ * @param {Partial<User>} updates - An object containing the project(s) ids to add to the user.
+ * @returns {Promise<UserResponse>} - Resolves with the updated user object (without the password) or an error message.
+ */
+export const addProjectToUser = async (
+  username: string,
+  updates: Partial<User>,
+): Promise<UserResponse> => {
+  try {
+    const updatedUser: SafeDatabaseUser | null = await UserModel.findOneAndUpdate(
+      { username },
+      { $push: { projects: { $each: updates.projects ?? [] } } },
+      { new: true },
+    ).select('-password');
+
+    if (!updatedUser) {
+      throw Error('Error adding project to user');
+    }
+
+    return updatedUser;
+  } catch (error) {
+    return { error: `Error occurred when adding project to user: ${error}` };
+  }
+};
