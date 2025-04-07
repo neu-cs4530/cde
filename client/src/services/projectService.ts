@@ -471,6 +471,7 @@ const runProjectFile = async (projectId: string, fileName: string, fileContent: 
     }
     return await response.json();
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error running project file:', error);
     throw error;
   }
