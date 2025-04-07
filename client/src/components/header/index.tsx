@@ -15,13 +15,8 @@ const Header = () => {
   const navigate = useNavigate();
   return (
     <div id='header' className='header'>
-      <div className='cde-logo-container'>
-        <div className='cde-logo'>
-          <span className='cde-letter cde-c'>C</span>
-          <span className='cde-letter cde-d'>D</span>
-          <span className='cde-letter cde-e'>E</span>
-        </div>
-      </div>
+      <div></div>
+      <div className='title'>Fake Stack Overflow</div>
       <input
         id='searchBar'
         placeholder='Search Questions...'
