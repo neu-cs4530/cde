@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
 import { createProject, getProjectsByUser } from '../../../services/projectService';
@@ -12,9 +12,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
-  const { userC, socket } = useUserContext();
+  const { user: userC } = useUserContext();
   const context = useContext(UserContext);
-  const location = useLocation();
   const username = context?.user?.username;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
@@ -96,11 +95,10 @@ const ProjectDashboard = () => {
     if (!userC || !userC.username) return;
     const fetchData = async () => {
       const allProj = await getProjectsByUser(userC.username);
-      // console.log('Fetched Projects:', allProj);
       setProjects(allProj);
     };
     fetchData();
-  }, [userC, location.pathname]);
+  }, [userC]);
 
   const handleAddSharedUser = user => {
     setNewProject({
@@ -187,12 +185,6 @@ const ProjectDashboard = () => {
       // setShowAddForm(false);
     }
   };
-
-  useEffect(() => {
-    if (!userC || !userC.username) return;
-
-    socket(userC);
-  }, [userC, socket]);
 
   // star or unstar a project
   const toggleStar = id => {
