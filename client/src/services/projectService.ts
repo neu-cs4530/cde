@@ -3,7 +3,6 @@ import {
   PopulatedCollaborator,
 } from '@fake-stack-overflow/shared/types/collaborator';
 import {
-  ProjectResponse,
   PopulatedDatabaseProject,
   DatabaseProject,
   CreateProjectRequest,
@@ -32,7 +31,7 @@ import api from './config';
 // ** isnt it the case that get reqs we can send a body?*/
 
 // project api url
-const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/project`;
+const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/projects`;
 
 // Create a new project.
 /**
@@ -43,13 +42,12 @@ const createProject = async (
   name: string,
   actor: string,
   collaborators?: RequestCollaborator[],
-): Promise<ProjectResponse> => {
+): Promise<DatabaseProject> => {
   const projectData: CreateProjectRequest['body'] = {
     name,
     actor,
     collaborators,
   };
-
   const res = await api.post(`${PROJECT_API_URL}/createProject`, projectData);
   if (res.status !== 200) {
     throw new Error(`Error when creating project`);
@@ -116,8 +114,8 @@ const updateProjectState = async (
  * @returns
  */
 // Retrieve all projects for a specific user based on their username.
-const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
-  const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser${user}`);
+const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> => {
+  const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser/${username}`);
   if (res.status !== 200) {
     throw new Error(`Error when getting projects by user`);
   }

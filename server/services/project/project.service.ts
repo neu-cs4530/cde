@@ -30,7 +30,17 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
       throw new Error('Failed to save project state');
     }
 
-    const result: DatabaseProject | null = await ProjectModel.create(project);
+    // const result: DatabaseProject | null = await ProjectModel.create(project);
+
+    // if (!result) {
+    //   throw new Error('Failed to save project');
+    // }
+    const projectToSave = {
+      ...project,
+      currentState: state._id, // referencing saved state
+    };
+
+    const result: DatabaseProject | null = await ProjectModel.create(projectToSave);
 
     if (!result) {
       throw new Error('Failed to save project');

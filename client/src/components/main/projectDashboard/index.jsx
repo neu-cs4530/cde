@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
-import { getProjectsByUser } from '../../../services/projectService';
+import { createProject, getProjectsByUser } from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
+import UserContext from '../../../contexts/UserContext';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
@@ -12,6 +13,9 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ProjectDashboard = () => {
   const { userC, socket } = useUserContext();
+  const context = useContext(UserContext);
+  const location = useLocation();
+  const username = context?.user?.username;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
@@ -19,13 +23,16 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
+  // const { pid } = useParams();
+  // const [textErr, setTextErr] = useState('');
+  // const [projectID, setprojectID] = useState('');
 
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
     currentState: 'draft', // should all new projects have current/initial state being a draft?
     sharedUsers: [],
-    starred: false,
+    // starred: false,
     inTrash: false,
   });
   const closeAndResetForm = () => {
@@ -53,16 +60,6 @@ const ProjectDashboard = () => {
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
   };
-
-  // get all projects by user use effect
-  useEffect(() => {
-    if (!userC || !userC.username) return;
-    const fetchData = async () => {
-      const allProj = await getProjectsByUser(userC.username);
-      socket(allProj);
-    };
-    fetchData();
-  }, [userC, socket]);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -94,6 +91,17 @@ const ProjectDashboard = () => {
     );
   }, [searchUsername, allUsers]);
 
+  // get all projects by user use effect
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+    const fetchData = async () => {
+      const allProj = await getProjectsByUser(userC.username);
+      // console.log('Fetched Projects:', allProj);
+      setProjects(allProj);
+    };
+    fetchData();
+  }, [userC, location.pathname]);
+
   const handleAddSharedUser = user => {
     setNewProject({
       ...newProject,
@@ -113,6 +121,15 @@ const ProjectDashboard = () => {
     });
   };
 
+  // useEffect(() => {
+  //   if (!pid) {
+  //     setTextErr('project ID is missing.');
+  //     navigate('/home');
+  //     return;
+  //   }
+  //   setprojectID(pid);
+  // }, [pid, navigate]);
+
   // remove a shared user
   const removeSharedUser = userId => {
     const removedUser = newProject.sharedUsers.find(user => user.id === userId);
@@ -123,7 +140,7 @@ const ProjectDashboard = () => {
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
   };
-  const addProject = () => {
+  const addProject = async () => {
     if (newProject.name.trim()) {
       const project = {
         id: Date.now(),
@@ -135,18 +152,47 @@ const ProjectDashboard = () => {
         starred: false,
         inTrash: false,
         type: 'doc',
-        sharedUsers: newProject.sharedUsers || [],
+        sharedUsers: newProject.sharedUsers.map(user => ({
+          username: user.username,
+          role: user.role || 'EDITOR', // or default role
+        })),
       };
-      setProjects([project, ...projects]);
-      setNewProject({
-        id: Date.now(),
-        name: '',
-        type: 'doc',
-        sharedUsers: [],
-      });
-      setShowAddForm(false);
+      try {
+        const requestBody = {
+          name: project.name,
+          actor: username,
+          collaborators: project.sharedUsers,
+        };
+
+        // console.log('Creating project with request body:', requestBody);
+
+        const addedProject = await createProject(
+          requestBody.name,
+          requestBody.actor,
+          requestBody.collaborators,
+        );
+
+        // console.log(addedProject);
+        setProjects([addedProject, ...projects]);
+        setNewProject({
+          id: Date.now(),
+          name: '',
+          type: 'doc',
+          sharedUsers: [],
+        });
+        closeAndResetForm();
+      } catch (err) {
+        throw new Error(`Error when adding project ${err}`);
+      }
+      // setShowAddForm(false);
     }
   };
+
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+
+    socket(userC);
+  }, [userC, socket]);
 
   // star or unstar a project
   const toggleStar = id => {
