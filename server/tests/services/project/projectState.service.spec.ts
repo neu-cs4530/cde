@@ -2,49 +2,55 @@ import { ObjectId } from 'mongodb';
 import {
   ProjectState,
   DatabaseProjectState,
-  PopulatedDatabaseProjectFile,
   ProjectStateResponse,
+  ProjectFile,
+  DatabaseProjectFile,
+  ProjectFileResponse,
 } from '@fake-stack-overflow/shared/types/types';
 import ProjectStateModel from '../../../models/projectStates.model';
+import ProjectFileModel from '../../../models/projectFiles.model';
 import {
   saveProjectState,
   deleteProjectStateById,
   updateProjectState,
   getProjectStateById,
+  saveFileInState,
+  deleteFileInState,
   // filterProjectStateFilesBySearch,
 } from '../../../services/project/projectState.service';
 
 jest.mock('../../../models/projectStates.model');
+jest.mock('../../../models/projectFiles.model');
 
 const fakeObjectId: ObjectId = new ObjectId();
 
-const fakeProjectFile: PopulatedDatabaseProjectFile = {
-  _id: new ObjectId(),
+const fakeFile: ProjectFile = {
   name: 'main.py',
   fileType: 'PYTHON',
   contents: 'print("Hello")',
   comments: [],
 };
 
+const fakeDatabaseFile: DatabaseProjectFile = {
+  _id: new ObjectId(),
+  name: fakeFile.name,
+  fileType: fakeFile.fileType,
+  contents: fakeFile.contents,
+  comments: [],
+};
+
 const fakeState: ProjectState = {
-  files: [
-    {
-      name: fakeProjectFile.name,
-      fileType: fakeProjectFile.fileType,
-      contents: fakeProjectFile.contents,
-      comments: fakeProjectFile.comments,
-    },
-  ],
+  files: [fakeFile],
 };
 
 const fakeDatabaseState: DatabaseProjectState = {
   _id: fakeObjectId,
-  files: [fakeProjectFile._id],
+  files: [fakeDatabaseFile._id],
   createdAt: new Date(),
   updatedAt: new Date(),
 };
 
-describe.skip('Project State Service', () => {
+describe('Project State Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.restoreAllMocks();
@@ -95,14 +101,7 @@ describe.skip('Project State Service', () => {
   describe('updateProjectState', () => {
     it('should update and return the state', async () => {
       const updates: Partial<ProjectState> = {
-        files: [
-          {
-            name: fakeProjectFile.name,
-            fileType: fakeProjectFile.fileType,
-            contents: fakeProjectFile.contents,
-            comments: fakeProjectFile.comments,
-          },
-        ],
+        files: [fakeFile],
       };
       const updatedState: DatabaseProjectState = { ...fakeDatabaseState };
       (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(updatedState);
@@ -148,10 +147,122 @@ describe.skip('Project State Service', () => {
     });
   });
 
+  describe('saveFileInState', () => {
+    it('should save a file in the state', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue({
+        ...fakeDatabaseState,
+        files: [],
+      });
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(fakeDatabaseFile);
+      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeDatabaseState);
+
+      const result: ProjectFileResponse = await saveFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeFile,
+      );
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toBe(fakeDatabaseFile);
+    });
+
+    it('should return error if state not found', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await saveFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeFile,
+      );
+      expect('error' in result).toBe(true);
+    });
+
+    it('should return error if file not created', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue({
+        ...fakeDatabaseState,
+        files: [],
+      });
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await saveFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeFile,
+      );
+      expect('error' in result).toBe(true);
+    });
+
+    it('should return error if state not updated', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue({
+        ...fakeDatabaseState,
+        files: [],
+      });
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(fakeDatabaseFile);
+      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await saveFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeFile,
+      );
+      expect('error' in result).toBe(true);
+    });
+  });
+
+  describe('deleteFileInState', () => {
+    it('should delete a file in the state', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findOneAndDelete as jest.Mock).mockResolvedValue(fakeDatabaseFile);
+      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue({
+        ...fakeDatabaseState,
+        files: [],
+      });
+
+      const result: ProjectFileResponse = await deleteFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeDatabaseFile._id.toString(),
+      );
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toBe(fakeDatabaseFile);
+    });
+
+    it('should return error if state not found', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await deleteFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeDatabaseFile._id.toString(),
+      );
+      expect('error' in result).toBe(true);
+    });
+
+    it('should return error if file not deleted', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findOneAndDelete as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await deleteFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeDatabaseFile._id.toString(),
+      );
+      expect('error' in result).toBe(true);
+    });
+
+    it('should return error if state not updated', async () => {
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findOneAndDelete as jest.Mock).mockResolvedValue(fakeDatabaseFile);
+      (ProjectStateModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result: ProjectFileResponse = await deleteFileInState(
+        fakeDatabaseState._id.toString(),
+        fakeDatabaseFile._id.toString(),
+      );
+      expect('error' in result).toBe(true);
+    });
+  });
+
   // describe('filterProjectStateFilesBySearch', () => {
   //   const populatedState: PopulatedDatabaseProjectState = {
   //     ...fakeDatabaseState,
-  //     files: [fakeProjectFile],
+  //     files: [fakeDatabaseFile],
   //   };
   //
   //   it('should return the file if found by name', () => {
@@ -159,7 +270,7 @@ describe.skip('Project State Service', () => {
   //       populatedState,
   //       'main',
   //     );
-  //     expect(result).toEqual(fakeProjectFile);
+  //     expect(result).toEqual(fakeDatabaseFile);
   //   });
   //
   //   it('should return error if no matching file is found', () => {

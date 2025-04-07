@@ -18,14 +18,17 @@ import {
   deleteProjectById,
   updateProject,
   addProjectCollaborator,
+  removeProjectCollaborator,
+  updateProjectCollaboratorRole,
   getProjectById,
+  createProjectBackup,
   revertProjectToState,
 } from '../../../services/project/project.service';
 import * as projectService from '../../../services/project/project.service';
 
 jest.mock('../../../models/projects.model');
 jest.mock('../../../models/projectStates.model');
-jest.mock(`../../../models/projectFiles.model`);
+jest.mock('../../../models/projectFiles.model');
 jest.mock('../../../models/users.model');
 
 const FAKE_PROJECT_ID = new ObjectId().toHexString();
@@ -258,6 +261,88 @@ describe('Project Service', () => {
     });
   });
 
+  describe('removeProjectCollaborator', () => {
+    it('should remove a collaborator from a project and update the user', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
+      (UserModel.findOneAndUpdate as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toEqual(fakeProject);
+    });
+
+    it('should return error if user not found', async () => {
+      (UserModel.findOne as jest.Mock).mockResolvedValue(null);
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+      expect('error' in result).toBe(true);
+    });
+
+    it('should throw an error if project update fails', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating project'),
+      });
+    });
+
+    it('should throw an error if user update fails', async () => {
+      (UserModel.findOne as jest.Mock).mockReturnValue({
+        select: jest.fn().mockResolvedValue(fakeUser),
+      });
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
+      (UserModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result = await removeProjectCollaborator(FAKE_PROJECT_ID, fakeUser.username);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating user'),
+      });
+    });
+  });
+
+  describe('updateProjectCollaboratorRole', () => {
+    it('should update the collaborator role', async () => {
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeProject);
+
+      const result = await updateProjectCollaboratorRole(
+        FAKE_PROJECT_ID,
+        fakeUser._id.toString(),
+        'EDITOR',
+      );
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toEqual(fakeProject);
+    });
+
+    it('should throw an error if project update fails', async () => {
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result = await updateProjectCollaboratorRole(
+        FAKE_PROJECT_ID,
+        fakeUser._id.toString(),
+        'EDITOR',
+      );
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating collaborators'),
+      });
+    });
+  });
+
   describe('getProjectById', () => {
     it('should return a project by ID', async () => {
       (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
@@ -276,6 +361,133 @@ describe('Project Service', () => {
       (ProjectModel.findOne as jest.Mock).mockRejectedValue(new Error('find error'));
       const result = await getProjectById(FAKE_PROJECT_ID);
       expect('error' in result).toBe(true);
+    });
+  });
+
+  describe('createProjectBackup', () => {
+    it('should create a backup project state', async () => {
+      const dupFile: DatabaseProjectFile = {
+        ...fakeProjectFile,
+        _id: new ObjectId(),
+      };
+      const dupState: DatabaseProjectState = {
+        _id: new ObjectId(),
+        files: [dupFile._id],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findById as jest.Mock).mockResolvedValue(fakeProjectFile);
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(dupFile);
+      (ProjectStateModel.create as jest.Mock).mockResolvedValue(dupState);
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue({
+        ...fakeProject,
+        currentState: dupState._id,
+        savedStates: [fakeDatabaseState._id],
+      });
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+      if ('error' in result) {
+        throw new Error(`Unexpected error: ${result.error}`);
+      }
+      expect(result).toEqual({
+        ...fakeProject,
+        currentState: dupState._id,
+        savedStates: [fakeDatabaseState._id],
+      });
+    });
+
+    it('should return error if project not found', async () => {
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Project not found'),
+      });
+    });
+
+    it('should return error if state not found', async () => {
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Current project state not found'),
+      });
+    });
+
+    it('should return error if file not found', async () => {
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findById as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Project file not found'),
+      });
+    });
+
+    it('should return error if file not created', async () => {
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findById as jest.Mock).mockResolvedValue(fakeProjectFile);
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error duplicating project file'),
+      });
+    });
+
+    it('should return error if state not created', async () => {
+      const dupFile: DatabaseProjectFile = {
+        ...fakeProjectFile,
+        _id: new ObjectId(),
+      };
+
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findById as jest.Mock).mockResolvedValue(fakeProjectFile);
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(dupFile);
+      (ProjectStateModel.create as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error duplicating project state'),
+      });
+    });
+
+    it('should return error if project not updated', async () => {
+      const dupFile: DatabaseProjectFile = {
+        ...fakeProjectFile,
+        _id: new ObjectId(),
+      };
+      const dupState: DatabaseProjectState = {
+        _id: new ObjectId(),
+        files: [dupFile._id],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      (ProjectModel.findOne as jest.Mock).mockResolvedValue(fakeProject);
+      (ProjectStateModel.findOne as jest.Mock).mockResolvedValue(fakeDatabaseState);
+      (ProjectFileModel.findById as jest.Mock).mockResolvedValue(fakeProjectFile);
+      (ProjectFileModel.create as jest.Mock).mockResolvedValue(dupFile);
+      (ProjectStateModel.create as jest.Mock).mockResolvedValue(dupState);
+      (ProjectModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
+
+      const result = await createProjectBackup(FAKE_PROJECT_ID);
+
+      expect(result).toEqual({
+        error: expect.stringContaining('Error updating project'),
+      });
     });
   });
 
@@ -314,7 +526,3 @@ describe('Project Service', () => {
     });
   });
 });
-
-// TODO: removeProjectCollaborator
-// TODO: updateProjectCollaboratorRole
-// TODO: createProjectBackup

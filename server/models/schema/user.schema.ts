@@ -26,6 +26,7 @@ const userSchema: Schema = new Schema(
       type: String,
       default: '',
     },
+    projects: [{ type: Schema.Types.ObjectId, ref: 'Project' }],
   },
   { collection: 'User' },
 );
