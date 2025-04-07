@@ -23,7 +23,7 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
-  const { pid } = useParams();
+  // const { pid } = useParams();
   // const [textErr, setTextErr] = useState('');
   // const [projectID, setprojectID] = useState('');
 
@@ -96,7 +96,7 @@ const ProjectDashboard = () => {
     if (!userC || !userC.username) return;
     const fetchData = async () => {
       const allProj = await getProjectsByUser(userC.username);
-      console.log('Fetched Projects:', allProj);
+      // console.log('Fetched Projects:', allProj);
       setProjects(allProj);
     };
     fetchData();
@@ -164,7 +164,7 @@ const ProjectDashboard = () => {
           collaborators: project.sharedUsers,
         };
 
-        console.log('Creating project with request body:', requestBody);
+        // console.log('Creating project with request body:', requestBody);
 
         const addedProject = await createProject(
           requestBody.name,
@@ -172,7 +172,7 @@ const ProjectDashboard = () => {
           requestBody.collaborators,
         );
 
-        console.log(addedProject);
+        // console.log(addedProject);
         setProjects([addedProject, ...projects]);
         setNewProject({
           id: Date.now(),
