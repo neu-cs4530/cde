@@ -12,7 +12,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
-  const { userC, socket } = useUserContext();
+  const { user: userC, socket } = useUserContext();
   const context = useContext(UserContext);
   const location = useLocation();
   const username = context?.user?.username;
@@ -96,11 +96,10 @@ const ProjectDashboard = () => {
     if (!userC || !userC.username) return;
     const fetchData = async () => {
       const allProj = await getProjectsByUser(userC.username);
-      // console.log('Fetched Projects:', allProj);
       setProjects(allProj);
     };
     fetchData();
-  }, [userC, location.pathname]);
+  }, [userC]);
 
   const handleAddSharedUser = user => {
     setNewProject({
@@ -187,12 +186,6 @@ const ProjectDashboard = () => {
       // setShowAddForm(false);
     }
   };
-
-  useEffect(() => {
-    if (!userC || !userC.username) return;
-
-    socket(userC);
-  }, [userC, socket]);
 
   // star or unstar a project
   const toggleStar = id => {
