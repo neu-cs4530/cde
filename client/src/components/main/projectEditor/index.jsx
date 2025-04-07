@@ -1,9 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import {
+  getFiles,
+  updateFileById,
+  createFile,
+  deleteFileById,
+} from '../../../services/projectService';
+import UserContext from '../../../contexts/UserContext';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -27,6 +35,9 @@ const ProjectEditor = () => {
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
+  const user = useContext(UserContext);
+  const { projectId } = useParams();
+  const [fileMap, setFileMap] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -74,20 +85,121 @@ const ProjectEditor = () => {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
+  useEffect(() => {
+    const loadFiles = async () => {
+      if (!projectId || !user?.user?.username) return;
+      const files = await getFiles(projectId, user.user.username);
+      const contents = {};
+      const languages = {};
+      const map = {};
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+        map[file.name] = file;
+      });
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setFileMap(map);
+      setActiveFile(files[0]?.name || '');
+    };
+    loadFiles();
+  }, [projectId, user.user.username]);
+  useEffect(() => {
+    if (!projectId) return undefined;
+
+    user?.socket.emit('joinProject', projectId);
+
+    return () => {
+      user?.socket.emit('leaveProject', projectId);
+    };
+  }, [projectId, user?.socket]);
+  useEffect(() => {
+    if (!activeFile) return undefined;
+
+    const handleRemoteEdit = ({ fileId, content }) => {
+      const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
+      if (!updatedFileName) return;
+
+      setFileContents(prev => ({
+        ...prev,
+        [updatedFileName]: content,
+      }));
+    };
+
+    user?.socket.on('remoteEdit', handleRemoteEdit);
+
+    return () => {
+      user?.socket.off('remoteEdit', handleRemoteEdit);
+    };
+  }, [activeFile, fileMap, user?.socket]);
+  useEffect(() => {
+    if (!projectId) return undefined;
+
+    const handleFileCreated = ({ file }) => {
+      const { name } = file;
+      const language = file.fileType.toLowerCase();
+      const starterContent = getStarterContentForLanguage(language, name);
+
+      setFileContents(prev => ({ ...prev, [name]: starterContent }));
+      setFileLanguages(prev => ({ ...prev, [name]: language }));
+      setFileMap(prev => ({ ...prev, [name]: file }));
+    };
+
+    user?.socket.on('fileCreated', handleFileCreated);
+
+    return () => {
+      user?.socket.off('fileCreated', handleFileCreated);
+    };
+  }, [projectId, user?.socket]);
+  useEffect(() => {
+    const handleFileDeleted = ({ fileId }) => {
+      const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
+
+      if (fileToDelete) {
+        setFileContents(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        setFileLanguages(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        setFileMap(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        if (activeFile === fileToDelete) {
+          const nextFile = Object.keys(fileContents).find(f => f !== fileToDelete);
+          setActiveFile(nextFile || '');
+        }
+      }
+    };
+
+    user?.socket.on('fileDeleted', handleFileDeleted);
+    return () => {
+      user?.socket.off('fileDeleted', handleFileDeleted);
+    };
+  }, [fileMap, fileContents, activeFile, user?.socket]);
 
   const handleUserSearch = e => {
     const input = e.target.value;
     setSearchUsername(input);
     const filtered = allUsers.filter(
-      user =>
-        user.username.toLowerCase().includes(input.toLowerCase()) &&
-        !sharedUsers.some(u => u.id === user.id),
+      userC =>
+        userC.username.toLowerCase().includes(input.toLowerCase()) &&
+        !sharedUsers.some(u => u.id === userC.id),
     );
     setFilteredUsers(filtered);
   };
-  const handleAddUser = user => {
-    setSharedUsers([...sharedUsers, { ...user, permissions: 'viewer' }]);
-    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+  const handleAddUser = userC => {
+    setSharedUsers([...sharedUsers, { ...userC, permissions: 'viewer' }]);
+    setFilteredUsers(prev => prev.filter(u => u.id !== userC.id));
     setSearchUsername('');
   };
 
@@ -99,35 +211,55 @@ const ProjectEditor = () => {
 
   const handleUpdatePermission = (userId, permission) => {
     setSharedUsers(
-      sharedUsers.map(user => (user.id === userId ? { ...user, permissions: permission } : user)),
+      sharedUsers.map(userC =>
+        userC.id === userId ? { ...userC, permissions: permission } : userC,
+      ),
     );
   };
 
-  const handleAddFile = () => {
+  const handleAddFile = async () => {
     if (!newFileName.trim()) {
       setConsoleOutput(prev => `${prev}Error: File name cannot be empty\n`);
       return;
     }
+
     const fileExtension = getFileExtensionForLanguage(selectedLanguage);
     const fullFileName = `${newFileName}${fileExtension}`;
+
     if (Object.keys(fileContents).includes(fullFileName)) {
       setConsoleOutput(prev => `${prev}Error: A file with this name already exists\n`);
       return;
     }
-    // making new file with appropriate starter content
+
     const starterContent = getStarterContentForLanguage(selectedLanguage, newFileName);
-    setFileContents(prev => ({
-      ...prev,
-      [fullFileName]: starterContent,
-    }));
-    setFileLanguages(prev => ({
-      ...prev,
-      [fullFileName]: selectedLanguage,
-    }));
-    setActiveFile(fullFileName);
-    // Reset form and close modal
-    setNewFileName('');
-    setIsAddFileOpen(false);
+
+    try {
+      const fileTypeEnum = selectedLanguage.toUpperCase();
+      const createdFile = await createFile(
+        projectId,
+        user.user.username,
+        fullFileName,
+        fileTypeEnum,
+      );
+
+      setFileContents(prev => ({
+        ...prev,
+        [fullFileName]: starterContent,
+      }));
+      setFileLanguages(prev => ({
+        ...prev,
+        [fullFileName]: selectedLanguage,
+      }));
+      setFileMap(prev => ({
+        ...prev,
+        [fullFileName]: createdFile,
+      }));
+      setActiveFile(fullFileName);
+      setNewFileName('');
+      setIsAddFileOpen(false);
+    } catch (err) {
+      setConsoleOutput(prev => `${prev}Error: Could not create file on server\n`);
+    }
   };
 
   const runJavaScript = () => {
@@ -174,7 +306,7 @@ const ProjectEditor = () => {
                 {file}
               </span>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (Object.keys(fileContents).length === 1) {
                     // eslint-disable-next-line no-alert
                     alert('You need at least one file in a project!!');
@@ -183,15 +315,30 @@ const ProjectEditor = () => {
                   // eslint-disable-next-line no-alert
                   const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
                   if (!confirmed) return;
-                  const updated = { ...fileContents };
-                  delete updated[file];
-                  const updatedLanguages = { ...fileLanguages };
-                  delete updatedLanguages[file];
-                  setFileLanguages(updatedLanguages);
-                  setFileContents(updated);
-                  if (file === activeFile) {
-                    const nextFile = Object.keys(updated)[0];
-                    setActiveFile(nextFile || '');
+                  try {
+                    const fileId = fileMap[file]?._id;
+                    if (!fileId) throw new Error('Missing fileId');
+
+                    await deleteFileById(projectId, fileId, user.user.username);
+
+                    const updated = { ...fileContents };
+                    delete updated[file];
+                    setFileContents(updated);
+
+                    const updatedLanguages = { ...fileLanguages };
+                    delete updatedLanguages[file];
+                    setFileLanguages(updatedLanguages);
+
+                    const updatedMap = { ...fileMap };
+                    delete updatedMap[file];
+                    setFileMap(updatedMap);
+
+                    if (file === activeFile) {
+                      const nextFile = Object.keys(updated)[0];
+                      setActiveFile(nextFile || '');
+                    }
+                  } catch (err) {
+                    setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
                   }
                 }}
                 style={{
@@ -242,7 +389,22 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
-            onChange={newValue => setFileContents(prev => ({ ...prev, [activeFile]: newValue }))}
+            onChange={async newValue => {
+              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+              const fileId = fileMap[activeFile]?._id;
+              user?.socket.emit('editFile', {
+                fileId,
+                content: newValue,
+              });
+              try {
+                if (!fileId) throw new Error('Missing fileId');
+                await updateFileById(projectId, fileId, user.user.username, {
+                  contents: newValue,
+                });
+              } catch (err) {
+                throw new Error('Failed to save file');
+              }
+            }}
             theme={theme}
           />
           {/* Console output area */}
@@ -316,21 +478,21 @@ const ProjectEditor = () => {
 
             <div className='form-group'>
               <label className='form-label'>Shared With</label>
-              {sharedUsers.map(user => (
-                <div key={user.id} className='flex items-center justify-between mb-2'>
+              {sharedUsers.map(userC => (
+                <div key={userC.id} className='flex items-center justify-between mb-2'>
                   <div className='flex items-center'>
                     <FiUser className='mr-2' />
-                    <span>{user.username}</span>
+                    <span>{userC.username}</span>
                   </div>
                   <div className='flex items-center'>
                     <select
-                      value={user.permissions}
-                      onChange={e => handleUpdatePermission(user.id, e.target.value)}
+                      value={userC.permissions}
+                      onChange={e => handleUpdatePermission(userC.id, e.target.value)}
                       className='form-select mr-2'>
                       <option value='viewer'>Viewer</option>
                       <option value='editor'>Editor</option>
                     </select>
-                    <button onClick={() => handleRemoveUser(user.id)} className='text-red-500'>
+                    <button onClick={() => handleRemoveUser(userC.id)} className='text-red-500'>
                       <FiTrash2 />
                     </button>
                   </div>
@@ -347,10 +509,10 @@ const ProjectEditor = () => {
                 className='form-input'
                 placeholder='Search username to share'
               />
-              {filteredUsers.map(user => (
-                <div key={user.id} className='flex items-center justify-between mb-2'>
-                  <span>{user.username}</span>
-                  <button onClick={() => handleAddUser(user)} className='btn btn-primary'>
+              {filteredUsers.map(userC => (
+                <div key={userC.id} className='flex items-center justify-between mb-2'>
+                  <span>{userC.username}</span>
+                  <button onClick={() => handleAddUser(userC)} className='btn btn-primary'>
                     Add
                   </button>
                 </div>
