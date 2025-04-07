@@ -13,19 +13,19 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ProjectCard = ({ project }: { project: DatabaseProject }) => {
   const navigate = useNavigate();
-  const { pid } = useParams();
-  const [textErr, setTextErr] = useState<string>('');
-  const [projectID, setprojectID] = useState<string>('');
+  // const { pid } = useParams();
+  // const [textErr, setTextErr] = useState<string>('');
+  // const [projectID, setprojectID] = useState<string>('');
 
-  useEffect(() => {
-    if (!pid) {
-      setTextErr('project ID is missing.');
-      navigate('/home');
-      return;
-    }
+  // useEffect(() => {
+  //   if (!pid) {
+  //     setTextErr('project ID is missing.');
+  //     navigate('/home');
+  //     return;
+  //   }
 
-    setprojectID(pid);
-  }, [pid, navigate]);
+  //   setprojectID(pid);
+  // }, [pid, navigate]);
 
   const handleClick = () => {
     navigate(`/projects/${project._id}`);
@@ -47,18 +47,22 @@ const ProjectCard = ({ project }: { project: DatabaseProject }) => {
       <div className='card-body project'>
         <div className='project-header'>
           <div className='fw-bold mb-2 project-name'>{project.name}</div>
-          <div className='text-muted small mb-1 project-creation'>
-            {getMetaData(project.createdAt)}
-          </div>
+          {/* <div className='text-muted small mb-1 project-creation'>
+            {{project.createdAt ? getMetaData(project.createdAt) : 'No date'}}
+          </div> */}
           <div className='text-muted small mb-1 project-curr-state'>
-            {project.currentState ? project.currentState.toString() : 'draft'}
+            {' '}
+            Added by: {project.creator}
           </div>
-          <div className='text-muted small project-collaborators'>
+          {/* <div className='text-muted small project-collaborators'>
             Collaborators:{' '}
-            {project.collaborators?.length
-              ? project.collaborators?.map(id => id.toString()).join(', ')
+            {project.collaborators?.filter(c => c.userId !== project.creator).length
+              ? project.collaborators
+                  .filter(c => c.userId !== project.creator)
+                  .map(c => c.userId) // Replace with `c.username` if available
+                  .join(', ')
               : 'No collaborators'}
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
