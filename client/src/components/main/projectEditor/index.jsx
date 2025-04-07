@@ -191,15 +191,15 @@ const ProjectEditor = () => {
     const input = e.target.value;
     setSearchUsername(input);
     const filtered = allUsers.filter(
-      user =>
-        user.username.toLowerCase().includes(input.toLowerCase()) &&
-        !sharedUsers.some(u => u.id === user.id),
+      userC =>
+      userC.username.toLowerCase().includes(input.toLowerCase()) &&
+        !sharedUsers.some(u => u.id === userC.id),
     );
     setFilteredUsers(filtered);
   };
-  const handleAddUser = user => {
-    setSharedUsers([...sharedUsers, { ...user, permissions: 'viewer' }]);
-    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+  const handleAddUser = userC => {
+    setSharedUsers([...sharedUsers, { ...userC, permissions: 'viewer' }]);
+    setFilteredUsers(prev => prev.filter(u => u.id !== userC.id));
     setSearchUsername('');
   };
 
@@ -211,7 +211,7 @@ const ProjectEditor = () => {
 
   const handleUpdatePermission = (userId, permission) => {
     setSharedUsers(
-      sharedUsers.map(user => (user.id === userId ? { ...user, permissions: permission } : user)),
+      sharedUsers.map(userC => (userC.id === userId ? { ...userC, permissions: permission } : userC)),
     );
   };
 
@@ -478,21 +478,21 @@ const ProjectEditor = () => {
 
             <div className='form-group'>
               <label className='form-label'>Shared With</label>
-              {sharedUsers.map(user => (
-                <div key={user.id} className='flex items-center justify-between mb-2'>
+              {sharedUsers.map(userC => (
+                <div key={userC.id} className='flex items-center justify-between mb-2'>
                   <div className='flex items-center'>
                     <FiUser className='mr-2' />
-                    <span>{user.username}</span>
+                    <span>{userC.username}</span>
                   </div>
                   <div className='flex items-center'>
                     <select
-                      value={user.permissions}
-                      onChange={e => handleUpdatePermission(user.id, e.target.value)}
+                      value={userC.permissions}
+                      onChange={e => handleUpdatePermission(userC.id, e.target.value)}
                       className='form-select mr-2'>
                       <option value='viewer'>Viewer</option>
                       <option value='editor'>Editor</option>
                     </select>
-                    <button onClick={() => handleRemoveUser(user.id)} className='text-red-500'>
+                    <button onClick={() => handleRemoveUser(userC.id)} className='text-red-500'>
                       <FiTrash2 />
                     </button>
                   </div>
@@ -509,10 +509,10 @@ const ProjectEditor = () => {
                 className='form-input'
                 placeholder='Search username to share'
               />
-              {filteredUsers.map(user => (
-                <div key={user.id} className='flex items-center justify-between mb-2'>
-                  <span>{user.username}</span>
-                  <button onClick={() => handleAddUser(user)} className='btn btn-primary'>
+              {filteredUsers.map(userC => (
+                <div key={userC.id} className='flex items-center justify-between mb-2'>
+                  <span>{userC.username}</span>
+                  <button onClick={() => handleAddUser(userC)} className='btn btn-primary'>
                     Add
                   </button>
                 </div>
