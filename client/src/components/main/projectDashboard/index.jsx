@@ -12,9 +12,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // import useUserSearch from '../../../hooks/useUserSearch';
 
 const ProjectDashboard = () => {
-  const { user: userC, socket } = useUserContext();
+  const { user: userC } = useUserContext();
   const context = useContext(UserContext);
-  const location = useLocation();
   const username = context?.user?.username;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
