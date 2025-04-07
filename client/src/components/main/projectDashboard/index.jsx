@@ -210,7 +210,7 @@ const ProjectDashboard = () => {
         <div className='d-flex align-items-center justify-content-between'>
           <div className='d-flex align-items-center'>
             <div className='bg-primary text-white p-2 rounded me-2 d-flex align-items-center'>
-              FSO
+              CDE
             </div>
             <span className='fs-5 text-dark'>Projects</span>
           </div>
