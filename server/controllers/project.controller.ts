@@ -1033,8 +1033,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const getFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
-    if (!isFileRequestValid(req)) {
-      res.status(400).send('Invalid file request');
+    const actorUsername = req.query.actor as string;
+    if (!actorUsername || typeof actorUsername !== 'string') {
+      res.status(400).send('Missing or invalid actor');
       return;
     }
 
@@ -1046,7 +1047,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(project.error);
       }
 
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      const actor: UserResponse = await getUserByUsername(actorUsername);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
@@ -1078,7 +1079,7 @@ const projectController = (socket: FakeSOSocket) => {
 
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).send(`Error when updating project file: ${error}`);
+      res.status(500).send(`Error when getting project file: ${error}`);
     }
   };
 
