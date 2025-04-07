@@ -103,7 +103,7 @@ const ProjectEditor = () => {
       setActiveFile(files[0]?.name || '');
     };
     loadFiles();
-  }, [projectId]);
+  }, [projectId, user.user.username]);
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -112,7 +112,7 @@ const ProjectEditor = () => {
     return () => {
       user?.socket.emit('leaveProject', projectId);
     };
-  }, [projectId]);
+  }, [projectId, user?.socket]);
   useEffect(() => {
     if (!activeFile) return undefined;
 
@@ -131,7 +131,7 @@ const ProjectEditor = () => {
     return () => {
       user?.socket.off('remoteEdit', handleRemoteEdit);
     };
-  }, [activeFile]);
+  }, [activeFile, fileMap, user?.socket]);
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -150,7 +150,7 @@ const ProjectEditor = () => {
     return () => {
       user?.socket.off('fileCreated', handleFileCreated);
     };
-  }, [projectId]);
+  }, [projectId, user?.socket]);
   useEffect(() => {
     const handleFileDeleted = ({ fileId }) => {
       const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
@@ -185,7 +185,7 @@ const ProjectEditor = () => {
     return () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
-  }, [fileMap, fileContents, activeFile]);
+  }, [fileMap, fileContents, activeFile, user?.socket]);
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -259,7 +259,6 @@ const ProjectEditor = () => {
       setIsAddFileOpen(false);
     } catch (err) {
       setConsoleOutput(prev => `${prev}Error: Could not create file on server\n`);
-      console.error('Failed to create file:', err);
     }
   };
 
@@ -339,7 +338,6 @@ const ProjectEditor = () => {
                       setActiveFile(nextFile || '');
                     }
                   } catch (err) {
-                    console.error('Error deleting file:', err);
                     setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
                   }
                 }}
@@ -404,7 +402,7 @@ const ProjectEditor = () => {
                   contents: newValue,
                 });
               } catch (err) {
-                console.error('Failed to save file:', err);
+                throw new Error('Failed to save file');
               }
             }}
             theme={theme}
