@@ -45,6 +45,7 @@ import {
   // DeleteFileCommentsByLineRequest,
   // DeleteFileCommentByIdRequest,
 } from '../types/types';
+import ProjectModel from '../models/projects.model';
 
 export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER';
 
@@ -1146,6 +1147,49 @@ const projectController = (socket: FakeSOSocket) => {
   //   '/:projectId/file/:fileId/deleteCommentById/:commentId',
   //   deleteFileCommentByIdRoute,
   // );
+
+  socket.on('connection', conn => {
+    conn.on('joinProject', (projectId: string) => {
+      conn.join(projectId);
+      conn.data.projectId = projectId; // track project id
+    });
+
+    conn.on('leaveProject', (projectId: string) => {
+      conn.leave(projectId);
+    });
+
+    conn.on('editFile', async ({ fileName, content }) => {
+      try {
+        const result = await updateProjectFile(fileName, { contents: content });
+
+        if ('error' in result) {
+          throw new Error(result.error);
+        } else {
+          conn.to(fileName).emit('remoteEdit', { fileName, content: result.contents });
+        }
+      } catch (error) {
+        throw new Error('HERE 1');
+      }
+    });
+
+    conn.on('disconnect', async () => {
+      try {
+        const { projectId } = conn.data;
+        if (!projectId) {
+          throw new Error('No project ID on disconnect');
+        }
+
+        const project: Project | null = await ProjectModel.findOne({ _id: projectId });
+        if (!project) {
+          throw new Error('Project not found on disconnect');
+        }
+
+        await saveProject(project);
+      } catch (error) {
+        console.error('Disconnect error:', error);
+      }
+    });
+  });
 
   return router;
 };

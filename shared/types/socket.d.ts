@@ -107,6 +107,9 @@ export interface ClientToServerEvents {
   leaveGame: (gameID: string) => void;
   joinChat: (chatID: string) => void;
   leaveChat: (chatID: string | undefined) => void;
+  joinProject: (projectId: string) => void;
+  leaveProject: (projectId: string) => void;
+  editFile: (data: { fileName: string; content: string }) => void;
 }
 
 /**
@@ -133,4 +136,5 @@ export interface ServerToClientEvents {
   gameUpdate: (game: GameUpdatePayload) => void;
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
+  remoteEdit: (data: { fileName: string; content: string }) => void;
 }
