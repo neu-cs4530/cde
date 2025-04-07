@@ -1156,8 +1156,16 @@ const projectController = (socket: FakeSOSocket) => {
       conn.data.projectId = projectId;
     });
 
-    conn.on('leaveProject', (projectId: string) => {
-      conn.leave(projectId);
+    conn.on('leaveProject', async (projectId: string) => {
+      try {
+        const project: Project | null = await ProjectModel.findById(projectId);
+        if (project) {
+          await saveProject(project);
+        }
+        conn.leave(projectId);
+      } catch (error) {
+        throw new Error('Unexpected error')
+      }
     });
 
     conn.on('editFile', async ({ fileId, content }) => {
@@ -1173,26 +1181,12 @@ const projectController = (socket: FakeSOSocket) => {
           conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
         }
       } catch (error) {
-        throw new Error();
+        throw new Error('Unexpected');
       }
     });
 
     conn.on('disconnect', async () => {
-      try {
-        const { projectId } = conn.data;
-        if (!projectId) {
-          throw new Error('No project ID on disconnect');
-        }
-
-        const project: Project | null = await ProjectModel.findOne({ _id: projectId });
-        if (!project) {
-          throw new Error('Project not found on disconnect');
-        }
-
-        await saveProject(project);
-      } catch (error) {
-        throw new Error();
-      }
+      // clean up if needed later
     });
   });
 
