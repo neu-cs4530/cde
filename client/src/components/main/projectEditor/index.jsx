@@ -192,7 +192,7 @@ const ProjectEditor = () => {
     setSearchUsername(input);
     const filtered = allUsers.filter(
       userC =>
-      userC.username.toLowerCase().includes(input.toLowerCase()) &&
+        userC.username.toLowerCase().includes(input.toLowerCase()) &&
         !sharedUsers.some(u => u.id === userC.id),
     );
     setFilteredUsers(filtered);
@@ -211,7 +211,9 @@ const ProjectEditor = () => {
 
   const handleUpdatePermission = (userId, permission) => {
     setSharedUsers(
-      sharedUsers.map(userC => (userC.id === userId ? { ...userC, permissions: permission } : userC)),
+      sharedUsers.map(userC => (
+        userC.id === userId ? { ...userC, permissions: permission } : userC
+        )),
     );
   };
 
