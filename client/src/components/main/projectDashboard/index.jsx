@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
 import { createProject, getProjectsByUser } from '../../../services/projectService';
