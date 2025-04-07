@@ -5,17 +5,14 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
-<<<<<<< HEAD
-import { runProjectFile } from '../../../services/projectService';
-=======
 import {
   getFiles,
   updateFileById,
   createFile,
   deleteFileById,
+  runProjectFile,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
->>>>>>> afaf6df8c9f0ec194739cdf9d7ff36f4f47ef3d6
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
