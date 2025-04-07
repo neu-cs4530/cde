@@ -1186,7 +1186,7 @@ describe('Project Controller', () => {
 
       const response = await supertest(app)
         .get(`/projects/${mockDatabaseProject._id}/getFiles`)
-        .send(mockReqBody);
+        .query(mockReqBody);
 
       expect(response.status).toBe(200);
       expect(response.body).toEqual([mockFileJSONResponse]);
