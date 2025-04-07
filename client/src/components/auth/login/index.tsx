@@ -20,7 +20,13 @@ const Login = () => {
 
   return (
     <div className='container'>
-      <h2>Welcome to FakeStackOverflow!</h2>
+      <div className='cde-header'>
+        <h1 className='cde-logo'>
+          <span className='cde-c'>C</span>
+          <span className='cde-d'>D</span>
+          <span className='cde-e'>E</span>
+        </h1>
+      </div>
       <h3>Please login to continue.</h3>
       <form onSubmit={handleSubmit}>
         <h4>Please enter your username.</h4>
