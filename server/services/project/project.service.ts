@@ -24,8 +24,6 @@ import { addProjectToUser } from '../user.service';
  */
 export const saveProject = async (project: Project): Promise<ProjectResponse> => {
   try {
-
-
     const state: DatabaseProjectState | null = await ProjectStateModel.create(project.currentState);
 
     if (!state) {

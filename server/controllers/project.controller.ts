@@ -40,11 +40,12 @@ import {
   ProjectStateRequest,
   CreateFileRequest,
   FileRequest,
-  ProjectState,
+  // ProjectState,
   // AddFileCommentRequest,
   // DeleteFileCommentsByLineRequest,
   // DeleteFileCommentByIdRequest,
 } from '../types/types';
+
 export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER';
 
 /**
@@ -274,19 +275,19 @@ const projectController = (socket: FakeSOSocket) => {
         collaborators.push(...invitedCollaborators);
       }
 
-      const mainFile: ProjectFile = {
-        name: 'main.py',
-        fileType: 'PYTHON',
-        contents: '# Start coding here...',
-        comments: [],
-      };
+      // const mainFile: ProjectFile = {
+      //   name: 'main.py',
+      //   fileType: 'PYTHON',
+      //   contents: '# Start coding here...',
+      //   comments: [],
+      // };
 
-      const utilsFile: ProjectFile = {
-        name: 'utils.py',
-        fileType: 'PYTHON',
-        contents: '# Start coding here...',
-        comments: [],
-      };
+      // const utilsFile: ProjectFile = {
+      //   name: 'utils.py',
+      //   fileType: 'PYTHON',
+      //   contents: '# Start coding here...',
+      //   comments: [],
+      // };
 
       // Create a new project and save it to the database
       // NOTE that currentState will be saved by saveProject()
