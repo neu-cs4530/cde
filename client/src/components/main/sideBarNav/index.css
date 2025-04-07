@@ -3,8 +3,10 @@
   flex-direction: column;
   width: 15%;
   border-right: dashed;
-  padding: 4% 0 4% 0;
+  padding: 4% 0;
+  border-right: 2px dashed #bfbfbf;
   align-items: center;
+  background-color: #f7f7f7;
 }
 
 .menu_button:first-child {
@@ -15,29 +17,52 @@
   height: 40px;
   width: 80%;
   margin-top: 20px;
-  border-radius: 5px;
+  border-radius: 8px;
   text-align: center;
   line-height: 40px;
-  color: cornflowerblue;
+  font-weight: 600;
+  color: #333;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
+  background-color: transparent;
+}
+
+.menu_button:hover {
+  background: linear-gradient(135deg, #797ff1, #f869e0);
+  color: white;
+  box-shadow: 0 0 10px #797ff1aa;
 }
 
 .menu_selected {
-  background: #cccccc;
+  background: linear-gradient(135deg, #797ff1, #f869e0);
+  color: white;
+  box-shadow: 0 0 12px #797ff1aa;
 }
 
 .additional-options {
   display: flex;
   flex-direction: column;
-  padding: 4% 0 4% 0;
   align-items: center;
+  width: 100%;
+  margin-top: 10px;
 }
 
 .message-options {
-  width: max-content;
+  width: 90%;
+  font-size: 14px;
+  text-align: center;
+  border-radius: 6px;
+  padding: 6px 0;
+  color: #444;
+  text-decoration: none;
 }
 
+.message-options:hover {
+  background: #a15deb;
+  color: white;
+}
 .message-option-selected {
   background: #3090e2;
   color: white;
-  width: 110%;
+  width: 90%;
 }
