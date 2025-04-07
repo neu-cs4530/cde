@@ -88,5 +88,6 @@ export interface FileRequest extends Request {
     actor: string;
     name?: string;
     fileType?: ProjectFileType;
+    contents?: string;
   };
 }

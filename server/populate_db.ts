@@ -209,7 +209,7 @@ async function userCreate(
 async function projectCreate(
   name: string,
   creator: string,
-  createdAt: Date, // if you want to track this locally
+  createdAt: Date,
   collaborators: { userId: mongoose.Types.ObjectId; role: string }[] = [],
 ): Promise<mongoose.Document> {
   return await ProjectModel.create({
