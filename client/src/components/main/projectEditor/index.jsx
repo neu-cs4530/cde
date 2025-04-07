@@ -211,9 +211,9 @@ const ProjectEditor = () => {
 
   const handleUpdatePermission = (userId, permission) => {
     setSharedUsers(
-      sharedUsers.map(userC => 
+      sharedUsers.map(userC =>
         userC.id === userId ? { ...userC, permissions: permission } : userC,
-        ),
+      ),
     );
   };
 
