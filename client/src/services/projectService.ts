@@ -116,8 +116,8 @@ const updateProjectState = async (
  * @returns
  */
 // Retrieve all projects for a specific user based on their username.
-const getProjectsByUser = async (user: string): Promise<DatabaseProject[]> => {
-  const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser${user}`);
+const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> => {
+  const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser/${username}`);
   if (res.status !== 200) {
     throw new Error(`Error when getting projects by user`);
   }

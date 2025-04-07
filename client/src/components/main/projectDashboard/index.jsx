@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
-import { createProject } from '../../../services/projectService';
+import { createProject, getProjectsByUser } from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
 import UserContext from '../../../contexts/UserContext';
 
@@ -14,6 +14,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 const ProjectDashboard = () => {
   const { userC, socket } = useUserContext();
   const context = useContext(UserContext);
+  const location = useLocation();
   const username = context?.user?.username;
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
@@ -31,7 +32,7 @@ const ProjectDashboard = () => {
     type: 'doc',
     currentState: 'draft', // should all new projects have current/initial state being a draft?
     sharedUsers: [],
-    starred: false,
+    // starred: false,
     inTrash: false,
   });
   const closeAndResetForm = () => {
@@ -89,6 +90,17 @@ const ProjectDashboard = () => {
       allUsers.filter(user => user.username.toLowerCase().includes(searchUsername.toLowerCase())),
     );
   }, [searchUsername, allUsers]);
+
+  // get all projects by user use effect
+  useEffect(() => {
+    if (!userC || !userC.username) return;
+    const fetchData = async () => {
+      const allProj = await getProjectsByUser(userC.username);
+      console.log('Fetched Projects:', allProj);
+      setProjects(allProj);
+    };
+    fetchData();
+  }, [userC, location.pathname]);
 
   const handleAddSharedUser = user => {
     setNewProject({
