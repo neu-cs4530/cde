@@ -13,7 +13,9 @@ import {
   DatabaseProjectState,
   ProjectFile,
   DatabaseProjectFile,
+  UserResponse,
 } from '../../types/types';
+import { addProjectToUser } from '../user.service';
 
 /**
  * Saves a new project to the database.
@@ -32,6 +34,15 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
 
     if (!result) {
       throw new Error('Failed to save project');
+    }
+
+    const projectToAdd: Partial<User> = {
+      projects: [result._id],
+    };
+    const user: UserResponse | null = await addProjectToUser(result.creator, projectToAdd);
+
+    if (!user) {
+      throw new Error('Failed to add project to user');
     }
 
     return result;
