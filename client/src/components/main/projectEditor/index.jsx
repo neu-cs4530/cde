@@ -5,7 +5,12 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
-import { getFiles, updateFileById } from '../../../services/projectService';
+import {
+  getFiles,
+  updateFileById,
+  createFile,
+  deleteFileById,
+} from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 
 const ProjectEditor = () => {
@@ -81,6 +86,25 @@ const ProjectEditor = () => {
     }
   }, [consoleOutput]);
   useEffect(() => {
+    const loadFiles = async () => {
+      if (!projectId || !user?.user?.username) return;
+      const files = await getFiles(projectId, user.user.username);
+      const contents = {};
+      const languages = {};
+      const map = {};
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+        map[file.name] = file;
+      });
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setFileMap(map);
+      setActiveFile(files[0]?.name || '');
+    };
+    loadFiles();
+  }, [projectId]);
+  useEffect(() => {
     if (!projectId) return undefined;
 
     user?.socket.emit('joinProject', projectId);
@@ -92,10 +116,13 @@ const ProjectEditor = () => {
   useEffect(() => {
     if (!activeFile) return undefined;
 
-    const handleRemoteEdit = ({ fileName, content }) => {
+    const handleRemoteEdit = ({ fileId, content }) => {
+      const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
+      if (!updatedFileName) return;
+
       setFileContents(prev => ({
         ...prev,
-        [fileName]: content,
+        [updatedFileName]: content,
       }));
     };
 
@@ -106,20 +133,59 @@ const ProjectEditor = () => {
     };
   }, [activeFile]);
   useEffect(() => {
-    const loadFiles = async () => {
-      const files = await getFiles(projectId);
-      const contents = {};
-      const languages = {};
-      files.forEach(file => {
-        contents[file.name] = file.contents;
-        languages[file.name] = file.fileType.toLowerCase();
-      });
-      setFileContents(contents);
-      setFileLanguages(languages);
-      setActiveFile(files[0]?.name || '');
+    if (!projectId) return undefined;
+
+    const handleFileCreated = ({ file }) => {
+      const { name } = file;
+      const language = file.fileType.toLowerCase();
+      const starterContent = getStarterContentForLanguage(language, name);
+
+      setFileContents(prev => ({ ...prev, [name]: starterContent }));
+      setFileLanguages(prev => ({ ...prev, [name]: language }));
+      setFileMap(prev => ({ ...prev, [name]: file }));
     };
-    loadFiles();
+
+    user?.socket.on('fileCreated', handleFileCreated);
+
+    return () => {
+      user?.socket.off('fileCreated', handleFileCreated);
+    };
   }, [projectId]);
+  useEffect(() => {
+    const handleFileDeleted = ({ fileId }) => {
+      const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
+
+      if (fileToDelete) {
+        setFileContents(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        setFileLanguages(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        setFileMap(prev => {
+          const updated = { ...prev };
+          delete updated[fileToDelete];
+          return updated;
+        });
+
+        if (activeFile === fileToDelete) {
+          const nextFile = Object.keys(fileContents).find(f => f !== fileToDelete);
+          setActiveFile(nextFile || '');
+        }
+      }
+    };
+
+    user?.socket.on('fileDeleted', handleFileDeleted);
+    return () => {
+      user?.socket.off('fileDeleted', handleFileDeleted);
+    };
+  }, [fileMap, fileContents, activeFile]);
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -149,31 +215,50 @@ const ProjectEditor = () => {
     );
   };
 
-  const handleAddFile = () => {
+  const handleAddFile = async () => {
     if (!newFileName.trim()) {
       setConsoleOutput(prev => `${prev}Error: File name cannot be empty\n`);
       return;
     }
+
     const fileExtension = getFileExtensionForLanguage(selectedLanguage);
     const fullFileName = `${newFileName}${fileExtension}`;
+
     if (Object.keys(fileContents).includes(fullFileName)) {
       setConsoleOutput(prev => `${prev}Error: A file with this name already exists\n`);
       return;
     }
-    // making new file with appropriate starter content
+
     const starterContent = getStarterContentForLanguage(selectedLanguage, newFileName);
-    setFileContents(prev => ({
-      ...prev,
-      [fullFileName]: starterContent,
-    }));
-    setFileLanguages(prev => ({
-      ...prev,
-      [fullFileName]: selectedLanguage,
-    }));
-    setActiveFile(fullFileName);
-    // Reset form and close modal
-    setNewFileName('');
-    setIsAddFileOpen(false);
+
+    try {
+      const fileTypeEnum = selectedLanguage.toUpperCase();
+      const createdFile = await createFile(
+        projectId,
+        user.user.username,
+        fullFileName,
+        fileTypeEnum,
+      );
+
+      setFileContents(prev => ({
+        ...prev,
+        [fullFileName]: starterContent,
+      }));
+      setFileLanguages(prev => ({
+        ...prev,
+        [fullFileName]: selectedLanguage,
+      }));
+      setFileMap(prev => ({
+        ...prev,
+        [fullFileName]: createdFile,
+      }));
+      setActiveFile(fullFileName);
+      setNewFileName('');
+      setIsAddFileOpen(false);
+    } catch (err) {
+      setConsoleOutput(prev => `${prev}Error: Could not create file on server\n`);
+      console.error('Failed to create file:', err);
+    }
   };
 
   const runJavaScript = () => {
@@ -220,7 +305,7 @@ const ProjectEditor = () => {
                 {file}
               </span>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (Object.keys(fileContents).length === 1) {
                     // eslint-disable-next-line no-alert
                     alert('You need at least one file in a project!!');
@@ -229,15 +314,31 @@ const ProjectEditor = () => {
                   // eslint-disable-next-line no-alert
                   const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
                   if (!confirmed) return;
-                  const updated = { ...fileContents };
-                  delete updated[file];
-                  const updatedLanguages = { ...fileLanguages };
-                  delete updatedLanguages[file];
-                  setFileLanguages(updatedLanguages);
-                  setFileContents(updated);
-                  if (file === activeFile) {
-                    const nextFile = Object.keys(updated)[0];
-                    setActiveFile(nextFile || '');
+                  try {
+                    const fileId = fileMap[file]?._id;
+                    if (!fileId) throw new Error('Missing fileId');
+
+                    await deleteFileById(projectId, fileId, user.user.username);
+
+                    const updated = { ...fileContents };
+                    delete updated[file];
+                    setFileContents(updated);
+
+                    const updatedLanguages = { ...fileLanguages };
+                    delete updatedLanguages[file];
+                    setFileLanguages(updatedLanguages);
+
+                    const updatedMap = { ...fileMap };
+                    delete updatedMap[file];
+                    setFileMap(updatedMap);
+
+                    if (file === activeFile) {
+                      const nextFile = Object.keys(updated)[0];
+                      setActiveFile(nextFile || '');
+                    }
+                  } catch (err) {
+                    console.error('Error deleting file:', err);
+                    setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
                   }
                 }}
                 style={{
@@ -290,8 +391,16 @@ const ProjectEditor = () => {
             value={fileContents[activeFile]}
             onChange={async newValue => {
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+              const fileId = fileMap[activeFile]?._id;
+              user?.socket.emit('editFile', {
+                fileId,
+                content: newValue,
+              });
               try {
-                await updateFileById(projectId, fileId, user.username, { contents: newValue });
+                if (!fileId) throw new Error('Missing fileId');
+                await updateFileById(projectId, fileId, user.user.username, {
+                  contents: newValue,
+                });
               } catch (err) {
                 console.error('Failed to save file:', err);
               }
