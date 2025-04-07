@@ -263,8 +263,9 @@ const restoreStateById = async (
  * @returns
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
-  const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, {
+    params: { actor },
+  });
   if (res.status !== 200) {
     throw new Error(`Error when getting files`);
   }
