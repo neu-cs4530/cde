@@ -1153,7 +1153,6 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('joinProject', (projectId: string) => {
       conn.join(projectId);
       conn.data.projectId = projectId;
-      console.log('YEY');
     });
 
     conn.on('leaveProject', (projectId: string) => {
@@ -1173,7 +1172,7 @@ const projectController = (socket: FakeSOSocket) => {
           conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
         }
       } catch (error) {
-        console.error('Edit file error:', error);
+        throw new Error()
       }
     });
 
@@ -1191,7 +1190,7 @@ const projectController = (socket: FakeSOSocket) => {
 
         await saveProject(project);
       } catch (error) {
-        console.error('Disconnect error:', error);
+        throw new Error()
       }
     });
   });
