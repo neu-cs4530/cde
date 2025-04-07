@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
+import { getFiles, updateFileById } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 
 const ProjectEditor = () => {
@@ -31,6 +32,7 @@ const ProjectEditor = () => {
   const consoleRef = useRef(null);
   const user = useContext(UserContext);
   const { projectId } = useParams();
+  const [fileMap, setFileMap] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -103,6 +105,21 @@ const ProjectEditor = () => {
       user?.socket.off('remoteEdit', handleRemoteEdit);
     };
   }, [activeFile]);
+  useEffect(() => {
+    const loadFiles = async () => {
+      const files = await getFiles(projectId);
+      const contents = {};
+      const languages = {};
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+      });
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setActiveFile(files[0]?.name || '');
+    };
+    loadFiles();
+  }, [projectId]);
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -271,9 +288,13 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
-            onChange={newValue => {
+            onChange={async newValue => {
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              user?.socket.emit('editFile', { fileName: activeFile, content: newValue });
+              try {
+                await updateFileById(projectId, fileId, user.username, { contents: newValue });
+              } catch (err) {
+                console.error('Failed to save file:', err);
+              }
             }}
             theme={theme}
           />
