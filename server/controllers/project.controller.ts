@@ -1164,7 +1164,7 @@ const projectController = (socket: FakeSOSocket) => {
         }
         conn.leave(projectId);
       } catch (error) {
-        throw new Error('Unexpected error')
+        throw new Error('Unexpected error');
       }
     });
 
