@@ -335,7 +335,9 @@ const getFileById = async (
   actor: string,
 ): Promise<DatabaseProjectFile> => {
   const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`, {
+    data,
+  });
   // const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`); query instead?
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
@@ -483,6 +485,5 @@ export {
   deleteCommentById,
   getCollaborators,
   saveProjectState,
-  updateProjectState,
   runProjectFile,
 };

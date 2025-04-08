@@ -45,6 +45,7 @@ import {
   ProjectStateRequest,
   CreateFileRequest,
   FileRequest,
+  GetFileRequest,
   // ProjectState,
   // AddFileCommentRequest,
   // DeleteFileCommentsByLineRequest,
@@ -114,9 +115,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isGetProjectReqValid = (req: GetProjectRequest): boolean =>
-    req.query !== undefined &&
-    req.query.actor !== undefined &&
-    req.query.actor !== '';
+    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for a collaborator.
@@ -128,7 +127,7 @@ const projectController = (socket: FakeSOSocket) => {
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
     (req.body.role ? req.query.role !== undefined : true) &&
-    (req.body.role ? isCollaboratorRoleValid(req.query.role) : true);
+    (req.body.role ? isCollaboratorRoleValid(req.query.role as string) : true);
 
   /**
    * Validates that the request contains all required fields for a project state.
@@ -161,16 +160,16 @@ const projectController = (socket: FakeSOSocket) => {
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
-    (req.body.name ? (req.body.name !== undefined && req.body.name !== '') : true) &&
+    (req.body.name ? req.body.name !== undefined && req.body.name !== '' : true) &&
     (req.body.fileType ? isProjectFileTypeValid(req.body.fileType) : true) &&
-    (req.body.contents ? (req.body.contents !== undefined && req.body.contents !== '') : true);
+    (req.body.contents ? req.body.contents !== undefined && req.body.contents !== '' : true);
 
   /**
    * Validates that the request contains all required fields for getting a file.
    * @param req The incoming request containing project and file IDs, and actor.
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
-  const isGetFileRequestValid = (req: GetFileRequest): boolean => 
+  const isGetFileRequestValid = (req: GetFileRequest): boolean =>
     req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
