@@ -102,3 +102,31 @@ form {
   margin-top: 20px;
   text-align: center;
 }
+
+.cde-logo-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.block {
+  font-size: 24px;
+  font-weight: 900;
+  padding: 6px 10px;
+  border-radius: 4px;
+  color: rgb(10, 1, 1);
+}
+
+/* CDE Colors */
+.block.c {
+  background-color: #797ff1;
+}
+
+.block.d {
+  background-color: #f869e0;
+}
+
+.block.e {
+  background-color: #31c553;
+}

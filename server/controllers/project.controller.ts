@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Response, Request } from 'express';
 import { ObjectId } from 'mongodb';
 import {
   saveProject,
@@ -16,7 +16,11 @@ import {
   saveFileInState,
   deleteFileInState,
 } from '../services/project/projectState.service';
-import { updateProjectFile, getProjectFile } from '../services/project/projectFile.service';
+import {
+  updateProjectFile,
+  getProjectFile,
+  executeProjectFile,
+} from '../services/project/projectFile.service';
 // import {
 //
 // } from '../services/project/projectFileComment.service';
@@ -45,6 +49,7 @@ import {
   // DeleteFileCommentsByLineRequest,
   // DeleteFileCommentByIdRequest,
 } from '../types/types';
+import ProjectModel from '../models/projects.model';
 
 export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER';
 
@@ -780,37 +785,31 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const getFilesRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
-    if (!isProjectReqValid(req)) {
-      res.status(400).send('Invalid project request');
+    const actorUsername = req.query.actor as string;
+    if (!actorUsername) {
+      res.status(400).send('Missing actor');
       return;
     }
-
     try {
       const { projectId } = req.params;
-
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      const actor: UserResponse = await getUserByUsername(actorUsername);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
-
       const validActor = isProjectCollaborator(actor._id, project);
       if (validActor === false) {
         res.status(403).send('Forbidden');
         return;
       }
-
       const stateId = project.currentState;
-
       const state: ProjectStateResponse = await getProjectStateById(stateId.toString());
       if ('error' in state) {
         throw new Error(state.error);
       }
-
       const files = [];
       if (state.files !== undefined) {
         const projectFiles: DatabaseProjectFile[] = await Promise.all(
@@ -819,14 +818,11 @@ const projectController = (socket: FakeSOSocket) => {
             if ('error' in file) {
               throw new Error(file.error);
             }
-
             return file;
           }),
         );
-
         files.push(...projectFiles);
       }
-
       res.status(200).json(files);
     } catch (error) {
       res.status(500).send(`Error when getting project files: ${error}`);
@@ -882,6 +878,12 @@ const projectController = (socket: FakeSOSocket) => {
       const result: ProjectFileResponse = await saveFileInState(currentStateId.toString(), file);
       if ('error' in result) {
         throw new Error(result.error);
+      }
+
+      if (socket && 'to' in socket) {
+        socket.to(projectId).emit('fileCreated', {
+          file: result,
+        });
       }
 
       res.status(200).json(result);
@@ -948,6 +950,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(result.error);
       }
 
+      socket.to(projectId).emit('fileDeleted', { fileId: fileId.toString() });
       res.status(200).json(result);
     } catch (error) {
       res.status(500).send(`Error when deleting project file: ${error}`);
@@ -1012,6 +1015,9 @@ const projectController = (socket: FakeSOSocket) => {
       if (req.body.fileType !== undefined) {
         updates.fileType = req.body.fileType;
       }
+      if (req.body.contents !== undefined) {
+        updates.contents = req.body.contents;
+      }
 
       const result: ProjectFileResponse = await updateProjectFile(fileId.toString(), updates);
       if ('error' in result) {
@@ -1031,8 +1037,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const getFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
-    if (!isFileRequestValid(req)) {
-      res.status(400).send('Invalid file request');
+    const actorUsername = req.query.actor as string;
+    if (!actorUsername || typeof actorUsername !== 'string') {
+      res.status(400).send('Missing or invalid actor');
       return;
     }
 
@@ -1044,7 +1051,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(project.error);
       }
 
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      const actor: UserResponse = await getUserByUsername(actorUsername);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
@@ -1076,7 +1083,38 @@ const projectController = (socket: FakeSOSocket) => {
 
       res.status(200).json(result);
     } catch (error) {
-      res.status(500).send(`Error when updating project file: ${error}`);
+      res.status(500).send(`Error when getting project file: ${error}`);
+    }
+  };
+  /**
+   * Controller function to handle executing a project file.
+   * @param {Request} req - Express request object.
+   * @param {Response} res - Express response object.
+   */
+  const runProjectFileCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { fileId } = req.params;
+      const { fileName, fileContent } = req.body;
+      if (!fileName || !fileContent) {
+        res.status(400).json({
+          success: false,
+          error: 'File name and content are required',
+        });
+        return;
+      }
+      // executing the file
+      const result = await executeProjectFile(fileName, fileContent);
+      res.status(result.success ? 200 : 400).json({
+        success: result.success,
+        output: result.output,
+        error: result.error,
+      });
+    } catch (error) {
+      console.error('Error in runProjectFileCode:', error);
+      res.status(500).json({
+        success: false,
+        error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
+      });
     }
   };
 
@@ -1137,6 +1175,7 @@ const projectController = (socket: FakeSOSocket) => {
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
+  router.post('/project-files/:fileId/run', runProjectFileCode);
   // router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
   // router.delete(
   //   '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',
@@ -1146,6 +1185,46 @@ const projectController = (socket: FakeSOSocket) => {
   //   '/:projectId/file/:fileId/deleteCommentById/:commentId',
   //   deleteFileCommentByIdRoute,
   // );
+
+  socket.on('connection', conn => {
+    conn.on('joinProject', (projectId: string) => {
+      conn.join(projectId);
+      conn.data.projectId = projectId;
+    });
+
+    conn.on('leaveProject', async (projectId: string) => {
+      try {
+        const project: Project | null = await ProjectModel.findById(projectId);
+        if (project) {
+          await saveProject(project);
+        }
+        conn.leave(projectId);
+      } catch (error) {
+        throw new Error('Unexpected error');
+      }
+    });
+
+    conn.on('editFile', async ({ fileId, content }) => {
+      try {
+        const result = await updateProjectFile(fileId, { contents: content });
+
+        if ('error' in result) {
+          throw new Error(result.error);
+        }
+
+        const { projectId } = conn.data;
+        if (projectId) {
+          conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
+        }
+      } catch (error) {
+        throw new Error('Unexpected');
+      }
+    });
+
+    conn.on('disconnect', async () => {
+      // clean up if needed later
+    });
+  });
 
   return router;
 };

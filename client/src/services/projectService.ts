@@ -263,8 +263,9 @@ const restoreStateById = async (
  * @returns
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
-  const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, {
+    params: { actor },
+  });
   if (res.status !== 200) {
     throw new Error(`Error when getting files`);
   }
@@ -450,6 +451,32 @@ const saveProjectState = async (
   return res.data;
 };
 
+const runProjectFile = async (projectId: string, fileName: string, fileContent: string) => {
+  try {
+    const response = await fetch(`${PROJECT_API_URL}/${projectId}/run`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // json data in request body
+      },
+      body: JSON.stringify({
+        // converts the js object w/ the file name and content into a JSON string
+        // data sent to server for processing
+        fileName,
+        fileContent,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to run file');
+    }
+    return await response.json();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error running project file:', error);
+    throw error;
+  }
+};
+
 export {
   createProject,
   deleteProjectById,
@@ -473,4 +500,5 @@ export {
   getCollaborators,
   saveProjectState,
   updateProjectState,
+  runProjectFile,
 };

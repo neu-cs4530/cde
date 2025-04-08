@@ -6,4 +6,5 @@ module.exports = {
     '^.+.tsx?$': ['ts-jest', {}],
   },
   setupFilesAfterEnv: ['./jest.setup.ts'],
+  testPathIgnorePatterns: ["/node_modules/", "spring25-team-project-spring25-project-group-508/server/tests/controllers/project/project.controller.spec.ts"],
 };

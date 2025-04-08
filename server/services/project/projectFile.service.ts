@@ -1,3 +1,7 @@
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 import ProjectFileCommentModel from '../../models/projectFileComments.model';
 import ProjectFileModel from '../../models/projectFiles.model';
 import { DatabaseProjectFile, ProjectFile, ProjectFileResponse } from '../../types/types';
@@ -160,4 +164,73 @@ export const getProjectFile = async (fileId: string): Promise<ProjectFileRespons
   } catch (error) {
     return { error: `Error retrieving file: ${error}` };
   }
+};
+/**
+ * Executes a Python file with the given content and returns the output.
+ * @param {string} fileName - The name of the file to execute.
+ * @param {string} fileContent - The content of the Python file to execute.
+ * @returns {Promise<{success: boolean, output: string, error: string}>} - Execution results.
+ */
+export const executeProjectFile = async (
+  fileName: string,
+  fileContent: string,
+): Promise<{ success: boolean; output: string; error: string }> => {
+  if (!fileName.endsWith('.py')) {
+    return {
+      success: false,
+      output: '',
+      error: 'Only Python files are supported for execution',
+    };
+  }
+
+  return new Promise(resolve => {
+    try {
+      // temporary directory for the file
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'py-execution-'));
+      const filePath = path.join(tempDir, fileName);
+      // file content to the temporary location
+      fs.writeFileSync(filePath, fileContent);
+      // spawning a python process to execute the file
+      const pythonProcess = spawn('python', [filePath]);
+      let output = '';
+      let errorOutput = '';
+      // stdout data
+      pythonProcess.stdout.on('data', data => {
+        output += data.toString();
+      });
+      // stderr data
+      pythonProcess.stderr.on('data', data => {
+        errorOutput += data.toString();
+      });
+      //  process completion
+      pythonProcess.on('close', code => {
+        // cleaning up the temp files
+        try {
+          fs.unlinkSync(filePath);
+          fs.rmdirSync(tempDir);
+        } catch (err) {
+          console.error('Error cleaning up temporary files:', err);
+        }
+        resolve({
+          success: code === 0,
+          output,
+          error: errorOutput,
+        });
+      });
+      // process errors
+      pythonProcess.on('error', err => {
+        resolve({
+          success: false,
+          output: '',
+          error: `Error executing Python: ${err.message}`,
+        });
+      });
+    } catch (error) {
+      resolve({
+        success: false,
+        output: '',
+        error: `Error setting up execution environment: ${error}`,
+      });
+    }
+  });
 };
