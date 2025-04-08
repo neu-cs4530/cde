@@ -109,7 +109,24 @@ export interface ClientToServerEvents {
   leaveChat: (chatID: string | undefined) => void;
   joinProject: (projectId: string) => void;
   leaveProject: (projectId: string) => void;
-  editFile: (data: { fileId: string; content: string }) => void;
+  editFile: (payload: {
+    fileId: string;
+    edits: {
+      range: {
+        startLineNumber: number;
+        startColumn: number;
+        endLineNumber: number;
+        endColumn: number;
+      };
+      text: string;
+    }[];
+    username: string;
+    position: {
+      lineNumber: number;
+      column: number;
+    };
+  }) => void;
+  cursorMove: (data: { fileId: string; username: string; position: { lineNumber: number; column: number } }) => void;
 }
 
 /**
@@ -136,7 +153,24 @@ export interface ServerToClientEvents {
   gameUpdate: (game: GameUpdatePayload) => void;
   gameError: (error: GameErrorPayload) => void;
   chatUpdate: (chat: ChatUpdatePayload) => void;
-  remoteEdit: (data: { fileId: string; content: string }) => void;
+  remoteEdit: (payload: {
+    fileId: string;
+    edits: {
+      range: {
+        startLineNumber: number;
+        startColumn: number;
+        endLineNumber: number;
+        endColumn: number;
+      };
+      text: string;
+    }[];
+    username: string;
+    position: {
+      lineNumber: number;
+      column: number;
+    };
+  }) => void;
   fileCreated: (payload: { file: DatabaseProjectFile }) => void;
   fileDeleted: (payload: { fileId: string }) => void;
+  remoteCursorMove: (data: { fileId: string; username: string; position: { lineNumber: number; column: number } }) => void;
 }
