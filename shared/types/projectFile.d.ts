@@ -91,3 +91,20 @@ export interface FileRequest extends Request {
     contents?: string;
   };
 }
+
+/**
+ * Express request for getting a file, containing project and file IDs,
+ * and the username of the actor.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `actor`: The username of the actor provided as a route query. 
+*/
+export interface GetFileRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+  };
+  query: {
+    actor: string;
+  };
+}

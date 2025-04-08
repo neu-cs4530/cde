@@ -155,9 +155,22 @@ const projectController = (socket: FakeSOSocket) => {
   /**
    * Validates that the request contains all required fields for a file.
    * @param req The incoming request containing project and file IDs, and actor.
-   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    (req.body.name ? (req.body.name !== undefined && req.body.name !== '') : true) &&
+    (req.body.fileType ? isProjectFileTypeValid(req.body.fileType) : true) &&
+    (req.body.contents ? (req.body.contents !== undefined && req.body.contents !== '') : true);
+
+  /**
+   * Validates that the request contains all required fields for getting a file.
+   * @param req The incoming request containing project and file IDs, and actor.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   */
+  const isGetFileRequestValid = (req: GetFileRequest): boolean => 
     req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
@@ -470,7 +483,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(project.error);
       }
 
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      const actor: UserResponse = await getUserByUsername(req.query.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
@@ -661,9 +674,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the saved state IDs or returning an error.
    * @returns A promise resolving to void.
    */
-  const getStatesRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
-    if (!isProjectReqValid(req)) {
-      res.status(400).send('Invalid project reqeust');
+  const getStatesRoute = async (req: GetProjectRequest, res: Response): Promise<void> => {
+    if (!isGetProjectReqValid(req)) {
+      res.status(400).send('Invalid get project reqeust');
       return;
     }
 
@@ -675,7 +688,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(project.error);
       }
 
-      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      const actor: UserResponse = await getUserByUsername(req.query.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
@@ -795,19 +808,19 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the files or returning an error.
    * @returns A promise resolving to void.
    */
-  const getFilesRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
-    const actorUsername = req.query.actor as string;
-    if (!actorUsername) {
-      res.status(400).send('Missing actor');
+  const getFilesRoute = async (req: GetProjectRequest, res: Response): Promise<void> => {
+    if (!isGetProjectReqValid(req)) {
+      res.status(400).send('Invalid get project request');
       return;
     }
+
     try {
       const { projectId } = req.params;
       const project: ProjectResponse = await getProjectById(projectId);
       if ('error' in project) {
         throw new Error(project.error);
       }
-      const actor: UserResponse = await getUserByUsername(actorUsername);
+      const actor: UserResponse = await getUserByUsername(req.query.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
@@ -1047,10 +1060,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the file or returning an error.
    * @returns A promise resolving to void.
    */
-  const getFileRoute = async (req: FileRequest, res: Response): Promise<void> => {
-    const actorUsername = req.query.actor as string;
-    if (!actorUsername || typeof actorUsername !== 'string') {
-      res.status(400).send('Missing or invalid actor');
+  const getFileRoute = async (req: GetFileRequest, res: Response): Promise<void> => {
+    if (!isGetFileRequestValid(req)) {
+      res.status(400).send('Invalid get file request');
       return;
     }
 
@@ -1062,7 +1074,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(project.error);
       }
 
-      const actor: UserResponse = await getUserByUsername(actorUsername);
+      const actor: UserResponse = await getUserByUsername(req.query.actor);
       if ('error' in actor) {
         throw new Error(actor.error);
       }
