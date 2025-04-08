@@ -451,7 +451,7 @@ const saveProjectState = async (
   return res.data;
 };
 
-const runProjectFile = async (projectId: string, fileName: string, fileContent: string) => {
+const runProjectFile = async (projectId: string, fileName: string, fileId: string, fileContent: string) => {
   try {
     const response = await fetch(`${PROJECT_API_URL}/${projectId}/run`, {
       method: 'POST',
@@ -462,12 +462,14 @@ const runProjectFile = async (projectId: string, fileName: string, fileContent: 
       body: JSON.stringify({
         // converts the js object w/ the file name and content into a JSON string
         // data sent to server for processing
+        fileId,
         fileName,
         fileContent,
       }),
     });
     if (!response.ok) {
-      throw new Error('Failed to run file');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to run file (${response.status})`);
     }
     return await response.json();
   } catch (error) {

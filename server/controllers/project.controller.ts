@@ -1091,14 +1091,19 @@ const projectController = (socket: FakeSOSocket) => {
    * @param {Request} req - Express request object.
    * @param {Response} res - Express response object.
    */
-  const runProjectFileCode = async (req: Request, res: Response): Promise<void> => {
+  const runProjectFileCode = async (req: FileRequest, res: Response) => {
     try {
-      const { fileId } = req.params;
-      const { fileName, fileContent } = req.body;
-      if (!fileName || !fileContent) {
+      const { projectId } = req.params;
+      const { fileId, fileName, fileContent } = req.body as unknown as {
+        fileId: string;
+        fileName: string;
+        fileContent: string;
+      };
+      // Validate required fields
+      if (!fileId || !fileName || !fileContent) {
         res.status(400).json({
           success: false,
-          error: 'File name and content are required',
+          error: 'File ID, name and content are required',
         });
         return;
       }
@@ -1110,6 +1115,7 @@ const projectController = (socket: FakeSOSocket) => {
         error: result.error,
       });
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error('Error in runProjectFileCode:', error);
       res.status(500).json({
         success: false,
@@ -1175,7 +1181,8 @@ const projectController = (socket: FakeSOSocket) => {
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
-  router.post('/project-files/:fileId/run', runProjectFileCode);
+  router.post('/:projectId/run-file', runProjectFileCode);
+  // router.post('/project-files/:fileId/run', runProjectFileCode);
   // router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
   // router.delete(
   //   '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',

@@ -75,9 +75,18 @@ const ProjectEditor = () => {
   const runPythonFile = async () => {
     try {
       setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
-      // get the fileId for the current file
-      const fileId = activeFile;
-      const result = await runProjectFile(fileId, activeFile, fileContents[activeFile]);
+      // Get the proper file ID from fileMap using the activeFile name
+      const fileId = fileMap[activeFile]?._id;
+      if (!fileId) {
+        setConsoleOutput(prev => `${prev}> Error: Could not find file ID for ${activeFile}\n`);
+        return;
+      }
+      const result = await runProjectFile(
+        projectId,
+        fileId, // send the correct file ID
+        activeFile,
+        fileContents[activeFile],
+      );
       if (result.error) {
         setConsoleOutput(prev => `${prev}${result.error}\n`);
       }
