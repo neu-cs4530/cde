@@ -30,11 +30,6 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
       throw new Error('Failed to save project state');
     }
 
-    // const result: DatabaseProject | null = await ProjectModel.create(project);
-
-    // if (!result) {
-    //   throw new Error('Failed to save project');
-    // }
     const projectToSave = {
       ...project,
       currentState: state._id, // referencing saved state
@@ -49,10 +44,29 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
     const projectToAdd: Partial<User> = {
       projects: [result._id],
     };
-    const user: UserResponse | null = await addProjectToUser(result.creator, projectToAdd);
+
+    const user: UserResponse = await addProjectToUser(result.creator, projectToAdd);
 
     if (!user) {
       throw new Error('Failed to add project to user');
+    }
+
+    const collabs: (User | null)[] = await Promise.all(
+      project.collaborators.map(c => UserModel.findById(c.userId)),
+    );
+
+    if (collabs.filter(c => c === null).length > 0) {
+      throw new Error('Failed to retrieve collaborator');
+    }
+
+    const updatedCollabs: UserResponse[] = await Promise.all(
+      collabs.map(u =>
+        u === null ? { error: 'User not found' } : addProjectToUser(u.username, projectToAdd),
+      ),
+    );
+
+    if (updatedCollabs.filter(c => 'error' in c).length > 0) {
+      throw new Error('Failed to retrieve collaborator');
     }
 
     return result;
