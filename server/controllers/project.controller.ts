@@ -88,12 +88,12 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the body contains valid project fields; otherwise, `false`.
    */
   const isCreateProjectReqValid = (req: CreateProjectRequest): boolean =>
-    req.query !== undefined &&
-    req.query.name !== undefined &&
-    req.query.name !== '' &&
-    req.query.actor !== undefined &&
-    req.query.actor !== ''; // &&
-    // (req.query.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
+    req.body !== undefined &&
+    req.body.name !== undefined &&
+    req.body.name !== '' &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    (req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
 
   /**
    * Validates that the request contains all required fields for a project.
@@ -125,7 +125,13 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
+    if (!!req.query) {
+      return req.query.actor !== undefined && req.query.actor !== '';
+    } else if (!!req.body) {
+      return req.body.actor !== undefined && req.body.actor !== '';
+    } else {
+      return false;
+    }
 
   /**
    * Validates that the request contains all required fields for file creation.
@@ -133,13 +139,13 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isCreateFileRequestValid = (req: CreateFileRequest): boolean =>
-    req.query !== undefined &&
-    req.query.actor !== undefined &&
-    req.query.actor !== '' &&
-    req.query.name !== undefined &&
-    req.query.name !== '' &&
-    req.query.fileType !== undefined; // &&
-    // isProjectFileTypeValid(req.query.fileType);
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    req.body.name !== undefined &&
+    req.body.name !== '' &&
+    req.body.fileType !== undefined &&
+    isProjectFileTypeValid(req.body.fileType);
 
   /**
    * Validates that the request contains all required fields for a file.
@@ -147,7 +153,13 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
-    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
+    if (!!req.query) {
+      return req.query.actor !== undefined && req.query.actor !== '';
+    } else if (!!req.body) {
+      return req.body.actor !== undefined && req.body.actor !== '';
+    } else {
+      return false;
+    }
 
   /**
    * Validates that the request contains all required fields for creating
