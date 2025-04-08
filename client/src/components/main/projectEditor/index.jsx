@@ -19,7 +19,7 @@ import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
 
 const ProjectEditor = () => {
-  const [theme, setTheme] = useState('vs-dark');
+  const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const [activeFile, setActiveFile] = useState('main.py');
@@ -75,12 +75,33 @@ const ProjectEditor = () => {
       case 'javascript':
         return `// ${fileName} content\n// Start coding in JavaScript...`;
       case 'java':
-        return `// ${fileName} content\n// Start coding in Java...`;
+        return `// ${fileName} content\n// Start coding in Java...\n// Remember your class name should be the same as your file name in java (excluding extension)`;
       default:
         return `// ${fileName} content`;
     }
   };
   const runPythonFile = async () => {
+    try {
+      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
+      // getting file ID from fileMap
+      const fileId = fileMap[activeFile]?._id;
+      if (!fileId) {
+        setConsoleOutput(prev => `${prev}> Error: Could not find file ID for ${activeFile}\n`);
+        return;
+      }
+      const result = await runProjectFile(projectId, fileId, activeFile, fileContents[activeFile]);
+      if (result.error) {
+        setConsoleOutput(prev => `${prev}${result.error}\n`);
+      }
+      if (result.output) {
+        setConsoleOutput(prev => `${prev}${result.output}\n`);
+      }
+      setConsoleOutput(prev => `${prev}> Execution complete\n`);
+    } catch (error) {
+      setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
+    }
+  };
+  const runJavaFile = async () => {
     try {
       setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
       // getting file ID from fileMap
@@ -421,7 +442,9 @@ const ProjectEditor = () => {
       // eslint-disable-next-line no-console
       console.log = originalLog;
       // updating console output
-      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n${output}\n`);
+      setConsoleOutput(
+        prev => `${prev}> Running ${activeFile}...\n${output}> Execution complete\n`,
+      );
     } catch (e) {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${e.message}\n`);
     }
@@ -599,6 +622,12 @@ const ProjectEditor = () => {
             {/* Run button for Python files */}
             {fileLanguages[activeFile] === 'python' && (
               <button className='btn' onClick={runPythonFile}>
+                Run
+              </button>
+            )}
+            {/* Run button for Java files */}
+            {fileLanguages[activeFile] === 'java' && (
+              <button className='btn' onClick={runJavaFile}>
                 Run
               </button>
             )}
