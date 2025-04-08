@@ -39,6 +39,7 @@ const ProjectEditor = () => {
   const user = useContext(UserContext);
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
+  const [searchFile, setSearchFile] = useState('');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -332,6 +333,20 @@ const ProjectEditor = () => {
       {/* Sidebar */}
       <aside className='file-tree'>
         <div className='file-tree-header'>Files</div>
+        {/* Search Bar */}
+        <input
+          type='text'
+          placeholder='Search files...'
+          className='file-search'
+          value={searchFile}
+          onChange={e => setSearchFile(e.target.value)}
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem',
+            borderRadius: '4px',
+            border: '1px solid #d1d5db',
+          }}
+        />
         <ul className='file-list'>
           {Object.keys(fileContents).map(file => (
             <li
