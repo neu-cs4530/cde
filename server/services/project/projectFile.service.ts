@@ -4,7 +4,12 @@ import path from 'path';
 import os from 'os';
 import ProjectFileCommentModel from '../../models/projectFileComments.model';
 import ProjectFileModel from '../../models/projectFiles.model';
-import { DatabaseProjectFile, ProjectFile, ProjectFileResponse } from '../../types/types';
+import {
+  DatabaseProjectFile,
+  ProjectFile,
+  ProjectFileResponse,
+  ExecutionResult,
+} from '../../types/types';
 
 /**
  * Saves a new project file to the database.
@@ -165,61 +170,65 @@ export const getProjectFile = async (fileId: string): Promise<ProjectFileRespons
     return { error: `Error retrieving file: ${error}` };
   }
 };
+
 /**
- * Executes a Python file with the given content and returns the output.
- * @param {string} fileName - The name of the file to execute.
- * @param {string} fileContent - The content of the Python file to execute.
- * @returns {Promise<{success: boolean, output: string, error: string}>} - Execution results.
+ * Executes a Python file
+ * @param fileName - The name of the Python file
+ * @param fileContent - The content of the Python file
+ * @returns Promise resolving to execution result
  */
-export const executeProjectFile = async (
+/* eslint-disable arrow-body-style */
+const executePythonFile = async (
   fileName: string,
   fileContent: string,
-): Promise<{ success: boolean; output: string; error: string }> => {
-  if (!fileName.endsWith('.py')) {
-    return {
-      success: false,
-      output: '',
-      error: 'Only Python files are supported for execution',
-    };
-  }
-
+): Promise<ExecutionResult> => {
   return new Promise(resolve => {
     try {
-      // temporary directory for the file
+      // Create temporary directory for the file
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'py-execution-'));
       const filePath = path.join(tempDir, fileName);
-      // file content to the temporary location
+      
+      // Write file content to the temporary location
       fs.writeFileSync(filePath, fileContent);
-      // spawning a python process to execute the file
-      const pythonProcess = spawn('python', [filePath]);
+      
+      // Determine Python command based on platform
+      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+      console.log(`Using Python command: ${pythonCommand}`);
+      
+      // Spawn a Python process to execute the file
+      const pythonProcess = spawn(pythonCommand, [filePath]);
       let output = '';
       let errorOutput = '';
-      // stdout data
-      pythonProcess.stdout.on('data', data => {
+      
+      // Capture stdout data
+      pythonProcess.stdout.on('data', (data) => {
         output += data.toString();
       });
-      // stderr data
-      pythonProcess.stderr.on('data', data => {
+      
+      // Capture stderr data
+      pythonProcess.stderr.on('data', (data) => {
         errorOutput += data.toString();
       });
-      //  process completion
-      pythonProcess.on('close', code => {
-        // cleaning up the temp files
+      
+      // Handle process completion
+      pythonProcess.on('close', (code) => {
+        // Clean up the temp files
         try {
           fs.unlinkSync(filePath);
           fs.rmdirSync(tempDir);
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('Error cleaning up temporary files:', err);
         }
+        
         resolve({
           success: code === 0,
           output,
           error: errorOutput,
         });
       });
-      // process errors
-      pythonProcess.on('error', err => {
+      
+      // Handle process errors
+      pythonProcess.on('error', (err) => {
         resolve({
           success: false,
           output: '',
@@ -230,8 +239,145 @@ export const executeProjectFile = async (
       resolve({
         success: false,
         output: '',
-        error: `Error setting up execution environment: ${error}`,
+        error: `Error setting up execution environment: ${error instanceof Error ? error.message : String(error)}`,
       });
     }
   });
+};
+/* eslint-enable arrow-body-style */
+
+/* eslint-disable arrow-body-style */
+/**
+ * Executes a Java file
+ * @param fileName - The name of the Java file
+ * @param fileContent - The content of the Java file
+ * @returns Promise resolving to execution result
+ */
+const executeJavaFile = async (
+  fileName: string,
+  fileContent: string,
+): Promise<ExecutionResult> => {
+  return new Promise(resolve => {
+    try {
+      // Create temporary directory
+      const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'java-execution-'));
+      const filePath = path.join(tempDir, fileName);
+      // Write Java file
+      fs.writeFileSync(filePath, fileContent);
+      // Extract class name (assuming public class name matches filename)
+      const className = fileName.replace('.java', '');
+      
+      // First compile the Java file
+      console.log('Compiling Java file...');
+      const compileProcess = spawn('javac', [filePath]);
+      
+      let compileError = '';
+      
+      compileProcess.stderr.on('data', (data) => {
+        compileError += data.toString();
+      });
+      
+      compileProcess.on('close', (compileCode) => {
+        if (compileCode !== 0) {
+          // Compilation failed
+          try {
+            fs.unlinkSync(filePath);
+            fs.rmdirSync(tempDir);
+          } catch (err) {
+            console.error('Error cleaning up temporary files:', err);
+          }
+          
+          resolve({
+            success: false,
+            output: '',
+            error: `Compilation error: ${compileError}`,
+          });
+          return;
+        }
+        
+        // If compilation succeeded, run the Java class
+        console.log('Running Java program...');
+        const runProcess = spawn('java', ['-cp', tempDir, className]);
+        
+        let output = '';
+        let runError = '';
+        
+        runProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+        
+        runProcess.stderr.on('data', (data) => {
+          runError += data.toString();
+        });
+        
+        runProcess.on('close', (runCode) => {
+          // Clean up the temporary files
+          try {
+            // Remove the .java file
+            fs.unlinkSync(filePath);
+            
+            // Remove the .class file
+            fs.unlinkSync(path.join(tempDir, `${className}.class`));
+            
+            // Remove the directory
+            fs.rmdirSync(tempDir);
+          } catch (err) {
+            console.error('Error cleaning up temporary files:', err);
+          }
+          
+          resolve({
+            success: runCode === 0,
+            output,
+            error: runError,
+          });
+        });
+        
+        runProcess.on('error', (err) => {
+          resolve({
+            success: false,
+            output: '',
+            error: `Error executing Java: ${err.message}`,
+          });
+        });
+      });
+      
+      compileProcess.on('error', (err) => {
+        resolve({
+          success: false,
+          output: '',
+          error: `Error compiling Java: ${err.message}`,
+        });
+      });
+    } catch (error) {
+      resolve({
+        success: false,
+        output: '',
+        error: `Error setting up Java execution environment: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  });
+};
+
+/**
+ * Executes a Python file with the given content and returns the output.
+ * @param {string} fileName - The name of the file to execute.
+ * @param {string} fileContent - The content of the Python file to execute.
+ * @returns {Promise<{success: boolean, output: string, error: string}>} - Execution results.
+ */
+export const executeProjectFile = async (
+  fileName: string,
+  fileContent: string,
+): Promise<ExecutionResult> => {
+  console.log(`Attempting to execute file: ${fileName}`);
+  if (fileName.endsWith('.py')) {
+    return executePythonFile(fileName, fileContent);
+  }
+  if (fileName.endsWith('.java')) {
+    return executeJavaFile(fileName, fileContent);
+  }
+  return {
+    success: false,
+    output: '',
+    error: 'Only Python and Java files are supported for execution',
+  };
 };
