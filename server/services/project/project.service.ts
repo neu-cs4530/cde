@@ -49,10 +49,27 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
     const projectToAdd: Partial<User> = {
       projects: [result._id],
     };
-    const user: UserResponse | null = await addProjectToUser(result.creator, projectToAdd);
+
+    const user: UserResponse = await addProjectToUser(result.creator, projectToAdd);
 
     if (!user) {
       throw new Error('Failed to add project to user');
+    }
+
+    const collabs: UserResponse[] = await Promise.all(
+      project.collaborators.map(c => UserModel.findById(c.userId))
+    );
+
+    if (collabs.filter(c => ('error' in c)).length > 0) {
+      throw new Error('Failed to retrieve collaborator');
+    }
+
+    const updatedCollabs: UserResponse[] = await Promise.all(
+      collabs.map(u => u ? addProjectToUser(u.username, projectToAdd) : null)
+    );
+
+    if (updatedCollabs.filter(c => !('error' in c)).length > 0) {
+      throw new Error('Failed to retrieve collaborator');
     }
 
     return result;
