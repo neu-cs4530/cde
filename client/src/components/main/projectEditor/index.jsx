@@ -343,7 +343,9 @@ const ProjectEditor = () => {
       // eslint-disable-next-line no-console
       console.log = originalLog;
       // updating console output
-      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n${output}\n`);
+      setConsoleOutput(
+        prev => `${prev}> Running ${activeFile}...\n${output}> Execution complete\n`,
+      );
     } catch (e) {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${e.message}\n`);
     }
