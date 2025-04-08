@@ -130,3 +130,22 @@ form {
 .block.e {
   background-color: #31c553;
 }
+
+.show-password-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.toggle-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.toggle-label {
+  color: #555;
+  cursor: pointer;
+}
