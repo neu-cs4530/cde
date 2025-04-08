@@ -303,20 +303,6 @@ const projectController = (socket: FakeSOSocket) => {
         collaborators.push(...invitedCollaborators);
       }
 
-      // const mainFile: ProjectFile = {
-      //   name: 'main.py',
-      //   fileType: 'PYTHON',
-      //   contents: '# Start coding here...',
-      //   comments: [],
-      // };
-
-      // const utilsFile: ProjectFile = {
-      //   name: 'utils.py',
-      //   fileType: 'PYTHON',
-      //   contents: '# Start coding here...',
-      //   comments: [],
-      // };
-
       // Create a new project and save it to the database
       // NOTE that currentState will be saved by saveProject()
       const project: Project = {
@@ -329,7 +315,7 @@ const projectController = (socket: FakeSOSocket) => {
 
       const result = await saveProject(project);
       if ('error' in result) {
-        throw new Error('Error saving project');
+        throw new Error(`Error saving project: ${result.error}`);
       }
 
       res.status(200).json(result);
