@@ -67,7 +67,7 @@ const ProjectEditor = () => {
       case 'javascript':
         return `// ${fileName} content\n// Start coding in JavaScript...`;
       case 'java':
-        return `// ${fileName} content\n// Start coding in Java...`;
+        return `// ${fileName} content\n// Start coding in Java...\n// Remember your class name should be the same as your file name in java (excluding extension)`;
       default:
         return `// ${fileName} content`;
     }
@@ -96,13 +96,12 @@ const ProjectEditor = () => {
   const runJavaFile = async () => {
     try {
       setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
-      // Get the proper file ID from fileMap using the activeFile name
+      // getting file ID from fileMap
       const fileId = fileMap[activeFile]?._id;
       if (!fileId) {
         setConsoleOutput(prev => `${prev}> Error: Could not find file ID for ${activeFile}\n`);
         return;
       }
-      // Use the same runProjectFile function we use for Python
       const result = await runProjectFile(projectId, fileId, activeFile, fileContents[activeFile]);
       if (result.error) {
         setConsoleOutput(prev => `${prev}${result.error}\n`);
