@@ -184,51 +184,44 @@ const executePythonFile = async (
 ): Promise<ExecutionResult> => {
   return new Promise(resolve => {
     try {
-      // Create temporary directory for the file
+      // temporary directory for the file
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'py-execution-'));
       const filePath = path.join(tempDir, fileName);
-      
-      // Write file content to the temporary location
+      // file content to the temporary location
       fs.writeFileSync(filePath, fileContent);
-      
-      // Determine Python command based on platform
+      // Python command based on platform
       const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+      // eslint-disable-next-line no-console
       console.log(`Using Python command: ${pythonCommand}`);
-      
-      // Spawn a Python process to execute the file
+      // spawning py process to execute the file
       const pythonProcess = spawn(pythonCommand, [filePath]);
       let output = '';
       let errorOutput = '';
-      
-      // Capture stdout data
-      pythonProcess.stdout.on('data', (data) => {
+      // stdout data
+      pythonProcess.stdout.on('data', data => {
         output += data.toString();
       });
-      
-      // Capture stderr data
-      pythonProcess.stderr.on('data', (data) => {
+      // stderr data
+      pythonProcess.stderr.on('data', data => {
         errorOutput += data.toString();
       });
-      
-      // Handle process completion
-      pythonProcess.on('close', (code) => {
-        // Clean up the temp files
+      // process completion
+      pythonProcess.on('close', code => {
         try {
           fs.unlinkSync(filePath);
           fs.rmdirSync(tempDir);
         } catch (err) {
+          // eslint-disable-next-line no-console
           console.error('Error cleaning up temporary files:', err);
         }
-        
         resolve({
           success: code === 0,
           output,
           error: errorOutput,
         });
       });
-      
-      // Handle process errors
-      pythonProcess.on('error', (err) => {
+      // process errors
+      pythonProcess.on('error', err => {
         resolve({
           success: false,
           output: '',
@@ -244,7 +237,6 @@ const executePythonFile = async (
     }
   });
 };
-/* eslint-enable arrow-body-style */
 
 /* eslint-disable arrow-body-style */
 /**
@@ -253,10 +245,7 @@ const executePythonFile = async (
  * @param fileContent - The content of the Java file
  * @returns Promise resolving to execution result
  */
-const executeJavaFile = async (
-  fileName: string,
-  fileContent: string,
-): Promise<ExecutionResult> => {
+const executeJavaFile = async (fileName: string, fileContent: string): Promise<ExecutionResult> => {
   return new Promise(resolve => {
     try {
       // Create temporary directory
@@ -306,11 +295,11 @@ const executeJavaFile = async (
           output += data.toString();
         });
         
-        runProcess.stderr.on('data', (data) => {
+        runProcess.stderr.on('data', data => {
           runError += data.toString();
         });
         
-        runProcess.on('close', (runCode) => {
+        runProcess.on('close', runCode => {
           // Clean up the temporary files
           try {
             // Remove the .java file
@@ -331,8 +320,7 @@ const executeJavaFile = async (
             error: runError,
           });
         });
-        
-        runProcess.on('error', (err) => {
+        runProcess.on('error', err => {
           resolve({
             success: false,
             output: '',
@@ -340,8 +328,7 @@ const executeJavaFile = async (
           });
         });
       });
-      
-      compileProcess.on('error', (err) => {
+      compileProcess.on('error', err => {
         resolve({
           success: false,
           output: '',
