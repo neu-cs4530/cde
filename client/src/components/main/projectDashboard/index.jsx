@@ -3,7 +3,11 @@ import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/
 import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
-import { createProject, getProjectsByUser } from '../../../services/projectService';
+import {
+  createProject,
+  getProjectsByUser,
+  deleteProjectById,
+} from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
 import UserContext from '../../../contexts/UserContext';
 
@@ -32,7 +36,6 @@ const ProjectDashboard = () => {
     currentState: 'draft', // should all new projects have current/initial state being a draft?
     sharedUsers: [],
     // starred: false,
-    inTrash: false,
   });
   const closeAndResetForm = () => {
     setNewProject({
@@ -148,7 +151,6 @@ const ProjectDashboard = () => {
         collaborators: [],
         lastEdited: 'Just now',
         starred: false,
-        inTrash: false,
         type: 'doc',
         sharedUsers: newProject.sharedUsers.map(user => ({
           username: user.username,
@@ -192,8 +194,15 @@ const ProjectDashboard = () => {
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
-  const trashProject = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, inTrash: true, starred: false } : p)));
+  const deleteProject = async id => {
+    try {
+      const confirmed = window.confirm('Are you sure you want to permanently delete this project?');
+      if (!confirmed) return;
+      await deleteProjectById(id, userC.username);
+      setProjects(projects.filter(p => p._id !== id));
+    } catch (err) {
+      console.error('Error deleting project:', err);
+    }
   };
 
   // Handle backdrop click to close modal
@@ -364,13 +373,13 @@ const ProjectDashboard = () => {
               Starred
             </button>
           </li>
-          <li className='nav-item'>
+          {/* <li className='nav-item'>
             <button
               className={`nav-link ${activeTab === 'trash' ? 'active' : ''}`}
               onClick={() => setActiveTab('trash')}>
               Trash
             </button>
-          </li>
+          </li> */}
         </ul>
 
         {/* All Projects */}
@@ -381,14 +390,10 @@ const ProjectDashboard = () => {
               Add Project
             </button>
           </div>
-          {projects.filter(p => !p.inTrash).length > 0 ? (
+          {projects.filter(project => activeTab !== 'starred' || project.starred).length > 0 ? (
             <div className='row row-cols-1 row-cols-md-3 g-4'>
               {projects
-                .filter(project => {
-                  if (activeTab === 'starred') return project.starred;
-                  if (activeTab === 'trash') return project.inTrash;
-                  return !project.inTrash; // Recent tab shows all
-                })
+                .filter(project => activeTab !== 'starred' || project.starred)
                 .map(project => (
                   <div className='col' key={project.id}>
                     <ProjectCard project={project} />
@@ -435,11 +440,7 @@ const ProjectDashboard = () => {
               </thead>
               <tbody>
                 {projects
-                  .filter(project => {
-                    if (activeTab === 'starred') return project.starred;
-                    if (activeTab === 'trash') return project.inTrash;
-                    return !project.inTrash; // Recent tab shows all
-                  })
+                  .filter(project => activeTab !== 'starred' || project.starred)
                   .map(project => (
                     <tr
                       key={project.id}
@@ -470,7 +471,7 @@ const ProjectDashboard = () => {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            trashProject(project.id);
+                            deleteProject(project._id);
                           }}
                           className='btn btn-link text-secondary p-1'>
                           <FiTrash2 size={18} />
