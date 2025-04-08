@@ -39,6 +39,7 @@ import {
   // ProjectFileComment,
   CreateProjectRequest,
   ProjectRequest,
+  GetProjectRequest,
   UserByUsernameRequest,
   CollaboratorRequest,
   ProjectStateRequest,
@@ -98,45 +99,49 @@ const projectController = (socket: FakeSOSocket) => {
   /**
    * Validates that the request contains all required fields for a project.
    * @param req The incoming request containing project ID and actor.
-   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectReqValid = (req: ProjectRequest): boolean =>
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    (req.body.name ? req.query.name !== undefined : true) &&
+    (req.body.name ? req.query.name !== '' : true);
+
+  /**
+   * Validates that the request contains all required fields for getting a project.
+   * @param req The incoming request containing project ID and actor.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   */
+  const isGetProjectReqValid = (req: GetProjectRequest): boolean =>
     req.query !== undefined &&
     req.query.actor !== undefined &&
-    req.query.actor !== '' &&
-    (req.query.name ? req.query.name !== undefined : true) &&
-    (req.query.name ? req.query.name !== '' : true);
+    req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for a collaborator.
    * @param req The incoming request containing project ID, collaborator, and actor.
-   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isCollaboratorReqValid = (req: CollaboratorRequest): boolean =>
-    req.query !== undefined &&
-    req.query.actor !== undefined &&
-    req.query.actor !== '' &&
-    (req.query.role ? req.query.role !== undefined : true); // &&
-    // (req.query.role ? isCollaboratorRoleValid(req.query.role) : true);
+    req.body !== undefined &&
+    req.body.actor !== undefined &&
+    req.body.actor !== '' &&
+    (req.body.role ? req.query.role !== undefined : true) &&
+    (req.body.role ? isCollaboratorRoleValid(req.query.role) : true);
 
   /**
    * Validates that the request contains all required fields for a project state.
    * @param req The incoming request containing project and state IDs, and actor.
-   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    if (!!req.query) {
-      return req.query.actor !== undefined && req.query.actor !== '';
-    } else if (!!req.body) {
-      return req.body.actor !== undefined && req.body.actor !== '';
-    } else {
-      return false;
-    }
+    req.body !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for file creation.
    * @param req The incoming request containing project ID, actor, and file data.
-   * @returns `true` if the request contains valid params and query; otherwise, `false`.
+   * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isCreateFileRequestValid = (req: CreateFileRequest): boolean =>
     req.body !== undefined &&
@@ -153,13 +158,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
-    if (!!req.query) {
-      return req.query.actor !== undefined && req.query.actor !== '';
-    } else if (!!req.body) {
-      return req.body.actor !== undefined && req.body.actor !== '';
-    } else {
-      return false;
-    }
+    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for creating
@@ -457,9 +456,9 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either containing the project or returning an error.
    * @returns A promise resolving to void.
    */
-  const getProjectRoute = async (req: ProjectRequest, res: Response): Promise<void> => {
-    if (!isProjectReqValid(req)) {
-      res.status(400).send('Invalid project reqeust');
+  const getProjectRoute = async (req: GetProjectRequest, res: Response): Promise<void> => {
+    if (!isGetProjectReqValid(req)) {
+      res.status(400).send('Invalid get project reqeust');
       return;
     }
 

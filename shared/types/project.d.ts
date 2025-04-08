@@ -84,3 +84,17 @@ export interface ProjectRequest extends Request {
     name?: string;
   };
 }
+
+/**
+ * Express request for getting a proejct, containing project ID and actor username.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `actor`: The username of the actor provided as a route query.
+ */
+export interface GetProjectRequest extends Request {
+  params: {
+    projectId: string
+  };
+  query: {
+    actor: string;
+  };
+}
