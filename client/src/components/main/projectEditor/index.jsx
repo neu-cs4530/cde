@@ -15,7 +15,7 @@ import {
 import UserContext from '../../../contexts/UserContext';
 
 const ProjectEditor = () => {
-  const [theme, setTheme] = useState('vs-dark');
+  const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
   const [activeFile, setActiveFile] = useState('main.py');
