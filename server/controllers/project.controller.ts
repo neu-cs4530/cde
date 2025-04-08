@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Response, Request } from 'express';
 import { ObjectId } from 'mongodb';
 import {
   saveProject,
@@ -16,7 +16,11 @@ import {
   saveFileInState,
   deleteFileInState,
 } from '../services/project/projectState.service';
-import { updateProjectFile, getProjectFile } from '../services/project/projectFile.service';
+import {
+  updateProjectFile,
+  getProjectFile,
+  executeProjectFile,
+} from '../services/project/projectFile.service';
 // import {
 //
 // } from '../services/project/projectFileComment.service';
@@ -1082,6 +1086,37 @@ const projectController = (socket: FakeSOSocket) => {
       res.status(500).send(`Error when getting project file: ${error}`);
     }
   };
+  /**
+   * Controller function to handle executing a project file.
+   * @param {Request} req - Express request object.
+   * @param {Response} res - Express response object.
+   */
+  const runProjectFileCode = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { fileId } = req.params;
+      const { fileName, fileContent } = req.body;
+      if (!fileName || !fileContent) {
+        res.status(400).json({
+          success: false,
+          error: 'File name and content are required',
+        });
+        return;
+      }
+      // executing the file
+      const result = await executeProjectFile(fileName, fileContent);
+      res.status(result.success ? 200 : 400).json({
+        success: result.success,
+        output: result.output,
+        error: result.error,
+      });
+    } catch (error) {
+      console.error('Error in runProjectFileCode:', error);
+      res.status(500).json({
+        success: false,
+        error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    }
+  };
 
   /**
    * TODO: Adds a comment to a file in a project.
@@ -1140,6 +1175,7 @@ const projectController = (socket: FakeSOSocket) => {
   router.delete('/:projectId/deleteFileById/:fileId', deleteFileRoute);
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
+  router.post('/project-files/:fileId/run', runProjectFileCode);
   // router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
   // router.delete(
   //   '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',

@@ -10,6 +10,7 @@ import {
   updateFileById,
   createFile,
   deleteFileById,
+  runProjectFile,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 
@@ -38,6 +39,7 @@ const ProjectEditor = () => {
   const user = useContext(UserContext);
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
+  const [searchFile, setSearchFile] = useState('');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -68,6 +70,23 @@ const ProjectEditor = () => {
         return `// ${fileName} content\n// Start coding in Java...`;
       default:
         return `// ${fileName} content`;
+    }
+  };
+  const runPythonFile = async () => {
+    try {
+      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
+      // get the fileId for the current file
+      const fileId = activeFile;
+      const result = await runProjectFile(fileId, activeFile, fileContents[activeFile]);
+      if (result.error) {
+        setConsoleOutput(prev => `${prev}${result.error}\n`);
+      }
+      if (result.output) {
+        setConsoleOutput(prev => `${prev}${result.output}\n`);
+      }
+      setConsoleOutput(prev => `${prev}> Execution complete\n`);
+    } catch (error) {
+      setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
 
@@ -280,7 +299,6 @@ const ProjectEditor = () => {
     }));
     setActiveFile(duplicatedFileName);
   };
-
   const runJavaScript = () => {
     try {
       // capture console.log output
@@ -315,88 +333,104 @@ const ProjectEditor = () => {
       {/* Sidebar */}
       <aside className='file-tree'>
         <div className='file-tree-header'>Files</div>
+        {/* Search Bar */}
+        <input
+          type='text'
+          placeholder='Search files...'
+          className='file-search'
+          value={searchFile}
+          onChange={e => setSearchFile(e.target.value)}
+          style={{
+            marginBottom: '1rem',
+            padding: '0.5rem',
+            borderRadius: '4px',
+            border: '1px solid #d1d5db',
+          }}
+        />
         <ul className='file-list'>
-          {Object.keys(fileContents).map(file => (
-            <li
-              key={file}
-              className={`file-item ${file === activeFile ? 'active' : ''}`}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                overflow: 'hidden',
-              }}>
-              <span
-                onClick={() => setActiveFile(file)}
-                title={file}
+          {Object.keys(fileContents)
+            .filter(fileName => fileName.toLowerCase().includes(searchFile.trim().toLowerCase()))
+            .map(file => (
+              <li
+                key={file}
+                className={`file-item ${file === activeFile ? 'active' : ''}`}
                 style={{
-                  flexGrow: 1,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
                   overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  cursor: 'pointer',
                 }}>
-                {file}
-              </span>
-              <button
-                onClick={() => handleDuplicateFile(file)}
-                style={{
-                  flexShrink: 0,
-                  background: 'none',
-                  border: 'none',
-                  color: '#9ca3af',
-                  marginLeft: '0.5rem',
-                }}
-                title='Duplicate file'>
-                <FiCopy size={16} />
-              </button>
-              <button
-                onClick={async () => {
-                  if (Object.keys(fileContents).length === 1) {
-                    // eslint-disable-next-line no-alert
-                    alert('You need at least one file in a project!!');
-                    return;
-                  }
-                  // eslint-disable-next-line no-alert
-                  const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
-                  if (!confirmed) return;
-                  try {
-                    const fileId = fileMap[file]?._id;
-                    if (!fileId) throw new Error('Missing fileId');
-
-                    await deleteFileById(projectId, fileId, user.user.username);
-
-                    const updated = { ...fileContents };
-                    delete updated[file];
-                    setFileContents(updated);
-
-                    const updatedLanguages = { ...fileLanguages };
-                    delete updatedLanguages[file];
-                    setFileLanguages(updatedLanguages);
-
-                    const updatedMap = { ...fileMap };
-                    delete updatedMap[file];
-                    setFileMap(updatedMap);
-
-                    if (file === activeFile) {
-                      const nextFile = Object.keys(updated)[0];
-                      setActiveFile(nextFile || '');
+                <span
+                  onClick={() => setActiveFile(file)}
+                  title={file}
+                  style={{
+                    flexGrow: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    cursor: 'pointer',
+                  }}>
+                  {file}
+                </span>
+                <button
+                  onClick={() => handleDuplicateFile(file)}
+                  style={{
+                    flexShrink: 0,
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    marginLeft: '0.5rem',
+                  }}
+                  title='Duplicate file'>
+                  <FiCopy size={16} />
+                </button>
+                <button
+                  onClick={async () => {
+                    if (Object.keys(fileContents).length === 1) {
+                      // eslint-disable-next-line no-alert
+                      alert('You need at least one file in a project!!');
+                      return;
                     }
-                  } catch (err) {
-                    setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
-                  }
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#9ca3af',
-                  marginLeft: '0.5rem',
-                }}
-                title='Delete file'>
-                <FiTrash2 size={16} />
-              </button>
-            </li>
-          ))}
+                    // eslint-disable-next-line no-alert
+                    const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
+                    if (!confirmed) return;
+                    try {
+                      const fileId = fileMap[file]?._id;
+                      if (!fileId) throw new Error('Missing fileId');
+
+                      await deleteFileById(projectId, fileId, user.user.username);
+
+                      const updated = { ...fileContents };
+                      delete updated[file];
+                      setFileContents(updated);
+
+                      const updatedLanguages = { ...fileLanguages };
+                      delete updatedLanguages[file];
+                      setFileLanguages(updatedLanguages);
+
+                      const updatedMap = { ...fileMap };
+                      delete updatedMap[file];
+                      setFileMap(updatedMap);
+
+                      if (file === activeFile) {
+                        const nextFile = Object.keys(updated)[0];
+                        setActiveFile(nextFile || '');
+                      }
+                    } catch (err) {
+                      setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#9ca3af',
+                    marginLeft: '0.5rem',
+                  }}
+                  title='Delete file'>
+                  <FiTrash2 size={16} />
+                </button>
+              </li>
+            ))}
         </ul>
 
         {/* Add file button */}
@@ -420,10 +454,15 @@ const ProjectEditor = () => {
             <button className='btn' onClick={() => setIsShareOpen(true)}>
               Share
             </button>
-            {/* cannot directly run python or java  in the browser because they require runtime environments */}
-            {/* Run button only for JavaScript files */}
+            {/* Run button for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
+                Run
+              </button>
+            )}
+            {/* Run button for Python files */}
+            {fileLanguages[activeFile] === 'python' && (
+              <button className='btn' onClick={runPythonFile}>
                 Run
               </button>
             )}
