@@ -95,19 +95,6 @@ const updateProjectById = async (
   return res.data;
 };
 
-const updateProjectState = async (
-  projectId: string,
-  stateId: string,
-  actor: string,
-): Promise<ProjectStateResponse> => {
-  try {
-    const res = await api.put(`${PROJECT_API_URL}/${projectId}/state/${stateId}`, { actor });
-    return res.data;
-  } catch (error) {
-    return { error: 'Error updating project state' };
-  }
-};
-
 /**
  *
  * @param user
