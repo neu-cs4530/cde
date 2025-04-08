@@ -1234,6 +1234,17 @@ const projectController = (socket: FakeSOSocket) => {
       }
     });
 
+    conn.on('cursorMove', ({ fileId, username, position }) => {
+      const { projectId } = conn.data;
+      if (projectId) {
+        conn.to(projectId).emit('remoteCursorMove', {
+          fileId,
+          username,
+          position,
+        });
+      }
+    });    
+
     conn.on('disconnect', async () => {
       // clean up if needed later
     });

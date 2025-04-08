@@ -40,6 +40,11 @@ const ProjectEditor = () => {
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
   const [searchFile, setSearchFile] = useState('');
+  const [remoteCursors, setRemoteCursors] = useState({});
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const fileMapRef = useRef(fileMap);
+  const activeFileRef = useRef(activeFile);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -209,6 +214,65 @@ const ProjectEditor = () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
+  useEffect(() => {
+    fileMapRef.current = fileMap;
+  }, [fileMap]);
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+  useEffect(() => {
+    const handleRemoteCursorMove = ({ fileId, username, position }) => {
+      if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return undefined;
+      setRemoteCursors(prev => ({
+        ...prev,
+        [username]: position,
+      }));
+      return undefined;
+    };
+
+    user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
+
+    return () => {
+      user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
+    };
+  }, [activeFile, fileMap, user?.socket]);
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+  
+    // Ensure editor, monaco, and fileMap are ready before drawing
+    if (
+      !editor ||
+      !monaco ||
+      !fileMap[activeFile]?._id ||
+      Object.keys(remoteCursors).length === 0
+    ) {
+      return;
+    }
+  
+    // Create Monaco decorations for each remote user (except yourself)
+    const decorations = Object.entries(remoteCursors)
+      .filter(([username]) => username !== user?.user?.username) // Ignore own cursor
+      .map(([username, pos]) => ({
+        range: new monaco.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+        options: {
+          className: 'remote-cursor',
+          hoverMessage: { value: `**${username}**` },
+          stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      }));
+  
+    // Apply decorations
+    const decorationIds = editor.deltaDecorations([], decorations);
+  
+    // Cleanup: remove old decorations
+    return () => {
+      if (editor && decorationIds.length > 0) {
+        editor.deltaDecorations(decorationIds, []);
+      }
+    };
+  }, [remoteCursors, activeFile, fileMap, user?.user?.username]);
+  
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -474,6 +538,27 @@ const ProjectEditor = () => {
         </div>
         <div className='editor-wrapper'>
           <Editor
+            onMount={(editor, monaco) => {
+              editorRef.current = editor;
+              monacoRef.current = monaco;
+          
+              editor.onDidChangeCursorPosition(() => {
+                const position = editor.getPosition();
+                const fileId = fileMapRef.current[activeFileRef.current]?._id;
+              
+                console.log('Sending cursorMove', {
+                  fileId,
+                  username: user?.user?.username,
+                  position,
+                });
+              
+                user?.socket.emit('cursorMove', {
+                  fileId,
+                  username: user?.user?.username,
+                  position,
+                });
+              });
+            }}
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
