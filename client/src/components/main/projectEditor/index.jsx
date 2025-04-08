@@ -102,6 +102,7 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+
   const saveContentToServer = debounce(async (fileId, contents) => {
     try {
       await updateFileById(projectId, fileId, user.user.username, { contents });
@@ -110,6 +111,7 @@ const ProjectEditor = () => {
       console.error('Failed to save file', err);
     }
   }, 1000);
+
   const computePatch = (model, oldText, newText) => {
     if (oldText === newText) return [];
   
@@ -139,7 +141,7 @@ const ProjectEditor = () => {
   
     const changedText = newText.slice(startOffset, endOffsetNew);
   
-    // 🧠 If user deleted a character, oldText has a longer range, newText is empty
+    // If user deleted a character, oldText has a longer range, newText is empty
     // So we use the full range in oldText for the patch
     return [
       {
@@ -633,18 +635,18 @@ const ProjectEditor = () => {
             onMount={(editor, monaco) => {
               editorRef.current = editor;
               monacoRef.current = monaco;
-            
+              
               const model = editor.getModel();
-            
-              previousContentRef.current = model.getValue(); // 👈 Snapshot BEFORE edits
-            
+
+              previousContentRef.current = model.getValue(); // Snapshot BEFORE editor
+
               model.onDidChangeContent(() => {
                 if (isRemoteEditRef.current) return;
-            
+
                 const newValue = model.getValue();
                 const fileId = fileMapRef.current[activeFileRef.current]?._id;
                 if (!fileId) return;
-            
+                 
                 const oldValue = previousContentRef.current;
                 const edits = computePatch(model, oldValue, newValue);
                 console.log('Computed edits:', JSON.stringify(edits, null, 2));
@@ -658,7 +660,7 @@ const ProjectEditor = () => {
                   position,
                 });
             
-                previousContentRef.current = newValue; // 👈 Update AFTER sending
+                previousContentRef.current = newValue; // Update AFTER sending
                 setFileContents(prev => ({
                   ...prev,
                   [activeFileRef.current]: newValue,

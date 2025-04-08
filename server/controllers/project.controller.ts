@@ -1209,9 +1209,6 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('leaveProject', async (projectId: string) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
-        if (project) {
-          await saveProject(project);
-        }
         conn.leave(projectId);
       } catch (error) {
         throw new Error('Unexpected error');
@@ -1221,7 +1218,7 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('editFile', ({ fileId, edits, username, position }) => {
       const { projectId } = conn.data;
       if (!projectId) return;
-    
+
       console.log(`[SERVER] editFile from ${username} → project ${projectId}`, edits);
       conn.to(projectId).emit('remoteEdit', {
         fileId,
@@ -1230,7 +1227,7 @@ const projectController = (socket: FakeSOSocket) => {
         position,
       });
     });
-    
+
     conn.on('cursorMove', ({ fileId, username, position }) => {
       const { projectId } = conn.data;
       if (projectId) {
@@ -1240,7 +1237,7 @@ const projectController = (socket: FakeSOSocket) => {
           position,
         });
       }
-    });    
+    });
 
     conn.on('disconnect', async () => {
       // clean up if needed later
