@@ -49,14 +49,17 @@ const Login = () => {
           className='input-text'
           id='password-input'
         />
-        <div className='show-password'>
+        <div className='show-password-toggle'>
           <input
             type='checkbox'
             id='showPasswordToggle'
             checked={showPassword}
             onChange={togglePasswordVisibility}
+            className='toggle-checkbox'
           />
-          <label htmlFor='showPasswordToggle'>Show Password</label>
+          <label htmlFor='showPasswordToggle' className='toggle-label'>
+            Show Password
+          </label>
         </div>
         <button type='submit' className='login-button'>
           Submit
