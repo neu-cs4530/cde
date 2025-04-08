@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiCopy, FiSave, FiClock } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiCopy, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -47,7 +47,7 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [project, setProject] = useState([]);
+  // const [project, setProject] = useState([]);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -308,25 +308,23 @@ const ProjectEditor = () => {
     const selectedBackupId = e.target.value;
     if (!selectedBackupId) return;
     try {
-      const restoredProject = await restoreStateById(
-        projectId,
-        selectedBackupId,
-        user.user.username,
-      );
+      await restoreStateById(projectId, selectedBackupId, user.user.username);
 
-      // const files = await getFiles(projectId, user.username);
-      // const contents = {};
-      // const languages = {};
-      // const map = {};
-      // files.forEach(file => {
-      //   contents[file.name] = file.contents;
-      //   languages[file.name] = file.fileType.toLowerCase();
-      //   map[file.name] = file;
-      // });
-      // setFileContents(contents);
-      // setFileLanguages(languages);
-      // setFileMap(map);
-      // setActiveFile(files[0]?.name || '');
+      const files = await getFiles(projectId, user.user.username);
+      const contents = {};
+      const languages = {};
+      const map = {};
+
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+        map[file.name] = file;
+      });
+
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setFileMap(map);
+      setActiveFile(files[0]?.name || '');
 
       alert('Project restored successfully');
     } catch (error) {
