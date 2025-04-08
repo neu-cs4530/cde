@@ -92,7 +92,7 @@ export interface ProjectRequest extends Request {
  */
 export interface GetProjectRequest extends Request {
   params: {
-    projectId: string
+    projectId: string;
   };
   query: {
     actor: string;
