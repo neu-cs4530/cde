@@ -116,10 +116,8 @@ const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> =
 const getProjectById = async (
   projectId: string,
   actor: string,
-  fileId: string,
 ): Promise<PopulatedDatabaseProject> => {
-  const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}?actor=${actor}`);
   if (res.status !== 200) {
     throw new Error(`Error when getting projects by id`);
   }
@@ -202,8 +200,7 @@ const getProjectStates = async (
   stateId: string,
   actor: string,
 ): Promise<PopulatedDatabaseProjectState> => {
-  const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/state/${stateId}`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/state/${stateId}?actor=${actor}`);
   if (res.status !== 200) {
     throw new Error(`Error when getting project states`);
   }
@@ -250,7 +247,7 @@ const restoreStateById = async (
  * @returns
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles`, {
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles?actor=${actor}`, {
     params: { actor },
   });
   if (res.status !== 200) {
@@ -338,7 +335,7 @@ const getFileById = async (
   actor: string,
 ): Promise<DatabaseProjectFile> => {
   const data = { actor };
-  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`, { data });
   // const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`); query instead?
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
