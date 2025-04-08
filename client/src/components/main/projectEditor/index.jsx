@@ -93,6 +93,28 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+  const runJavaFile = async () => {
+    try {
+      setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
+      // Get the proper file ID from fileMap using the activeFile name
+      const fileId = fileMap[activeFile]?._id;
+      if (!fileId) {
+        setConsoleOutput(prev => `${prev}> Error: Could not find file ID for ${activeFile}\n`);
+        return;
+      }
+      // Use the same runProjectFile function we use for Python
+      const result = await runProjectFile(projectId, fileId, activeFile, fileContents[activeFile]);
+      if (result.error) {
+        setConsoleOutput(prev => `${prev}${result.error}\n`);
+      }
+      if (result.output) {
+        setConsoleOutput(prev => `${prev}${result.output}\n`);
+      }
+      setConsoleOutput(prev => `${prev}> Execution complete\n`);
+    } catch (error) {
+      setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
+    }
+  };
 
   useEffect(() => {
     getUsers()
@@ -467,6 +489,12 @@ const ProjectEditor = () => {
             {/* Run button for Python files */}
             {fileLanguages[activeFile] === 'python' && (
               <button className='btn' onClick={runPythonFile}>
+                Run
+              </button>
+            )}
+            {/* Run button for Java files */}
+            {fileLanguages[activeFile] === 'java' && (
+              <button className='btn' onClick={runJavaFile}>
                 Run
               </button>
             )}
