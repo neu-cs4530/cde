@@ -196,12 +196,13 @@ const ProjectDashboard = () => {
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
   const deleteProject = async id => {
     try {
+      // eslint-disable-next-line no-alert
       const confirmed = window.confirm('Are you sure you want to permanently delete this project?');
       if (!confirmed) return;
       await deleteProjectById(id, userC.username);
       setProjects(projects.filter(p => p._id !== id));
     } catch (err) {
-      console.error('Error deleting project:', err);
+      throw new Error(err);
     }
   };
 
