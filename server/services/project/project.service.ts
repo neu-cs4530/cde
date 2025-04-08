@@ -52,18 +52,20 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
     }
 
     const collabs: (User | null)[] = await Promise.all(
-      project.collaborators.map(c => UserModel.findById(c.userId))
+      project.collaborators.map(c => UserModel.findById(c.userId)),
     );
 
-    if (collabs.filter(c => c !== null).length > 0) {
+    if (collabs.filter(c => c === null).length > 0) {
       throw new Error('Failed to retrieve collaborator');
     }
 
     const updatedCollabs: UserResponse[] = await Promise.all(
-      collabs.map(u => u === null ? { error: 'User not found' } : addProjectToUser(u.username, projectToAdd))
+      collabs.map(u =>
+        u === null ? { error: 'User not found' } : addProjectToUser(u.username, projectToAdd),
+      ),
     );
 
-    if (updatedCollabs.filter(c => !('error' in c)).length > 0) {
+    if (updatedCollabs.filter(c => 'error' in c).length > 0) {
       throw new Error('Failed to retrieve collaborator');
     }
 
