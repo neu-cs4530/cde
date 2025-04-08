@@ -248,34 +248,31 @@ const executePythonFile = async (
 const executeJavaFile = async (fileName: string, fileContent: string): Promise<ExecutionResult> => {
   return new Promise(resolve => {
     try {
-      // Create temporary directory
+      // creating temporary directory
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'java-execution-'));
       const filePath = path.join(tempDir, fileName);
-      // Write Java file
+      // writing Java file
       fs.writeFileSync(filePath, fileContent);
-      // Extract class name (assuming public class name matches filename)
+      // get class name (assuming public class name matches filename)
       const className = fileName.replace('.java', '');
-      
-      // First compile the Java file
+      // compile the Java file
+      // eslint-disable-next-line no-console
       console.log('Compiling Java file...');
       const compileProcess = spawn('javac', [filePath]);
-      
       let compileError = '';
-      
-      compileProcess.stderr.on('data', (data) => {
+      compileProcess.stderr.on('data', data => {
         compileError += data.toString();
       });
-      
-      compileProcess.on('close', (compileCode) => {
+      compileProcess.on('close', compileCode => {
         if (compileCode !== 0) {
-          // Compilation failed
+          // failed comp
           try {
             fs.unlinkSync(filePath);
             fs.rmdirSync(tempDir);
           } catch (err) {
+            // eslint-disable-next-line no-console
             console.error('Error cleaning up temporary files:', err);
           }
-          
           resolve({
             success: false,
             output: '',
@@ -283,37 +280,28 @@ const executeJavaFile = async (fileName: string, fileContent: string): Promise<E
           });
           return;
         }
-        
-        // If compilation succeeded, run the Java class
+        // If compilation success, run the Java class
+        // eslint-disable-next-line no-console
         console.log('Running Java program...');
         const runProcess = spawn('java', ['-cp', tempDir, className]);
-        
         let output = '';
         let runError = '';
-        
-        runProcess.stdout.on('data', (data) => {
+        runProcess.stdout.on('data', data => {
           output += data.toString();
         });
-        
         runProcess.stderr.on('data', data => {
           runError += data.toString();
         });
-        
+        // temp directory clean up
         runProcess.on('close', runCode => {
-          // Clean up the temporary files
           try {
-            // Remove the .java file
             fs.unlinkSync(filePath);
-            
-            // Remove the .class file
             fs.unlinkSync(path.join(tempDir, `${className}.class`));
-            
-            // Remove the directory
             fs.rmdirSync(tempDir);
           } catch (err) {
+            // eslint-disable-next-line no-console
             console.error('Error cleaning up temporary files:', err);
           }
-          
           resolve({
             success: runCode === 0,
             output,
@@ -355,6 +343,7 @@ export const executeProjectFile = async (
   fileName: string,
   fileContent: string,
 ): Promise<ExecutionResult> => {
+  // eslint-disable-next-line no-console
   console.log(`Attempting to execute file: ${fileName}`);
   if (fileName.endsWith('.py')) {
     return executePythonFile(fileName, fileContent);
