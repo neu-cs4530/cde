@@ -11,8 +11,11 @@ import {
   createFile,
   deleteFileById,
   runProjectFile,
+  createProjectBackup,
+  getProjectById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
+import useUserContext from '../../../hooks/useUserContext';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-dark');
@@ -37,9 +40,12 @@ const ProjectEditor = () => {
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
   const user = useContext(UserContext);
+  const { user: userCon } = useUserContext();
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
   const [searchFile, setSearchFile] = useState('');
+  const [backups, setBackups] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -238,6 +244,67 @@ const ProjectEditor = () => {
         userC.id === userId ? { ...userC, permissions: permission } : userC,
       ),
     );
+  };
+
+  /**
+   * This function handles the api call to create a new backup for a project when the save backup button is pressed.
+   * @param {*} projectId - the id of the specific project that a backup will be created for.
+   * @param {*} userCon - the current user that is creating the backup
+   */
+  const handleCreateBackup = async () => {
+    try {
+      await createProjectBackup(projectId, user.user.username);
+      alert('Backup created successfully');
+    } catch (err) {
+      alert('Failed to create backup');
+      throw new Error(`Failed to create backup ${err}`);
+    }
+  };
+
+  // const handleRevertProject = async stateId => {
+  //   try {
+  //     await revertProjectToState(projectId, stateId);
+  //     alert('Reverted to the selected state');
+  //   } catch (err) {
+  //     alert('Failed to revert project');
+  //     throw new Error(`Failed to revert to selected backup ${err}`);
+  //   }
+  // };
+
+  // save state button that adds to the view backups
+  // /**
+  //  * useEffect for saving a project backup every minute
+  //  */
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     createProjectBackup(projectId, user);
+  //   }, 60000);
+  //   return () => clearInterval(interval);
+  // }, []);
+
+  const getFilesFromSavedStates = async () => {
+    const proj = await getProjectById(projectId, userCon.username);
+    const backup = [];
+
+    for (const state of proj.savedStates) {
+      backup.push(state);
+    }
+    return backup;
+  };
+  // when someone clicks on a new state current state should be updated to the one they clicked on -> restoreStateRoute
+  // objectids -> s#_dateTime
+  //
+  // change the editor view
+  const handleViewBackups = async () => {
+    setLoading(true);
+    try {
+      const files = await getFilesFromSavedStates();
+      setBackups(files);
+    } catch (error) {
+      throw new Error(`Failed to get backups ${error}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddFile = async () => {
@@ -450,18 +517,32 @@ const ProjectEditor = () => {
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
-            <button
-              // onClick={handleCreateBackup}
-              className='btn btn-primary'>
-              <FiSave /> Save Backup
+            {/* beginning of selecting backups */}
+            <label htmlFor='backup-select'>Select Backup:</label>
+            {/* Dropdown */}
+            <select id='backup-select' disabled={loading}>
+              <option value='' disabled selected={!backups.length}>
+                Select Backup
+              </option>
+              {backups.length > 0 ? (
+                backups.map((file, index) => (
+                  <option key={index} value={file}>
+                    {`s_${index + 1}`}
+                  </option>
+                ))
+              ) : (
+                <option value='' disabled>
+                  No backups found
+                </option>
+              )}
+            </select>
+            <button onClick={handleViewBackups} className='btn btn-primary'>
+              {loading ? 'Loading...' : 'Refresh Backups'}
             </button>
-            <button
-              // onClick={() => {
-              //   loadProjectBackups();
-              //   setIsBackupsModalOpen(true);
-              // }}
-              className='btn'>
-              <FiClock /> View Backups
+            {/* ending of selecting backups */}
+
+            <button onClick={handleCreateBackup} className='btn btn-primary'>
+              <FiSave /> Save Backup
             </button>
             <button
               className='btn'
