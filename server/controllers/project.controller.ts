@@ -991,7 +991,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
+      const validActor = isProjectCollaborator(actor._id, project);
       if (validActor === false) {
         res.status(403).send('Forbidden');
         return;

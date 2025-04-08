@@ -103,6 +103,13 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
 
       await ProjectStateModel.deleteMany({ _id: { $in: stateIds } });
 
+      // 4. Remove projectId from all collaborators' user documents
+      const collaboratorIds = project.collaborators.map(c => c.userId);
+      await UserModel.updateMany(
+        { _id: { $in: collaboratorIds } },
+        { $pull: { projects: project._id } },
+      );
+
       const deletedProject: DatabaseProject | null = await ProjectModel.findOneAndDelete({
         _id: projectId,
       });
