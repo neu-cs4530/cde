@@ -583,9 +583,9 @@ const ProjectEditor = () => {
               </option>
               {backups.length > 0 ? (
                 backups.map((file, index) => (
-                  <option key={index} value={file._id}>
-                    {/* {`s_${index + 1}`} */}
-                    {file}
+                  <option key={index} value={file}>
+                    {`s_${index + 1}`}
+                    {/* {file} */}
                   </option>
                 ))
               ) : (
