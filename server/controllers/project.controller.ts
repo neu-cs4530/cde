@@ -92,8 +92,8 @@ const projectController = (socket: FakeSOSocket) => {
     req.query.name !== undefined &&
     req.query.name !== '' &&
     req.query.actor !== undefined &&
-    req.query.actor !== '' &&
-    (req.query.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
+    req.query.actor !== ''; // &&
+    // (req.query.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
 
   /**
    * Validates that the request contains all required fields for a project.
@@ -116,8 +116,8 @@ const projectController = (socket: FakeSOSocket) => {
     req.query !== undefined &&
     req.query.actor !== undefined &&
     req.query.actor !== '' &&
-    (req.query.role ? req.query.role !== undefined : true) &&
-    (req.query.role ? isCollaboratorRoleValid(req.query.role) : true);
+    (req.query.role ? req.query.role !== undefined : true); // &&
+    // (req.query.role ? isCollaboratorRoleValid(req.query.role) : true);
 
   /**
    * Validates that the request contains all required fields for a project state.
@@ -138,8 +138,8 @@ const projectController = (socket: FakeSOSocket) => {
     req.query.actor !== '' &&
     req.query.name !== undefined &&
     req.query.name !== '' &&
-    req.query.fileType !== undefined &&
-    isProjectFileTypeValid(req.query.fileType);
+    req.query.fileType !== undefined; // &&
+    // isProjectFileTypeValid(req.query.fileType);
 
   /**
    * Validates that the request contains all required fields for a file.
