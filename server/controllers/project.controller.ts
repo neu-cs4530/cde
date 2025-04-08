@@ -83,66 +83,66 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the body contains valid project fields; otherwise, `false`.
    */
   const isCreateProjectReqValid = (req: CreateProjectRequest): boolean =>
-    req.body !== undefined &&
-    req.body.name !== undefined &&
-    req.body.name !== '' &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '' &&
-    (req.body.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
+    req.query !== undefined &&
+    req.query.name !== undefined &&
+    req.query.name !== '' &&
+    req.query.actor !== undefined &&
+    req.query.actor !== '' &&
+    (req.query.collaborators?.every(c => isCollaboratorRoleValid(c.role)) ?? true);
 
   /**
    * Validates that the request contains all required fields for a project.
    * @param req The incoming request containing project ID and actor.
-   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isProjectReqValid = (req: ProjectRequest): boolean =>
-    req.body !== undefined &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '' &&
-    (req.body.name ? req.body.name !== undefined : true) &&
-    (req.body.name ? req.body.name !== '' : true);
+    req.query !== undefined &&
+    req.query.actor !== undefined &&
+    req.query.actor !== '' &&
+    (req.query.name ? req.query.name !== undefined : true) &&
+    (req.query.name ? req.query.name !== '' : true);
 
   /**
    * Validates that the request contains all required fields for a collaborator.
    * @param req The incoming request containing project ID, collaborator, and actor.
-   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isCollaboratorReqValid = (req: CollaboratorRequest): boolean =>
-    req.body !== undefined &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '' &&
-    (req.body.role ? req.body.role !== undefined : true) &&
-    (req.body.role ? isCollaboratorRoleValid(req.body.role) : true);
+    req.query !== undefined &&
+    req.query.actor !== undefined &&
+    req.query.actor !== '' &&
+    (req.query.role ? req.query.role !== undefined : true) &&
+    (req.query.role ? isCollaboratorRoleValid(req.query.role) : true);
 
   /**
    * Validates that the request contains all required fields for a project state.
    * @param req The incoming request containing project and state IDs, and actor.
-   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    req.body !== undefined && req.body.actor !== undefined && req.body.actor !== '';
+    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for file creation.
    * @param req The incoming request containing project ID, actor, and file data.
-   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isCreateFileRequestValid = (req: CreateFileRequest): boolean =>
-    req.body !== undefined &&
-    req.body.actor !== undefined &&
-    req.body.actor !== '' &&
-    req.body.name !== undefined &&
-    req.body.name !== '' &&
-    req.body.fileType !== undefined &&
-    isProjectFileTypeValid(req.body.fileType);
+    req.query !== undefined &&
+    req.query.actor !== undefined &&
+    req.query.actor !== '' &&
+    req.query.name !== undefined &&
+    req.query.name !== '' &&
+    req.query.fileType !== undefined &&
+    isProjectFileTypeValid(req.query.fileType);
 
   /**
    * Validates that the request contains all required fields for a file.
    * @param req The incoming request containing project and file IDs, and actor.
-   * @returns `true` if the request contains valid params and body; otherwise, `false`.
+   * @returns `true` if the request contains valid params and query; otherwise, `false`.
    */
   const isFileRequestValid = (req: FileRequest): boolean =>
-    req.body !== undefined && req.body.actor !== undefined && req.body.actor !== '';
+    req.query !== undefined && req.query.actor !== undefined && req.query.actor !== '';
 
   /**
    * Validates that the request contains all required fields for creating
