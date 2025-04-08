@@ -284,14 +284,32 @@ const ProjectEditor = () => {
   //   return () => clearInterval(interval);
   // }, []);
   const handleBackupSelection = async e => {
-    const selectedBackup = e.target.value;
-    if (!selectedBackup) return;
+    const selectedBackupId = e.target.value;
+    if (!selectedBackupId) return;
     try {
-      const restoredProject = await restoreStateById(projectId, selectedBackup, user.user.username);
-      setProject(restoredProject);
-      // set the project to the current project
-      alert('project restored successfully');
+      const restoredProject = await restoreStateById(
+        projectId,
+        selectedBackupId,
+        user.user.username,
+      );
+
+      // const files = await getFiles(projectId, user.username);
+      // const contents = {};
+      // const languages = {};
+      // const map = {};
+      // files.forEach(file => {
+      //   contents[file.name] = file.contents;
+      //   languages[file.name] = file.fileType.toLowerCase();
+      //   map[file.name] = file;
+      // });
+      // setFileContents(contents);
+      // setFileLanguages(languages);
+      // setFileMap(map);
+      // setActiveFile(files[0]?.name || '');
+
+      alert('Project restored successfully');
     } catch (error) {
+      alert('Failed to restore backup');
       throw new Error(`Failed to restore to backup ${error}`);
     }
   };
@@ -534,14 +552,19 @@ const ProjectEditor = () => {
             {/* beginning of selecting backups */}
             <label htmlFor='backup-select'>Select Backup:</label>
             {/* Dropdown */}
-            <select id='backup-select' disabled={loading}>
-              <option value='' disabled selected={!backups.length} onChange={handleBackupSelection}>
+            <select
+              id='backup-select'
+              disabled={loading}
+              onChange={handleBackupSelection}
+              defaultValue=''>
+              <option value='' disabled>
                 Select Backup
               </option>
               {backups.length > 0 ? (
                 backups.map((file, index) => (
-                  <option key={index} value={file}>
-                    {`s_${index + 1}`}
+                  <option key={index} value={file._id}>
+                    {/* {`s_${index + 1}`} */}
+                    {file}
                   </option>
                 ))
               ) : (
@@ -550,6 +573,7 @@ const ProjectEditor = () => {
                 </option>
               )}
             </select>
+
             <button onClick={handleViewBackups} className='btn btn-primary'>
               {loading ? 'Loading...' : 'Refresh Backups'}
             </button>
