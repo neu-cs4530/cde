@@ -108,3 +108,15 @@ export interface GetFileRequest extends Request {
     actor: string;
   };
 }
+
+/**
+ * Represents the result of executing a code file.
+ * - `success`: Boolean indicating whether the execution was successful.
+ * - `output`: The standard output (stdout) from the execution process.
+ * - `error`: Any error message or standard error (stderr) from the execution.
+ */
+export interface ExecutionResult {
+  success: boolean;
+  output: string;
+  error: string;
+}
