@@ -123,10 +123,10 @@ const ProjectEditor = () => {
     ) {
       startOffset++;
     }
-  
+    
     let endOffsetOld = oldText.length;
     let endOffsetNew = newText.length;
-  
+    
     while (
       endOffsetOld > startOffset &&
       endOffsetNew > startOffset &&
@@ -138,9 +138,9 @@ const ProjectEditor = () => {
   
     const startPos = model.getPositionAt(startOffset);
     const endPos = model.getPositionAt(endOffsetOld);
-  
+    
     const changedText = newText.slice(startOffset, endOffsetNew);
-  
+    
     // If user deleted a character, oldText has a longer range, newText is empty
     // So we use the full range in oldText for the patch
     return [
@@ -193,33 +193,33 @@ const ProjectEditor = () => {
   }, [projectId, user.user.username]);
   useEffect(() => {
     if (!projectId) return undefined;
-
+    
     user?.socket.emit('joinProject', projectId);
-
+    
     return () => {
       user?.socket.emit('leaveProject', projectId);
     };
   }, [projectId, user?.socket]);
   useEffect(() => {
     if (!user?.socket) return;
-  
+    
     const handleRemoteEdit = ({ fileId, edits, username }) => {
       console.log('REMOTE EDIT FIRED');
       if (username === user?.user?.username) return;
-  
+      
       const currentFileId = fileMapRef.current[activeFileRef.current]?._id;
       if (fileId !== currentFileId) return;
-  
+      
       const model = editorRef.current?.getModel();
       if (!model || !monacoRef.current) return;
-  
+      
       if (!Array.isArray(edits)) {
         console.warn('Invalid edits received:', edits);
         return;
       }
-  
+      
       console.log('Received remote edit:', JSON.stringify(edits, null, 2));
-  
+      
       const monacoEdits = edits.map(edit => ({
         range: new monacoRef.current.Range(
           edit.range.startLineNumber,
@@ -232,12 +232,12 @@ const ProjectEditor = () => {
       }));
       
       
-  
+      
       isRemoteEditRef.current = true;
       editorRef.current.executeEdits('remote', monacoEdits);
       editorRef.current.pushUndoStop();
       isRemoteEditRef.current = false;
-  
+      
       const newContent = model.getValue();
       setFileContents(prev => ({
         ...prev,
@@ -245,7 +245,7 @@ const ProjectEditor = () => {
       }));
       previousContentRef.current = newContent;
     };
-  
+    
     console.log('Registering remoteEdit handler');
     user.socket.on('remoteEdit', handleRemoteEdit);
     return () => {
@@ -333,7 +333,7 @@ const ProjectEditor = () => {
   useEffect(() => {
     const editor = editorRef.current;
     const monaco = monacoRef.current;
-  
+    
     // Ensure editor, monaco, and fileMap are ready before drawing
     if (
       !editor ||
@@ -355,10 +355,10 @@ const ProjectEditor = () => {
           stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
         },
       }));
-  
+       
     // Apply decorations
     const decorationIds = editor.deltaDecorations([], decorations);
-  
+    
     // Cleanup: remove old decorations
     return () => {
       if (editor && decorationIds.length > 0) {
@@ -485,11 +485,11 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${e.message}\n`);
     }
   };
-
+  
   const clearConsole = () => {
     setConsoleOutput('');
   };
-
+  
   return (
     <div className='editor-container'>
       {/* Sidebar */}
@@ -559,21 +559,21 @@ const ProjectEditor = () => {
                     try {
                       const fileId = fileMap[file]?._id;
                       if (!fileId) throw new Error('Missing fileId');
-
+                      
                       await deleteFileById(projectId, fileId, user.user.username);
-
+                      
                       const updated = { ...fileContents };
                       delete updated[file];
                       setFileContents(updated);
-
+                      
                       const updatedLanguages = { ...fileLanguages };
                       delete updatedLanguages[file];
                       setFileLanguages(updatedLanguages);
-
+                      
                       const updatedMap = { ...fileMap };
                       delete updatedMap[file];
                       setFileMap(updatedMap);
-
+                       
                       if (file === activeFile) {
                         const nextFile = Object.keys(updated)[0];
                         setActiveFile(nextFile || '');
@@ -594,7 +594,7 @@ const ProjectEditor = () => {
               </li>
             ))}
         </ul>
-
+        
         {/* Add file button */}
         <button
           onClick={() => setIsAddFileOpen(true)}
@@ -637,29 +637,29 @@ const ProjectEditor = () => {
               monacoRef.current = monaco;
               
               const model = editor.getModel();
-
+              
               previousContentRef.current = model.getValue(); // Snapshot BEFORE editor
-
+              
               model.onDidChangeContent(() => {
                 if (isRemoteEditRef.current) return;
 
                 const newValue = model.getValue();
                 const fileId = fileMapRef.current[activeFileRef.current]?._id;
                 if (!fileId) return;
-                 
+                
                 const oldValue = previousContentRef.current;
                 const edits = computePatch(model, oldValue, newValue);
                 console.log('Computed edits:', JSON.stringify(edits, null, 2));
                 const position = editor.getPosition();
                 console.log('Emitting editFile', { fileId, edits, username: user?.user?.username });
-
+                
                 user?.socket.emit('editFile', {
                   fileId,
                   edits,
                   username: user?.user?.username,
                   position,
                 });
-            
+                 
                 previousContentRef.current = newValue; // Update AFTER sending
                 setFileContents(prev => ({
                   ...prev,
@@ -667,11 +667,11 @@ const ProjectEditor = () => {
                 }));
                 saveContentToServer(fileId, newValue);
               });
-            
+              
               editor.onDidChangeCursorPosition(() => {
                 const position = editor.getPosition();
                 const fileId = fileMapRef.current[activeFileRef.current]?._id;
-            
+                
                 user?.socket.emit('cursorMove', {
                   fileId,
                   username: user?.user?.username,
@@ -682,7 +682,7 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile]}
-          
+            
             theme={theme}
           />
           {/* Console output area */}
@@ -699,7 +699,7 @@ const ProjectEditor = () => {
           </div>
         </div>
       </main>
-
+      
       {/* Add File Modal */}
       {isAddFileOpen && (
         <div className='modal-overlay'>
@@ -742,7 +742,7 @@ const ProjectEditor = () => {
           </div>
         </div>
       )}
-
+      
       {/* Share Modal */}
       {isShareOpen && (
         <div className='modal-overlay'>
@@ -753,7 +753,7 @@ const ProjectEditor = () => {
                 <FiX size={20} />
               </button>
             </div>
-
+            
             <div className='form-group'>
               <label className='form-label'>Shared With</label>
               {sharedUsers.map(userC => (
@@ -777,7 +777,7 @@ const ProjectEditor = () => {
                 </div>
               ))}
             </div>
-
+            
             <div className='form-group'>
               <label className='form-label'>Add Users</label>
               <input
