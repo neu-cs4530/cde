@@ -75,7 +75,7 @@ const ProjectEditor = () => {
   const runPythonFile = async () => {
     try {
       setConsoleOutput(prev => `${prev}> Running ${activeFile}...\n`);
-      // file ID from fileMap
+      // getting file ID from fileMap
       const fileId = fileMap[activeFile]?._id;
       if (!fileId) {
         setConsoleOutput(prev => `${prev}> Error: Could not find file ID for ${activeFile}\n`);
