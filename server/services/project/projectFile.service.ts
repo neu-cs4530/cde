@@ -177,12 +177,8 @@ export const getProjectFile = async (fileId: string): Promise<ProjectFileRespons
  * @param fileContent - The content of the Python file
  * @returns Promise resolving to execution result
  */
-/* eslint-disable arrow-body-style */
-const executePythonFile = async (
-  fileName: string,
-  fileContent: string,
-): Promise<ExecutionResult> => {
-  return new Promise(resolve => {
+const executePythonFile = async (fileName: string, fileContent: string): Promise<ExecutionResult> =>
+  new Promise(resolve => {
     try {
       // temporary directory for the file
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'py-execution-'));
@@ -236,17 +232,15 @@ const executePythonFile = async (
       });
     }
   });
-};
 
-/* eslint-disable arrow-body-style */
 /**
  * Executes a Java file
  * @param fileName - The name of the Java file
  * @param fileContent - The content of the Java file
  * @returns Promise resolving to execution result
  */
-const executeJavaFile = async (fileName: string, fileContent: string): Promise<ExecutionResult> => {
-  return new Promise(resolve => {
+const executeJavaFile = async (fileName: string, fileContent: string): Promise<ExecutionResult> =>
+  new Promise(resolve => {
     try {
       // creating temporary directory
       const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'java-execution-'));
@@ -331,13 +325,12 @@ const executeJavaFile = async (fileName: string, fileContent: string): Promise<E
       });
     }
   });
-};
 
 /**
- * Executes a Python file with the given content and returns the output.
- * @param {string} fileName - The name of the file to execute.
- * @param {string} fileContent - The content of the Python file to execute.
- * @returns {Promise<{success: boolean, output: string, error: string}>} - Execution results.
+ * Executes a project file with the given content and returns the output.
+ * @param fileName - The name of the file to execute.
+ * @param fileContent - The content of the file to execute.
+ * @returns Promise resolving to execution result.
  */
 export const executeProjectFile = async (
   fileName: string,
