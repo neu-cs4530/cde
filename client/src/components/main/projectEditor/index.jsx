@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiCopy, FiSave, FiClock } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -450,6 +450,19 @@ const ProjectEditor = () => {
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
+            <button
+              // onClick={handleCreateBackup}
+              className='btn btn-primary'>
+              <FiSave /> Save Backup
+            </button>
+            <button
+              // onClick={() => {
+              //   loadProjectBackups();
+              //   setIsBackupsModalOpen(true);
+              // }}
+              className='btn'>
+              <FiClock /> View Backups
+            </button>
             <button
               className='btn'
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
