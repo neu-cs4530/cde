@@ -1,4 +1,4 @@
-import express, { Response, Request } from 'express';
+import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
 import {
   saveProject,
@@ -1093,7 +1093,6 @@ const projectController = (socket: FakeSOSocket) => {
    */
   const runProjectFileCode = async (req: FileRequest, res: Response) => {
     try {
-      const { projectId } = req.params;
       const { fileId, fileName, fileContent } = req.body as unknown as {
         fileId: string;
         fileName: string;
@@ -1101,15 +1100,14 @@ const projectController = (socket: FakeSOSocket) => {
       };
       // Validate required fields
       if (!fileId || !fileName || !fileContent) {
-        res.status(400).json({
+        return res.status(400).json({
           success: false,
           error: 'File ID, name and content are required',
         });
-        return;
       }
       // executing the file
       const result = await executeProjectFile(fileName, fileContent);
-      res.status(result.success ? 200 : 400).json({
+      return res.status(result.success ? 200 : 400).json({
         success: result.success,
         output: result.output,
         error: result.error,
@@ -1117,7 +1115,7 @@ const projectController = (socket: FakeSOSocket) => {
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error in runProjectFileCode:', error);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
       });
