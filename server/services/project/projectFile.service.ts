@@ -209,6 +209,7 @@ export const executeProjectFile = async (
           fs.unlinkSync(filePath);
           fs.rmdirSync(tempDir);
         } catch (err) {
+          // eslint-disable-next-line no-console
           console.error('Error cleaning up temporary files:', err);
         }
         resolve({
