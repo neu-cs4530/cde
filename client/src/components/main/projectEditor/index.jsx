@@ -13,6 +13,7 @@ import {
   runProjectFile,
   createProjectBackup,
   getProjectById,
+  restoreStateById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -46,6 +47,7 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [project, setProject] = useState([]);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -281,6 +283,18 @@ const ProjectEditor = () => {
   //   }, 60000);
   //   return () => clearInterval(interval);
   // }, []);
+  const handleBackupSelection = async e => {
+    const selectedBackup = e.target.value;
+    if (!selectedBackup) return;
+    try {
+      const restoredProject = await restoreStateById(projectId, selectedBackup, user.user.username);
+      setProject(restoredProject);
+      // set the project to the current project
+      alert('project restored successfully');
+    } catch (error) {
+      throw new Error(`Failed to restore to backup ${error}`);
+    }
+  };
 
   const getFilesFromSavedStates = async () => {
     const proj = await getProjectById(projectId, userCon.username);
@@ -521,7 +535,7 @@ const ProjectEditor = () => {
             <label htmlFor='backup-select'>Select Backup:</label>
             {/* Dropdown */}
             <select id='backup-select' disabled={loading}>
-              <option value='' disabled selected={!backups.length}>
+              <option value='' disabled selected={!backups.length} onChange={handleBackupSelection}>
                 Select Backup
               </option>
               {backups.length > 0 ? (
