@@ -268,8 +268,8 @@ const ProjectDashboard = () => {
   const deleteProject = async id => {
     try {
       // eslint-disable-next-line no-alert
-      const confirmed = window.confirm('Are you sure you want to permanently delete this project?');
-      if (!confirmed) return;
+      // const confirmed = window.confirm('Are you sure you want to permanently delete this project?');
+      // if (!confirmed) return;
       await deleteProjectById(id, userC.username);
       setProjects(projects.filter(p => p._id !== id));
     } catch (err) {
