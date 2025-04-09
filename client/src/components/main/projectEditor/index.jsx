@@ -48,7 +48,7 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  // const [project, setProject] = useState({});
+  const [project, setProject] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -57,33 +57,34 @@ const ProjectEditor = () => {
     return 'plaintext';
   };
 
-  // const isViewer = () => {
-  //   if (project) {
-  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-  //     if (userCollab) {
-  //       return userCollab.role === 'VIEWER';
-  //     }
-  //   }
-  //   return false;
-  // };
-  // const isEditor = () => {
-  //   if (project) {
-  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-  //     if (userCollab) {
-  //       return userCollab.role === 'EDITOR';
-  //     }
-  //   }
-  //   return false;
-  // };
-  // const isOwner = () => {
-  //   if (project) {
-  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-  //     if (userCollab) {
-  //       return userCollab.role === 'OWNER';
-  //     }
-  //   }
-  //   return false;
-  // };
+  // eslint-disable-next-line no-unused-vars
+  const isViewer = () => {
+    if (project) {
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+      if (userCollab) {
+        return userCollab.role === 'VIEWER';
+      }
+    }
+    return false;
+  };
+  const isEditor = () => {
+    if (project) {
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+      if (userCollab) {
+        return userCollab.role === 'EDITOR';
+      }
+    }
+    return false;
+  };
+  const isOwner = () => {
+    if (project) {
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+      if (userCollab) {
+        return userCollab.role === 'OWNER';
+      }
+    }
+    return false;
+  };
 
   const getFileExtensionForLanguage = language => {
     switch (language) {
@@ -152,19 +153,19 @@ const ProjectEditor = () => {
     }
   };
 
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     try {
-  //       const result = await getProjectById(projectId, user.user.username);
-  //       setProject(result);
-  //     } catch (error) {
-  //       setConsoleOutput(
-  //         prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
-  //       );
-  //     }
-  //   };
-  //   fetchData();
-  // }, [projectId, user]);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await getProjectById(projectId, user.user.username);
+        setProject(result);
+      } catch (error) {
+        setConsoleOutput(
+          prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
+        );
+      }
+    };
+    fetchData();
+  }, []);
   useEffect(() => {
     getUsers()
       .then(data => {
@@ -648,9 +649,11 @@ const ProjectEditor = () => {
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
               Switch Mode
             </button>
-            <button className='btn' onClick={() => setIsShareOpen(true)}>
-              Share
-            </button>
+            {isOwner() && (
+              <button className='btn' onClick={() => setIsShareOpen(true)}>
+                Share
+              </button>
+            )}
             {/* Run button for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
