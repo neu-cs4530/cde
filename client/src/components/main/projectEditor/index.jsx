@@ -7,7 +7,7 @@ import { debounce } from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
 // import DiffMatchPatch from 'diff-match-patch';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiSave, FiMessageCircle } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiMessageCircle } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -157,7 +157,7 @@ const ProjectEditor = () => {
     } catch (err) {
       throw new Error();
     }
-  }, [activeFile]);
+  }, [activeFile, fileMap, projectId, user.user.username]);
   const fetchCollaborators = useCallback(async () => {
     try {
       const projectC = await getProjectById(projectId, user.user.username);
@@ -1087,7 +1087,7 @@ const ProjectEditor = () => {
                       setNewCommentText('');
                       await loadComments();
                     } catch (err) {
-                      alert('Failed to add comment');
+                      throw new Error();
                     }
                   }}>
                   Add
