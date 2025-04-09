@@ -1490,6 +1490,7 @@ const projectController = (socket: FakeSOSocket) => {
 
   socket.on('connection', conn => {
     conn.on('joinProject', (projectId: string) => {
+      console.log(`[SERVER] Socket ${conn.id} joined project ${projectId}`);
       conn.join(projectId);
       conn.data.projectId = projectId;
     });
@@ -1497,29 +1498,33 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('leaveProject', async (projectId: string) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
-        if (!project) {
-          throw new Error('invalid project');
-        }
         conn.leave(projectId);
       } catch (error) {
         throw new Error('Unexpected error');
       }
     });
 
-    conn.on('editFile', async ({ fileId, content }) => {
-      try {
-        const result = await updateProjectFile(fileId, { contents: content });
+    conn.on('editFile', ({ fileId, edits, username, position }) => {
+      const { projectId } = conn.data;
+      if (!projectId) return;
 
-        if ('error' in result) {
-          throw new Error(result.error);
-        }
+      console.log(`[SERVER] editFile from ${username} → project ${projectId}`, edits);
+      conn.to(projectId).emit('remoteEdit', {
+        fileId,
+        edits,
+        username,
+        position,
+      });
+    });
 
-        const { projectId } = conn.data;
-        if (projectId) {
-          conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
-        }
-      } catch (error) {
-        throw new Error('Unexpected');
+    conn.on('cursorMove', ({ fileId, username, position }) => {
+      const { projectId } = conn.data;
+      if (projectId) {
+        conn.to(projectId).emit('remoteCursorMove', {
+          fileId,
+          username,
+          position,
+        });
       }
     });
 

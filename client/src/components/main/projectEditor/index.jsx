@@ -1,7 +1,11 @@
-import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import Editor from '@monaco-editor/react';
+import Editor, { useMonaco } from '@monaco-editor/react';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { debounce } from 'lodash';
+// eslint-disable-next-line import/no-extraneous-dependencies
+// import DiffMatchPatch from 'diff-match-patch';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiSave, FiMessageCircle } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
@@ -53,6 +57,7 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [project, setProject] = useState({});
   const [collaborators, setCollaborators] = useState([]);
   const [selectedPermission] = useState('EDITOR'); // editor default
   const [projectName, setProjectName] = useState('');
@@ -60,6 +65,14 @@ const ProjectEditor = () => {
   const [comments, setComments] = useState([]); // fetched comments
   const [newCommentLine, setNewCommentLine] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
+  const monaco = useMonaco();
+  const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const previousContentRef = useRef('');
+  const isRemoteEditRef = useRef(false);
+  const fileMapRef = useRef(fileMap);
+  const activeFileRef = useRef(activeFile);
+  const [remoteCursors, setRemoteCursors] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -147,10 +160,10 @@ const ProjectEditor = () => {
   }, [activeFile]);
   const fetchCollaborators = useCallback(async () => {
     try {
-      const project = await getProjectById(projectId, user.user.username);
+      const projectC = await getProjectById(projectId, user.user.username);
       const users = await getUsers();
 
-      const mapped = project.collaborators
+      const mapped = projectC.collaborators
         .filter(c => c.userId !== user.user._id)
         .map(c => {
           const matchedUser = users.find(u => u._id === c.userId);
@@ -162,13 +175,57 @@ const ProjectEditor = () => {
         });
 
       setCollaborators(mapped);
-      setProjectName(project.name);
+      setProjectName(projectC.name);
     } catch (error) {
       setProjectName('Unknown Project');
       throw new Error(error);
     }
   }, [projectId, user.user.username, user.user._id]);
 
+  // check user role once
+  const userRole = useMemo(() => {
+    if (!project || !user?.user) return 'VIEWER';
+
+    if (user.user.username === project.creator) {
+      return 'OWNER';
+    }
+
+    const userCollab = project.collaborators?.find(
+      c => c.userId?.toString() === user.user._id?.toString(),
+    );
+
+    if (userCollab?.role === 'OWNER') {
+      return 'OWNER';
+    }
+    if (userCollab?.role === 'EDITOR') {
+      return 'EDITOR';
+    }
+
+    if (user.user.role === 'VIEWER') {
+      return 'VIEWER';
+    }
+
+    // if not owner, editor, viewer, default to viewer
+    return 'VIEWER';
+  }, [project, user]);
+
+  const isOwner = userRole === 'OWNER';
+  const isEditor = userRole === 'EDITOR' || isOwner;
+  const isViewer = userRole === 'VIEWER';
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await getProjectById(projectId, user.user.username);
+        setProject(result);
+      } catch (error) {
+        setConsoleOutput(
+          prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
+        );
+      }
+    };
+    fetchData();
+  }, [projectId, user]);
   useEffect(() => {
     getUsers()
       .then(data => {
@@ -217,25 +274,25 @@ const ProjectEditor = () => {
       user?.socket.emit('leaveProject', projectId);
     };
   }, [projectId, user?.socket]);
-  useEffect(() => {
-    if (!activeFile) return undefined;
+  // useEffect(() => {
+  //   if (!activeFile) return undefined;
 
-    const handleRemoteEdit = ({ fileId, content }) => {
-      const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
-      if (!updatedFileName) return;
+  //   const handleRemoteEdit = ({ fileId, content }) => {
+  //     const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
+  //     if (!updatedFileName) return;
 
-      setFileContents(prev => ({
-        ...prev,
-        [updatedFileName]: content,
-      }));
-    };
+  //     setFileContents(prev => ({
+  //       ...prev,
+  //       [updatedFileName]: content,
+  //     }));
+  //   };
 
-    user?.socket.on('remoteEdit', handleRemoteEdit);
+  //   user?.socket.on('remoteEdit', handleRemoteEdit);
 
-    return () => {
-      user?.socket.off('remoteEdit', handleRemoteEdit);
-    };
-  }, [activeFile, fileMap, user?.socket]);
+  //   return () => {
+  //     user?.socket.off('remoteEdit', handleRemoteEdit);
+  //   };
+  // }, [activeFile, fileMap, user?.socket]);
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -266,6 +323,148 @@ const ProjectEditor = () => {
       loadComments();
     }
   }, [activeFile, loadComments]);
+
+  // new real time editing stuff
+  const saveContentToServer = debounce(async (fileId, contents) => {
+    try {
+      await updateFileById(projectId, fileId, user.user.username, { contents });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save file', err);
+    }
+  }, 1000);
+  const computePatch = (model, oldText, newText) => {
+    if (oldText === newText) return [];
+
+    let startOffset = 0;
+    while (
+      startOffset < oldText.length &&
+      startOffset < newText.length &&
+      oldText[startOffset] === newText[startOffset]
+    ) {
+      startOffset++;
+    }
+
+    let endOffsetOld = oldText.length;
+    let endOffsetNew = newText.length;
+
+    while (
+      endOffsetOld > startOffset &&
+      endOffsetNew > startOffset &&
+      oldText[endOffsetOld - 1] === newText[endOffsetNew - 1]
+    ) {
+      endOffsetOld--;
+      endOffsetNew--;
+    }
+
+    const startPos = model.getPositionAt(startOffset);
+    const endPos = model.getPositionAt(endOffsetOld);
+    const changedText = newText.slice(startOffset, endOffsetNew);
+
+    return [
+      {
+        range: {
+          startLineNumber: startPos.lineNumber,
+          startColumn: startPos.column,
+          endLineNumber: endPos.lineNumber,
+          endColumn: endPos.column,
+        },
+        text: changedText,
+      },
+    ];
+  };
+
+  // USE EFFECTS
+  useEffect(() => {
+    fileMapRef.current = fileMap;
+  }, [fileMap]);
+
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+
+  useEffect(() => {
+    // eslint-disable-next-line consistent-return
+    if (!user?.socket) return;
+
+    const handleRemoteEdit = ({ fileId, edits, username }) => {
+      // eslint-disable-next-line consistent-return
+      if (username === user.user.username) return;
+
+      const model = editorRef.current?.getModel();
+      const currentFileId = fileMapRef.current[activeFileRef.current]?._id;
+      // eslint-disable-next-line consistent-return
+      if (!model || !monacoRef.current || fileId !== currentFileId) return;
+
+      const monacoEdits = edits.map(edit => ({
+        range: new monacoRef.current.Range(
+          Math.min(edit.range.startLineNumber, edit.range.endLineNumber),
+          edit.range.startColumn,
+          Math.max(edit.range.startLineNumber, edit.range.endLineNumber),
+          edit.range.endColumn,
+        ),
+        text: edit.text,
+        forceMoveMarkers: true,
+      }));
+
+      isRemoteEditRef.current = true;
+      editorRef.current.executeEdits('remote', monacoEdits);
+      editorRef.current.pushUndoStop();
+      isRemoteEditRef.current = false;
+
+      const newContent = model.getValue();
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newContent,
+      }));
+      previousContentRef.current = newContent;
+    };
+
+    user.socket.on('remoteEdit', handleRemoteEdit);
+    // eslint-disable-next-line consistent-return
+    return () => user.socket.off('remoteEdit', handleRemoteEdit);
+  }, [user?.socket, user?.user.username]);
+
+  useEffect(() => {
+    if (
+      !editorRef.current ||
+      !monacoRef.current ||
+      !fileMap[activeFile]?._id ||
+      Object.keys(remoteCursors).length === 0
+    ) {
+      // eslint-disable-next-line consistent-return
+      return;
+    }
+
+    const decorations = Object.entries(remoteCursors)
+      .filter(([username]) => username !== user?.user?.username)
+      .map(([username, pos]) => ({
+        range: new monacoRef.current.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+        options: {
+          className: 'remote-cursor',
+          hoverMessage: { value: `**${username}**` },
+          stickiness: monacoRef.current.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      }));
+
+    const ids = editorRef.current.deltaDecorations([], decorations);
+    // eslint-disable-next-line consistent-return
+    return () => editorRef.current?.deltaDecorations(ids, []);
+  }, [remoteCursors, activeFile, fileMap, user?.user?.username]);
+
+  useEffect(() => {
+    const handleRemoteCursorMove = ({ fileId, username, position }) => {
+      // eslint-disable-next-line consistent-return
+      if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return;
+      setRemoteCursors(prev => ({
+        ...prev,
+        [username]: position,
+      }));
+    };
+
+    user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
+    return () => user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
+  }, [activeFile, fileMap, user?.socket]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
@@ -319,6 +518,104 @@ const ProjectEditor = () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
+  // eslint-disable-next-line no-unused-vars
+  // const handleEditorValidation = (value, language) => {
+  //   // some basic syntaxing rules
+  //   if (!monaco || !value) return;
+  //   const model = monaco.editor.getModels()[0];
+  //   const markers = [];
+  //   const lines = value.split('\n');
+  //   lines.forEach((line, index) => {
+  //     // py
+  //     if (language === 'python') {
+  //       if (line.includes('print(') && !line.includes(')')) {
+  //         markers.push({
+  //           // this is the structure monaco editor uses to display a syntax warning or error
+  //           severity: monaco.MarkerSeverity.Error,
+  //           message: 'Possible missing closing parenthesis in print statement',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //     // java
+  //     if (language === 'java') {
+  //       if (line.includes('public static void main') && !line.includes('{')) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Warning,
+  //           message: 'main method may be missing opening brace',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //       if (
+  //         line.trim().endsWith(';') === false &&
+  //         line.trim() !== '' &&
+  //         !line.includes('{') &&
+  //         !line.includes('}')
+  //       ) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Info,
+  //           message: 'Possible missing semicolon',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //   });
+  //   monaco.editor.setModelMarkers(model, 'owner', markers);
+  // };
+  const handleEditorDidMount = (editor, monacoInstance) => {
+    editorRef.current = editor;
+    monacoRef.current = monacoInstance;
+    const model = editor.getModel();
+
+    previousContentRef.current = model.getValue();
+
+    model.onDidChangeContent(() => {
+      if (isRemoteEditRef.current) return;
+
+      const newValue = model.getValue();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      if (!fileId) return;
+
+      const oldValue = previousContentRef.current;
+      const edits = computePatch(model, oldValue, newValue);
+
+      const position = editor.getPosition();
+      user?.socket.emit('editFile', {
+        fileId,
+        edits,
+        username: user.user.username,
+        position,
+      });
+
+      saveContentToServer(fileId, newValue);
+      previousContentRef.current = newValue;
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newValue,
+      }));
+    });
+
+    editor.onDidChangeCursorPosition(() => {
+      const position = editor.getPosition();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      user?.socket.emit('cursorMove', {
+        fileId,
+        username: user.user.username,
+        position,
+      });
+    });
+  };
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -328,7 +625,7 @@ const ProjectEditor = () => {
       userC =>
         userC.username.toLowerCase().includes(input.toLowerCase()) &&
         !sharedUsers.some(u => u._id === userC._id) &&
-        !collaborators.some(c => c.username === userC.username), // 👈 exclude current collaborators
+        !collaborators.some(c => c.username === userC.username), // exclude current collaborators
     );
 
     setFilteredUsers(filtered);
@@ -591,113 +888,128 @@ const ProjectEditor = () => {
                   }}>
                   {file}
                 </span>
-                <button
-                  onClick={async () => {
-                    if (Object.keys(fileContents).length === 1) {
-                      // eslint-disable-next-line no-alert
-                      alert('You need at least one file in a project!!');
-                      return;
-                    }
-                    // eslint-disable-next-line no-alert
-                    const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
-                    if (!confirmed) return;
-                    try {
-                      const fileId = fileMap[file]?._id;
-                      if (!fileId) throw new Error('Missing fileId');
-
-                      await deleteFileById(projectId, fileId, user.user.username);
-
-                      const updated = { ...fileContents };
-                      delete updated[file];
-                      setFileContents(updated);
-
-                      const updatedLanguages = { ...fileLanguages };
-                      delete updatedLanguages[file];
-                      setFileLanguages(updatedLanguages);
-
-                      const updatedMap = { ...fileMap };
-                      delete updatedMap[file];
-                      setFileMap(updatedMap);
-
-                      if (file === activeFile) {
-                        const nextFile = Object.keys(updated)[0];
-                        setActiveFile(nextFile || '');
+                {(isEditor || isOwner) && (
+                  <button
+                    onClick={async () => {
+                      if (Object.keys(fileContents).length === 1) {
+                        // eslint-disable-next-line no-alert
+                        alert('You need at least one file in a project!!');
+                        return;
                       }
-                    } catch (err) {
-                      setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
-                    }
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#9ca3af',
-                    marginLeft: '0.5rem',
-                  }}
-                  title='Delete file'>
-                  <FiTrash2 size={16} />
-                </button>
+                      // eslint-disable-next-line no-alert
+                      const confirmed = window.confirm(
+                        `Are you sure you want to delete "${file}"?`,
+                      );
+                      if (!confirmed) return;
+                      try {
+                        const fileId = fileMap[file]?._id;
+                        if (!fileId) throw new Error('Missing fileId');
+
+                        await deleteFileById(projectId, fileId, user.user.username);
+
+                        const updated = { ...fileContents };
+                        delete updated[file];
+                        setFileContents(updated);
+
+                        const updatedLanguages = { ...fileLanguages };
+                        delete updatedLanguages[file];
+                        setFileLanguages(updatedLanguages);
+
+                        const updatedMap = { ...fileMap };
+                        delete updatedMap[file];
+                        setFileMap(updatedMap);
+
+                        if (file === activeFile) {
+                          const nextFile = Object.keys(updated)[0];
+                          setActiveFile(nextFile || '');
+                        }
+                      } catch (err) {
+                        setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#9ca3af',
+                      marginLeft: '0.5rem',
+                    }}
+                    title='Delete file'>
+                    <FiTrash2 size={16} />
+                  </button>
+                )}
               </li>
             ))}
         </ul>
 
         {/* Add file button */}
-        <button
-          onClick={() => setIsAddFileOpen(true)}
-          className='btn btn-primary'
-          style={{ marginTop: '1rem' }}>
-          <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
-        </button>
+        {(isEditor || isOwner) && (
+          <button onClick={() => setIsAddFileOpen(true)} className='btn btn-primary'>
+            <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
+          </button>
+        )}
       </aside>
       {/* Main editor */}
       <main className='code-editor'>
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
-            {/* beginning of selecting backups */}
-            {/* Dropdown */}
-            <select
-              id='backup-select'
-              disabled={loading}
-              onChange={handleBackupSelection}
-              defaultValue=''>
-              <option value='' disabled>
-                Select Backup
-              </option>
-              {backups.length > 0 ? (
-                backups.map((file, index) => (
-                  <option key={index} value={file}>
-                    {`s_${index + 1}`}
-                    {/* {file} */}
+            {isOwner && (
+              <>
+                {/* beginning of selecting backups */}
+                {/* Dropdown */}
+                <select
+                  id='backup-select'
+                  disabled={loading}
+                  onChange={handleBackupSelection}
+                  defaultValue=''>
+                  <option value='' disabled>
+                    Select Backup
                   </option>
-                ))
-              ) : (
-                <option value='' disabled>
-                  No backups found
-                </option>
-              )}
-            </select>
+                  {backups.length > 0 ? (
+                    backups.map((file, index) => (
+                      <option key={index} value={file}>
+                        {`s_${index + 1}`}
+                        {/* {file} */}
+                      </option>
+                    ))
+                  ) : (
+                    <option value='' disabled>
+                      No backups found
+                    </option>
+                  )}
+                </select>
 
-            <button onClick={handleViewBackups} className='btn btn-primary'>
-              {loading ? 'Loading...' : 'Refresh Backups'}
-            </button>
+                <button onClick={handleViewBackups} className='btn btn-primary'>
+                  {loading ? 'Loading...' : 'Refresh Backups'}
+                </button>
+              </>
+            )}
             {/* ending of selecting backups */}
 
             <button onClick={handleCreateBackup} className='btn btn-primary'>
               Save Backup
             </button>
+            {(isOwner || isEditor) && (
+              <button onClick={handleCreateBackup} className='btn btn-primary'>
+                Save Backup
+              </button>
+            )}
             <button
               className='btn'
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
               Switch Mode
             </button>
-            <button
-              className='btn'
-              onClick={async () => {
-                await fetchCollaborators();
-                setIsShareOpen(true);
-              }}>
-              Share
-            </button>
+            {isOwner && (
+              <button
+                className='btn'
+                onClick={async () => {
+                  await fetchCollaborators();
+                  setIsShareOpen(true);
+                }}>
+                Share
+              </button>
+            )}
+
             {/* Run button for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
@@ -794,26 +1106,27 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
-            onChange={async newValue => {
-              if (!activeFile) return; // Prevent if no file is active
-              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              const fileId = fileMap[activeFile]?._id;
-              user?.socket.emit('editFile', {
-                fileId,
-                content: newValue,
-              });
-              try {
-                if (!fileId) throw new Error('Missing fileId');
-                await updateFileById(projectId, fileId, user.user.username, {
-                  contents: newValue,
-                });
-              } catch (err) {
-                throw new Error('Failed to save file');
-              }
-            }}
+            onMount={handleEditorDidMount}
+            // onChange={async newValue => {
+            //   if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
+            //   setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+            //   handleEditorValidation(newValue, fileLanguages[activeFile]);
+            //   const fileId = fileMap[activeFile]?._id;
+            //   user?.socket.emit('editFile', {
+            //     fileId,
+            //   });
+            //   try {
+            //     if (!fileId) throw new Error('Missing fileId');
+            //     await updateFileById(projectId, fileId, user.user.username, {
+            //       contents: newValue,
+            //     });
+            //   } catch (err) {
+            //     throw new Error('Failed to save file');
+            //   }
+            // }}
             theme={theme}
             options={{
-              readOnly: !activeFile, // option prop from monaco set to read only
+              readOnly: isViewer || !activeFile, // option prop from monaco set to read only
             }}
           />
           {/* Console output area */}
@@ -832,7 +1145,7 @@ const ProjectEditor = () => {
       </main>
 
       {/* Add File Modal */}
-      {isAddFileOpen && (
+      {(isEditor || isOwner) && isAddFileOpen && (
         <div className='modal-overlay'>
           <div className='modal-content'>
             <div className='modal-header'>
