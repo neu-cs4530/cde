@@ -67,7 +67,7 @@ const ProjectEditor = () => {
     }
     return false;
   };
-  const isEditor = => {
+  const isEditor = () => {
     if (project) {
       const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
       if (userCollab) {
@@ -76,7 +76,7 @@ const ProjectEditor = () => {
     }
     return false;
   };
-  const isOwner = => {
+  const isOwner = () => {
     if (project) {
       const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
       if (userCollab) {
