@@ -66,7 +66,7 @@ const ProjectDashboard = () => {
         // exclude self from search results
         user.username.toLowerCase() !== username.toLowerCase() &&
         // Exclude already added users
-        !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
+        !newProject.sharedUsers.some(sharedUser => sharedUser._id === user._id),
     );
     setFilteredUsers(filtered);
   };
@@ -82,7 +82,7 @@ const ProjectDashboard = () => {
       await respondToInvite(username, notifId, action);
 
       // Remove notification from local state
-      setNotifications(prev => prev.filter(n => n.id !== notifId));
+      setNotifications(prev => prev.filter(n => n._id !== notifId));
 
       // Refetch projects if accepted
       if (action === 'accept') {
@@ -146,7 +146,7 @@ const ProjectDashboard = () => {
       ...newProject,
       sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
     });
-    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+    setFilteredUsers(prev => prev.filter(u => u._id !== user._id));
     setSearchUsername('');
   };
 
@@ -155,7 +155,7 @@ const ProjectDashboard = () => {
     setNewProject({
       ...newProject,
       sharedUsers: newProject.sharedUsers.map(user =>
-        user.id === userId ? { ...user, permissions } : user,
+        user._id === userId ? { ...user, permissions } : user,
       ),
     });
   };
@@ -189,7 +189,7 @@ const ProjectDashboard = () => {
   const handleDeleteNotification = async notifId => {
     try {
       await deleteNotification(username, notifId);
-      setNotifications(prev => prev.filter(n => n.id !== notifId));
+      setNotifications(prev => prev.filter(n => n._id !== notifId));
     } catch (err) {
       throw new Error('Failed', err.error);
     }
@@ -212,10 +212,10 @@ const ProjectDashboard = () => {
 
   // remove a shared user
   const removeSharedUser = userId => {
-    const removedUser = newProject.sharedUsers.find(user => user.id === userId);
+    const removedUser = newProject.sharedUsers.find(user => user._id === userId);
     setNewProject({
       ...newProject,
-      sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
+      sharedUsers: newProject.sharedUsers.filter(user => user._id !== userId),
     });
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
@@ -349,13 +349,13 @@ const ProjectDashboard = () => {
                   <p className='text-muted'>No new notifications.</p>
                 ) : (
                   notifications.map(n => (
-                    <div key={n.id} className='border-bottom pb-2 mb-2 position-relative'>
+                    <div key={n._id} className='border-bottom pb-2 mb-2 position-relative'>
                       {/* 'X' button for DELETE notifications only */}
                       {n.type === 'DELETE' && (
                         <button
                           className='btn btn-sm btn-light position-absolute top-0 end-0'
                           style={{ border: 'none', fontSize: '1rem', padding: '0.25rem 0.5rem' }}
-                          onClick={() => handleDeleteNotification(n.id)}>
+                          onClick={() => handleDeleteNotification(n._id)}>
                           ×
                         </button>
                       )}
@@ -366,14 +366,14 @@ const ProjectDashboard = () => {
                         {n.actions.includes('Accept') && (
                           <button
                             className='btn btn-sm btn-success'
-                            onClick={() => handleNotificationAction(n.id, 'accept')}>
+                            onClick={() => handleNotificationAction(n._id, 'accept')}>
                             Accept
                           </button>
                         )}
                         {n.actions.includes('Decline') && (
                           <button
                             className='btn btn-sm btn-danger'
-                            onClick={() => handleNotificationAction(n.id, 'decline')}>
+                            onClick={() => handleNotificationAction(n._id, 'decline')}>
                             Decline
                           </button>
                         )}
@@ -425,7 +425,7 @@ const ProjectDashboard = () => {
                   <div className='mb-3'>
                     {filteredUsers.map(user => (
                       <div
-                        key={user.id}
+                        key={user._id}
                         className='d-flex align-items-center justify-content-between mb-2'>
                         <div className='d-flex align-items-center'>
                           <FiUser className='me-2' />
@@ -447,7 +447,7 @@ const ProjectDashboard = () => {
                     <label className='form-label'>Shared Users</label>
                     {newProject.sharedUsers.map(user => (
                       <div
-                        key={user.id}
+                        key={user._id}
                         className='d-flex align-items-center justify-content-between mb-2'>
                         <div className='d-flex align-items-center'>
                           <FiUser className='me-2' />
@@ -456,14 +456,14 @@ const ProjectDashboard = () => {
                         <div className='d-flex align-items-center'>
                           <select
                             value={user.permissions}
-                            onChange={e => updateUserPermissions(user.id, e.target.value)}
+                            onChange={e => updateUserPermissions(user._id, e.target.value)}
                             className='form-select form-select-sm me-2'
                             style={{ minWidth: '90px' }}>
                             <option value='viewer'>Viewer</option>
                             <option value='editor'>Editor</option>
                           </select>
                           <button
-                            onClick={() => removeSharedUser(user.id)}
+                            onClick={() => removeSharedUser(user._id)}
                             className='btn btn-sm text-danger'>
                             <FiTrash2 />
                           </button>
@@ -526,7 +526,7 @@ const ProjectDashboard = () => {
               {projects
                 .filter(project => activeTab !== 'starred' || project.starred)
                 .map(project => (
-                  <div className='col' key={project.id}>
+                  <div className='col' key={project._id}>
                     <ProjectCard project={project} />
                   </div>
                 ))}
@@ -573,7 +573,7 @@ const ProjectDashboard = () => {
                   .filter(project => activeTab !== 'starred' || project.starred)
                   .map(project => (
                     <tr
-                      key={project.id}
+                      key={project._id}
                       onClick={() => handleClick(project)}
                       style={{ cursor: 'pointer' }}>
                       <td>
