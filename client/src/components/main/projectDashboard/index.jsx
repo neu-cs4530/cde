@@ -13,8 +13,13 @@ import UserContext from '../../../contexts/UserContext';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// import useUserSearch from '../../../hooks/useUserSearch';
-
+/**
+ *
+ * ProjectDashboard component allows users to view their existing projects, create new projects, and add collaborators.
+ *
+ *
+ * @returns A rendered component of the ProjectDashboard.
+ */
 const ProjectDashboard = () => {
   const { user: userC } = useUserContext();
   const context = useContext(UserContext);
@@ -26,14 +31,11 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
-  // const { pid } = useParams();
-  // const [textErr, setTextErr] = useState('');
-  // const [projectID, setprojectID] = useState('');
 
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
-    currentState: 'draft', // should all new projects have current/initial state being a draft?
+    currentState: 'draft',
     sharedUsers: [],
     starred: false,
   });
@@ -46,6 +48,8 @@ const ProjectDashboard = () => {
     setSearchUsername('');
     setShowAddForm(false);
   };
+
+  // search users through the list of users, exlcuding the already added users.
   const handleInputChange = e => {
     const inputValue = e.target.value;
     setSearchUsername(inputValue);
@@ -59,6 +63,7 @@ const ProjectDashboard = () => {
     setFilteredUsers(filtered);
   };
 
+  // handle click for project navigation
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
   };
@@ -75,6 +80,7 @@ const ProjectDashboard = () => {
     }
   }, [showAddForm, allUsers.length]);
 
+  // use effect for showing the add project form
   useEffect(() => {
     if (showAddForm) {
       document.body.style.overflow = 'hidden';
@@ -122,15 +128,6 @@ const ProjectDashboard = () => {
     });
   };
 
-  // useEffect(() => {
-  //   if (!pid) {
-  //     setTextErr('project ID is missing.');
-  //     navigate('/home');
-  //     return;
-  //   }
-  //   setprojectID(pid);
-  // }, [pid, navigate]);
-
   // remove a shared user
   const removeSharedUser = userId => {
     const removedUser = newProject.sharedUsers.find(user => user.id === userId);
@@ -141,6 +138,8 @@ const ProjectDashboard = () => {
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
   };
+
+  // adding a new project to the users dashboard
   const addProject = async () => {
     if (newProject.name.trim()) {
       const project = {
@@ -164,15 +163,12 @@ const ProjectDashboard = () => {
           collaborators: project.sharedUsers,
         };
 
-        // console.log('Creating project with request body:', requestBody);
-
         const addedProject = await createProject(
           requestBody.name,
           requestBody.actor,
           requestBody.collaborators,
         );
 
-        // console.log(addedProject);
         setProjects([addedProject, ...projects]);
         setNewProject({
           id: Date.now(),
@@ -184,7 +180,6 @@ const ProjectDashboard = () => {
       } catch (err) {
         throw new Error(`Error when adding project ${err}`);
       }
-      // setShowAddForm(false);
     }
   };
 
@@ -374,13 +369,6 @@ const ProjectDashboard = () => {
               Starred
             </button>
           </li>
-          {/* <li className='nav-item'>
-            <button
-              className={`nav-link ${activeTab === 'trash' ? 'active' : ''}`}
-              onClick={() => setActiveTab('trash')}>
-              Trash
-            </button>
-          </li> */}
         </ul>
 
         {/* All Projects */}
@@ -433,7 +421,6 @@ const ProjectDashboard = () => {
                     <span className='visually-hidden'>Star</span>
                   </th>
                   <th>Name</th>
-                  <th>Last Modified</th>
                   <th style={{ width: '80px' }}>
                     <span className='visually-hidden'>Actions</span>
                   </th>
