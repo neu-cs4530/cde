@@ -150,7 +150,7 @@ const ProjectEditor = () => {
       setProjectName('Unknown Project');
       throw new Error(error);
     }
-  }, [projectId, user.user.user]);
+  }, [projectId, user.user.username, user.user._id]);
 
   useEffect(() => {
     getUsers()
@@ -669,7 +669,12 @@ const ProjectEditor = () => {
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
               Switch Mode
             </button>
-            <button className='btn' onClick={() => setIsShareOpen(true)}>
+            <button
+              className='btn'
+              onClick={async () => {
+                await fetchCollaborators();
+                setIsShareOpen(true);
+              }}>
               Share
             </button>
             {/* Run button for JavaScript files */}
