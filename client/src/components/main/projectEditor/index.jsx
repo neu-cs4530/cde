@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import Editor, { useMonaco } from '@monaco-editor/react';
+import Editor from '@monaco-editor/react';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { debounce } from 'lodash';
+// eslint-disable-next-line import/no-extraneous-dependencies
+// import DiffMatchPatch from 'diff-match-patch';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiMessageCircle } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -17,6 +21,8 @@ import {
   updateCollaboratorRole,
   sendNotificationToUser,
   removeCollaboratorFromProject,
+  addCommentToFile,
+  getCommentsForFile,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -55,7 +61,17 @@ const ProjectEditor = () => {
   const [collaborators, setCollaborators] = useState([]);
   const [selectedPermission] = useState('EDITOR'); // editor default
   const [projectName, setProjectName] = useState('');
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [comments, setComments] = useState([]); // fetched comments
+  const [newCommentLine, setNewCommentLine] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
   const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const previousContentRef = useRef('');
+  const isRemoteEditRef = useRef(false);
+  const fileMapRef = useRef(fileMap);
+  const activeFileRef = useRef(activeFile);
+  const [remoteCursors, setRemoteCursors] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -130,6 +146,17 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+  const loadComments = useCallback(async () => {
+    const fileId = fileMap[activeFile]?._id;
+    if (!fileId) return;
+
+    try {
+      const commentList = await getCommentsForFile(projectId, fileId, user.user.username);
+      setComments(commentList);
+    } catch (err) {
+      throw new Error();
+    }
+  }, [activeFile, fileMap, projectId, user.user.username]);
   const fetchCollaborators = useCallback(async () => {
     try {
       const projectC = await getProjectById(projectId, user.user.username);
@@ -246,25 +273,25 @@ const ProjectEditor = () => {
       user?.socket.emit('leaveProject', projectId);
     };
   }, [projectId, user?.socket]);
-  useEffect(() => {
-    if (!activeFile) return undefined;
+  // useEffect(() => {
+  //   if (!activeFile) return undefined;
 
-    const handleRemoteEdit = ({ fileId, content }) => {
-      const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
-      if (!updatedFileName) return;
+  //   const handleRemoteEdit = ({ fileId, content }) => {
+  //     const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
+  //     if (!updatedFileName) return;
 
-      setFileContents(prev => ({
-        ...prev,
-        [updatedFileName]: content,
-      }));
-    };
+  //     setFileContents(prev => ({
+  //       ...prev,
+  //       [updatedFileName]: content,
+  //     }));
+  //   };
 
-    user?.socket.on('remoteEdit', handleRemoteEdit);
+  //   user?.socket.on('remoteEdit', handleRemoteEdit);
 
-    return () => {
-      user?.socket.off('remoteEdit', handleRemoteEdit);
-    };
-  }, [activeFile, fileMap, user?.socket]);
+  //   return () => {
+  //     user?.socket.off('remoteEdit', handleRemoteEdit);
+  //   };
+  // }, [activeFile, fileMap, user?.socket]);
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -290,6 +317,153 @@ const ProjectEditor = () => {
       fetchCollaborators();
     }
   }, [projectId, user, fetchCollaborators]);
+  useEffect(() => {
+    if (activeFile) {
+      loadComments();
+    }
+  }, [activeFile, loadComments]);
+
+  // new real time editing stuff
+  const saveContentToServer = debounce(async (fileId, contents) => {
+    try {
+      await updateFileById(projectId, fileId, user.user.username, { contents });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save file', err);
+    }
+  }, 1000);
+  const computePatch = (model, oldText, newText) => {
+    if (oldText === newText) return [];
+
+    let startOffset = 0;
+    while (
+      startOffset < oldText.length &&
+      startOffset < newText.length &&
+      oldText[startOffset] === newText[startOffset]
+    ) {
+      startOffset++;
+    }
+
+    let endOffsetOld = oldText.length;
+    let endOffsetNew = newText.length;
+
+    while (
+      endOffsetOld > startOffset &&
+      endOffsetNew > startOffset &&
+      oldText[endOffsetOld - 1] === newText[endOffsetNew - 1]
+    ) {
+      endOffsetOld--;
+      endOffsetNew--;
+    }
+
+    const startPos = model.getPositionAt(startOffset);
+    const endPos = model.getPositionAt(endOffsetOld);
+    const changedText = newText.slice(startOffset, endOffsetNew);
+
+    return [
+      {
+        range: {
+          startLineNumber: startPos.lineNumber,
+          startColumn: startPos.column,
+          endLineNumber: endPos.lineNumber,
+          endColumn: endPos.column,
+        },
+        text: changedText,
+      },
+    ];
+  };
+
+  // USE EFFECTS
+  useEffect(() => {
+    fileMapRef.current = fileMap;
+  }, [fileMap]);
+
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+
+  useEffect(() => {
+    // eslint-disable-next-line consistent-return
+    if (!user?.socket) return;
+
+    const handleRemoteEdit = ({ fileId, edits, username }) => {
+      // eslint-disable-next-line consistent-return
+      if (username === user.user.username) return;
+
+      const model = editorRef.current?.getModel();
+      const currentFileId = fileMapRef.current[activeFileRef.current]?._id;
+      // eslint-disable-next-line consistent-return
+      if (!model || !monacoRef.current || fileId !== currentFileId) return;
+
+      const monacoEdits = edits.map(edit => ({
+        range: new monacoRef.current.Range(
+          Math.min(edit.range.startLineNumber, edit.range.endLineNumber),
+          edit.range.startColumn,
+          Math.max(edit.range.startLineNumber, edit.range.endLineNumber),
+          edit.range.endColumn,
+        ),
+        text: edit.text,
+        forceMoveMarkers: true,
+      }));
+
+      isRemoteEditRef.current = true;
+      editorRef.current.executeEdits('remote', monacoEdits);
+      editorRef.current.pushUndoStop();
+      isRemoteEditRef.current = false;
+
+      const newContent = model.getValue();
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newContent,
+      }));
+      previousContentRef.current = newContent;
+    };
+
+    user.socket.on('remoteEdit', handleRemoteEdit);
+    // eslint-disable-next-line consistent-return
+    return () => user.socket.off('remoteEdit', handleRemoteEdit);
+  }, [user?.socket, user?.user.username]);
+
+  useEffect(() => {
+    if (
+      !editorRef.current ||
+      !monacoRef.current ||
+      !fileMap[activeFile]?._id ||
+      Object.keys(remoteCursors).length === 0
+    ) {
+      // eslint-disable-next-line consistent-return
+      return;
+    }
+
+    const decorations = Object.entries(remoteCursors)
+      .filter(([username]) => username !== user?.user?.username)
+      .map(([username, pos]) => ({
+        range: new monacoRef.current.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+        options: {
+          className: 'remote-cursor',
+          hoverMessage: { value: `**${username}**` },
+          stickiness: monacoRef.current.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      }));
+
+    const ids = editorRef.current.deltaDecorations([], decorations);
+    // eslint-disable-next-line consistent-return
+    return () => editorRef.current?.deltaDecorations(ids, []);
+  }, [remoteCursors, activeFile, fileMap, user?.user?.username]);
+
+  useEffect(() => {
+    const handleRemoteCursorMove = ({ fileId, username, position }) => {
+      // eslint-disable-next-line consistent-return
+      if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return;
+      setRemoteCursors(prev => ({
+        ...prev,
+        [username]: position,
+      }));
+    };
+
+    user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
+    return () => user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
+  }, [activeFile, fileMap, user?.socket]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
@@ -343,62 +517,103 @@ const ProjectEditor = () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
-  const handleEditorValidation = (value, language) => {
-    // some basic syntaxing rules
-    if (!monaco || !value) return;
-    const model = monaco.editor.getModels()[0];
-    const markers = [];
-    const lines = value.split('\n');
-    lines.forEach((line, index) => {
-      // py
-      if (language === 'python') {
-        if (line.includes('print(') && !line.includes(')')) {
-          markers.push({
-            // this is the structure monaco editor uses to display a syntax warning or error
-            severity: monaco.MarkerSeverity.Error,
-            message: 'Possible missing closing parenthesis in print statement',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-      }
-      // java
-      if (language === 'java') {
-        if (line.includes('public static void main') && !line.includes('{')) {
-          markers.push({
-            // monaco editor struct for errors
-            severity: monaco.MarkerSeverity.Warning,
-            message: 'main method may be missing opening brace',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-        if (
-          line.trim().endsWith(';') === false &&
-          line.trim() !== '' &&
-          !line.includes('{') &&
-          !line.includes('}')
-        ) {
-          markers.push({
-            // monaco editor struct for errors
-            severity: monaco.MarkerSeverity.Info,
-            message: 'Possible missing semicolon',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-      }
-    });
-    monaco.editor.setModelMarkers(model, 'owner', markers);
-  };
+  // eslint-disable-next-line no-unused-vars
+  // const handleEditorValidation = (value, language) => {
+  //   // some basic syntaxing rules
+  //   if (!monaco || !value) return;
+  //   const model = monaco.editor.getModels()[0];
+  //   const markers = [];
+  //   const lines = value.split('\n');
+  //   lines.forEach((line, index) => {
+  //     // py
+  //     if (language === 'python') {
+  //       if (line.includes('print(') && !line.includes(')')) {
+  //         markers.push({
+  //           // this is the structure monaco editor uses to display a syntax warning or error
+  //           severity: monaco.MarkerSeverity.Error,
+  //           message: 'Possible missing closing parenthesis in print statement',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //     // java
+  //     if (language === 'java') {
+  //       if (line.includes('public static void main') && !line.includes('{')) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Warning,
+  //           message: 'main method may be missing opening brace',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //       if (
+  //         line.trim().endsWith(';') === false &&
+  //         line.trim() !== '' &&
+  //         !line.includes('{') &&
+  //         !line.includes('}')
+  //       ) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Info,
+  //           message: 'Possible missing semicolon',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //   });
+  //   monaco.editor.setModelMarkers(model, 'owner', markers);
+  // };
   const handleEditorDidMount = (editor, monacoInstance) => {
     editorRef.current = editor;
+    monacoRef.current = monacoInstance;
+    const model = editor.getModel();
+
+    previousContentRef.current = model.getValue();
+
+    model.onDidChangeContent(() => {
+      if (isRemoteEditRef.current) return;
+
+      const newValue = model.getValue();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      if (!fileId) return;
+
+      const oldValue = previousContentRef.current;
+      const edits = computePatch(model, oldValue, newValue);
+
+      const position = editor.getPosition();
+      user?.socket.emit('editFile', {
+        fileId,
+        edits,
+        username: user.user.username,
+        position,
+      });
+
+      saveContentToServer(fileId, newValue);
+      previousContentRef.current = newValue;
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newValue,
+      }));
+    });
+
+    editor.onDidChangeCursorPosition(() => {
+      const position = editor.getPosition();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      user?.socket.emit('cursorMove', {
+        fileId,
+        username: user.user.username,
+        position,
+      });
+    });
   };
 
   const handleUserSearch = e => {
@@ -740,7 +955,6 @@ const ProjectEditor = () => {
             {isOwner && (
               <>
                 {/* beginning of selecting backups */}
-                <label htmlFor='backup-select'>Select Backup:</label>
                 {/* Dropdown */}
                 <select
                   id='backup-select'
@@ -771,9 +985,12 @@ const ProjectEditor = () => {
             )}
             {/* ending of selecting backups */}
 
+            <button onClick={handleCreateBackup} className='btn btn-primary'>
+              Save Backup
+            </button>
             {(isOwner || isEditor) && (
               <button onClick={handleCreateBackup} className='btn btn-primary'>
-                <FiSave /> Save Backup
+                Save Backup
               </button>
             )}
             <button
@@ -810,9 +1027,73 @@ const ProjectEditor = () => {
                 Run
               </button>
             )}
+            <button
+              className='btn'
+              onClick={() => setIsCommentsOpen(prev => !prev)}
+              title='Toggle Comments'>
+              <FiMessageCircle />
+            </button>
           </div>
         </div>
         <div className='editor-wrapper'>
+          {isCommentsOpen && (
+            <div className='comment-dropdown'>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {comments.length === 0 ? (
+                  <p style={{ fontStyle: 'italic' }}>No comments yet</p>
+                ) : (
+                  comments
+                    .sort((a, b) => a.lineNumber - b.lineNumber)
+                    .map(comment => (
+                      <div key={comment._id} style={{ marginBottom: '1rem' }}>
+                        <strong>Line {comment.lineNumber}</strong>
+                        <p>{comment.text}</p>
+                        <small>by {comment.commentBy}</small>
+                      </div>
+                    ))
+                )}
+              </div>
+
+              <div style={{ marginTop: '1rem' }}>
+                <h4>Add Comment</h4>
+                <input
+                  type='number'
+                  placeholder='Line number'
+                  value={newCommentLine}
+                  onChange={e => setNewCommentLine(e.target.value)}
+                  style={{ width: '100%', marginBottom: '0.5rem' }}
+                />
+                <textarea
+                  placeholder='Comment...'
+                  value={newCommentText}
+                  onChange={e => setNewCommentText(e.target.value)}
+                  style={{ width: '100%', marginBottom: '0.5rem' }}
+                />
+                <button
+                  className='btn btn-primary'
+                  onClick={async () => {
+                    const fileId = fileMap[activeFile]?._id;
+                    if (!fileId || !newCommentLine || !newCommentText.trim()) return;
+                    try {
+                      await addCommentToFile(
+                        projectId,
+                        fileId,
+                        newCommentText,
+                        user.user.username,
+                        parseInt(newCommentLine, 10),
+                      );
+                      setNewCommentLine('');
+                      setNewCommentText('');
+                      await loadComments();
+                    } catch (err) {
+                      throw new Error();
+                    }
+                  }}>
+                  Add
+                </button>
+              </div>
+            </div>
+          )}
           {!activeFile && (
             <div className='no-file-message'>
               <p style={{ padding: '1rem', color: 'black' }}>
@@ -825,24 +1106,23 @@ const ProjectEditor = () => {
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
             onMount={handleEditorDidMount}
-            onChange={async newValue => {
-              if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
-              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              handleEditorValidation(newValue, fileLanguages[activeFile]);
-              const fileId = fileMap[activeFile]?._id;
-              user?.socket.emit('editFile', {
-                fileId,
-                content: newValue,
-              });
-              try {
-                if (!fileId) throw new Error('Missing fileId');
-                await updateFileById(projectId, fileId, user.user.username, {
-                  contents: newValue,
-                });
-              } catch (err) {
-                throw new Error('Failed to save file');
-              }
-            }}
+            // onChange={async newValue => {
+            //   if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
+            //   setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+            //   handleEditorValidation(newValue, fileLanguages[activeFile]);
+            //   const fileId = fileMap[activeFile]?._id;
+            //   user?.socket.emit('editFile', {
+            //     fileId,
+            //   });
+            //   try {
+            //     if (!fileId) throw new Error('Missing fileId');
+            //     await updateFileById(projectId, fileId, user.user.username, {
+            //       contents: newValue,
+            //     });
+            //   } catch (err) {
+            //     throw new Error('Failed to save file');
+            //   }
+            // }}
             theme={theme}
             options={{
               readOnly: isViewer || !activeFile, // option prop from monaco set to read only

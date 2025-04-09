@@ -191,13 +191,13 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project and file IDs, and comment data.
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
-  const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
-    req.body !== undefined &&
-    req.body.comment !== undefined &&
-    req.body.comment.text !== undefined &&
-    req.body.comment.commentBy !== undefined &&
-    req.body.comment.commentBy !== '' &&
-    req.body.comment.commentDateTime !== undefined;
+  // const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
+  //   req.body !== undefined &&
+  //   req.body.comment !== undefined &&
+  //   req.body.comment.text !== undefined &&
+  //   req.body.comment.commentBy !== undefined &&
+  //   req.body.comment.commentBy !== '' &&
+  //   req.body.comment.commentDateTime !== undefined;
 
   /**
    * Validates that the request contains all required fields for accessing file
@@ -1227,7 +1227,6 @@ const projectController = (socket: FakeSOSocket) => {
       });
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error in runProjectFileCode:', error);
       return res.status(500).json({
         success: false,
         error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
@@ -1268,10 +1267,10 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
-    if (!isAddFileCommentRequestValid(req)) {
-      res.status(400).send('Invalid add file comment request');
-      return;
-    }
+    // if (!isAddFileCommentRequestValid(req)) {
+    //   res.status(400).send('Invalid add file comment request');
+    //   return;
+    // }
 
     try {
       const { projectId, fileId } = req.params;
@@ -1413,6 +1412,46 @@ const projectController = (socket: FakeSOSocket) => {
     }
   };
 
+  /**
+   * Retrieves all comments on a project file.
+   * @param req The request containing the project and file IDs as route parameters.
+   * @param res The response, either returning comments or an error.
+   * @returns A promise resolving to void.
+   */
+  const getAllFileCommentsRoute = async (req: GetFileRequest, res: Response): Promise<void> => {
+    if (!isGetFileRequestValid(req)) {
+      res.status(400).send('Invalid get file comments request');
+      return;
+    }
+
+    try {
+      const { projectId, fileId } = req.params;
+
+      const project = await getProjectById(projectId);
+      if ('error' in project) throw new Error(project.error);
+
+      const actor = await getUserByUsername(req.query.actor);
+      if ('error' in actor) throw new Error(actor.error);
+
+      if (!isProjectCollaborator(actor._id, project)) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const file = await getProjectFile(fileId);
+      if ('error' in file) throw new Error(file.error);
+
+      const comments = await Promise.all(
+        file.comments.map(commentId => getProjectFileComment(commentId.toString())),
+      );
+
+      const validComments = comments.filter(c => !('error' in c));
+      res.status(200).json(validComments);
+    } catch (error) {
+      res.status(500).send(`Error retrieving file comments: ${error}`);
+    }
+  };
+
   // Register the routes
   // router.use((req, res, next) => {
   //   console.log('🔥 Incoming:', req.method, req.originalUrl);
@@ -1442,6 +1481,7 @@ const projectController = (socket: FakeSOSocket) => {
     deleteFileCommentByIdRoute,
   );
   router.get('/:projectId/file/:fileId/comment/:commentId', getFileCommentRoute);
+  router.get('/:projectId/file/:fileId/comments', getAllFileCommentsRoute);
   router.get('/getNotifsByUser/:username', getNotifsByUserRoute);
   router.post('/notifications/respond', respondToInviteRoute);
   router.post('/notifications/:username', addNotificationToUserRoute);
@@ -1457,7 +1497,7 @@ const projectController = (socket: FakeSOSocket) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
         if (!project) {
-          throw new Error('invalid project');
+          throw new Error();
         }
         conn.leave(projectId);
       } catch (error) {
@@ -1465,20 +1505,26 @@ const projectController = (socket: FakeSOSocket) => {
       }
     });
 
-    conn.on('editFile', async ({ fileId, content }) => {
-      try {
-        const result = await updateProjectFile(fileId, { contents: content });
+    conn.on('editFile', ({ fileId, edits, username, position }) => {
+      const { projectId } = conn.data;
+      if (!projectId) return;
 
-        if ('error' in result) {
-          throw new Error(result.error);
-        }
+      conn.to(projectId).emit('remoteEdit', {
+        fileId,
+        edits,
+        username,
+        position,
+      });
+    });
 
-        const { projectId } = conn.data;
-        if (projectId) {
-          conn.to(projectId).emit('remoteEdit', { fileId, content: result.contents });
-        }
-      } catch (error) {
-        throw new Error('Unexpected');
+    conn.on('cursorMove', ({ fileId, username, position }) => {
+      const { projectId } = conn.data;
+      if (projectId) {
+        conn.to(projectId).emit('remoteCursorMove', {
+          fileId,
+          username,
+          position,
+        });
       }
     });
 
