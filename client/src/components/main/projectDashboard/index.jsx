@@ -37,7 +37,7 @@ const ProjectDashboard = () => {
     type: 'doc',
     currentState: 'draft',
     sharedUsers: [],
-    // starred: false,
+    starred: false,
   });
   const closeAndResetForm = () => {
     setNewProject({
@@ -185,7 +185,7 @@ const ProjectDashboard = () => {
 
   // star or unstar a project
   const toggleStar = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, starred: !p.starred } : p)));
+    setProjects(projects.map(p => (p._id === id ? { ...p, starred: !p.starred } : p)));
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
@@ -438,7 +438,7 @@ const ProjectDashboard = () => {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            toggleStar(project.id);
+                            toggleStar(project._id);
                           }}
                           className='btn btn-link p-0'>
                           <FiStar
