@@ -10,7 +10,7 @@ import { ProjectFileComment, DatabaseProjectFileComment } from './comment';
  * - `JAVASCRIPT`: .js file
  * - `OTHER`: any other file extension
  */
-export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'OTHER';
+export type ProjectFileType = 'PYTHON' | 'JAVA' | 'JAVASCRIPT' | 'JSON' | 'OTHER';
 
 /**
  * Represents a file in a project.

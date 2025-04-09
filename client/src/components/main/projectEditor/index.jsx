@@ -62,6 +62,7 @@ const ProjectEditor = () => {
     if (fileName.endsWith('.py')) return 'python';
     if (fileName.endsWith('.js')) return 'javascript';
     if (fileName.endsWith('.java')) return 'java';
+    if (fileName.endsWith('.json')) return 'json';
     return 'plaintext';
   };
 
@@ -73,6 +74,8 @@ const ProjectEditor = () => {
         return '.js';
       case 'java':
         return '.java';
+      case 'json':
+        return '.json';
       default:
         return '.txt';
     }
@@ -85,6 +88,8 @@ const ProjectEditor = () => {
         return `// ${fileName} content\n// Start coding in JavaScript...`;
       case 'java':
         return `// ${fileName} content\n// Start coding in Java...\n// Remember your class name should be the same as your file name in java (excluding extension)`;
+      case 'json':
+        return `{\n  "example": "value"\n}`;
       default:
         return `// ${fileName} content`;
     }
@@ -396,6 +401,22 @@ const ProjectEditor = () => {
         }
       }
     });
+
+    if (language === 'json') {
+      try {
+        JSON.parse(value);
+      } catch (err) {
+        markers.push({
+          // monaco editor struct for errors
+          severity: monaco.MarkerSeverity.Error,
+          message: 'Invalid JSON syntax',
+          startLineNumber: 1,
+          endLineNumber: 1,
+          startColumn: 1,
+          endColumn: 1,
+        });
+      }
+    }
     monaco.editor.setModelMarkers(model, 'owner', markers);
   };
   const handleEditorDidMount = (editor, monacoInstance) => {
@@ -893,6 +914,7 @@ const ProjectEditor = () => {
                 <option value='javascript'>JavaScript</option>
                 <option value='python'>Python</option>
                 <option value='java'>Java</option>
+                <option value='json'>JSON</option>
               </select>
             </div>
             <div className='modal-footer'>
