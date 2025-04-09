@@ -143,6 +143,9 @@ const ProjectEditor = () => {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
+
+  const username = user?.user?.username;
+
   useEffect(() => {
     const loadFiles = async () => {
       if (!projectId || !user?.user?.username) return;
@@ -161,7 +164,8 @@ const ProjectEditor = () => {
       setActiveFile(files[0]?.name || '');
     };
     loadFiles();
-  }, [projectId, user.user.username]);
+  }, [projectId, username]);
+
   useEffect(() => {
     if (!projectId) return undefined;
 
