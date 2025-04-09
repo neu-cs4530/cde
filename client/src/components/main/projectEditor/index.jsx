@@ -58,9 +58,7 @@ const ProjectEditor = () => {
 
   const isViewer = () => {
     if (project) {
-      const userCollab = project.collaborators.find(
-        c => c.userId === user.user.userId
-      );
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
       if (userCollab) {
         return userCollab.role === 'VIEWER';
       }
@@ -69,9 +67,7 @@ const ProjectEditor = () => {
   };
   const isEditor = => {
     if (project) {
-      const userCollab = project.collaborators.find(
-        c => c.userId === user.user.userId
-      );
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
       if (userCollab) {
         return userCollab.role === 'EDITOR';
       }
@@ -80,9 +76,7 @@ const ProjectEditor = () => {
   };
   const isOwner = => {
     if (project) {
-      const userCollab = project.collaborators.find(
-        c => c.userId === user.user.userId
-      );
+      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
       if (userCollab) {
         return userCollab.role === 'OWNER';
       }
