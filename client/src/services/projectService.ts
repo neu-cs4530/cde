@@ -442,31 +442,16 @@ const runProjectFile = async (
   fileId: string,
   fileName: string,
   fileContent: string,
-) => {
-  try {
-    const response = await fetch(`${PROJECT_API_URL}/${projectId}/run-file`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // converts the js object w/ the file name and content into a JSON string
-        // data sent to server for processing
-        fileId,
-        fileName,
-        fileContent,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to run file (${response.status})`);
-    }
-    return await response.json();
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error running project file:', error);
-    throw error;
+): Promise<{ output: string; error?: string }> => {
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/run-file`, {
+    fileId,
+    fileName,
+    fileContent,
+  });
+  if (res.status !== 200) {
+    throw new Error(`Error when running project file`);
   }
+  return res.data;
 };
 
 export {
