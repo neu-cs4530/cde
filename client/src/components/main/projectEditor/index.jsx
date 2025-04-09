@@ -11,6 +11,7 @@ import {
   createFile,
   deleteFileById,
   runProjectFile,
+  getProjectById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 
@@ -195,6 +196,23 @@ const ProjectEditor = () => {
       user?.socket.off('fileCreated', handleFileCreated);
     };
   }, [projectId, user?.socket]);
+
+  const [projectName, setProjectName] = useState('');
+
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      try {
+        const project = await getProjectById(projectId, user.user.username);
+        setProjectName(project.name);
+      } catch (error) {
+        setProjectName('Unknown Project');
+        throw new Error('Failed to load project name');
+      }
+    };
+
+    fetchProjectName();
+  }, [projectId]);
+  
   useEffect(() => {
     const handleFileDeleted = ({ fileId }) => {
       const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
@@ -359,7 +377,7 @@ const ProjectEditor = () => {
     <div className='editor-container'>
       {/* Sidebar */}
       <aside className='file-tree'>
-        <div className='file-tree-header'>Files</div>
+        <div className='file-tree-header'>{projectName}</div>
         {/* Search Bar */}
         <input
           type='text'
