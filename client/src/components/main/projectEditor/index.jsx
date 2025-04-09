@@ -310,7 +310,7 @@ const ProjectEditor = () => {
     } catch (err) {
       console.error('Failed to save file', err);
     }
-  }, 1000);  
+  }, 1000);
   const computePatch = (model, oldText, newText) => {
     if (oldText === newText) return [];
 
@@ -339,15 +339,17 @@ const ProjectEditor = () => {
     const endPos = model.getPositionAt(endOffsetOld);
     const changedText = newText.slice(startOffset, endOffsetNew);
 
-    return [{
-      range: {
-        startLineNumber: startPos.lineNumber,
-        startColumn: startPos.column,
-        endLineNumber: endPos.lineNumber,
-        endColumn: endPos.column,
+    return [
+      {
+        range: {
+          startLineNumber: startPos.lineNumber,
+          startColumn: startPos.column,
+          endLineNumber: endPos.lineNumber,
+          endColumn: endPos.column,
+        },
+        text: changedText,
       },
-      text: changedText,
-    }];
+    ];
   };  
 
   // USE EFFECTS
@@ -371,11 +373,9 @@ const ProjectEditor = () => {
 
       const monacoEdits = edits.map(edit => ({
         range: new monacoRef.current.Range(
-          Math.min(edit.range.startLineNumber,
-            edit.range.endLineNumber),
+          Math.min(edit.range.startLineNumber, edit.range.endLineNumber),
           edit.range.startColumn,
-          Math.max(edit.range.startLineNumber,
-            edit.range.endLineNumber),
+          Math.max(edit.range.startLineNumber, edit.range.endLineNumber),
           edit.range.endColumn,
         ),
         text: edit.text,
@@ -406,6 +406,7 @@ const ProjectEditor = () => {
       !fileMap[activeFile]?._id ||
       Object.keys(remoteCursors).length === 0
     ) {
+      //eslint-disable-next-line consistent-return
       return;
     }
 
@@ -426,17 +427,18 @@ const ProjectEditor = () => {
 
   useEffect(() => {
     const handleRemoteCursorMove = ({ fileId, username, position }) => {
+      //eslint-disable-next-line consistent-return
       if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return;
       setRemoteCursors(prev => ({
         ...prev,
         [username]: position,
       }));
     };
-  
+ 
     user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
     return () => user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
   }, [activeFile, fileMap, user?.socket]);
-  
+
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
   // if (projectOwner == user.user.username && {})
