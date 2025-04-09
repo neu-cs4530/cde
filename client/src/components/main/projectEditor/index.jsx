@@ -399,6 +399,7 @@ const ProjectEditor = () => {
     };
 
     user.socket.on('remoteEdit', handleRemoteEdit);
+    // eslint-disable-next-line consistent-return
     return () => user.socket.off('remoteEdit', handleRemoteEdit);
   }, [user?.socket]);
 
@@ -425,6 +426,7 @@ const ProjectEditor = () => {
       }));
 
     const ids = editorRef.current.deltaDecorations([], decorations);
+    // eslint-disable-next-line consistent-return
     return () => editorRef.current?.deltaDecorations(ids, []);
   }, [remoteCursors, activeFile, fileMap, user?.user?.username]);
 
