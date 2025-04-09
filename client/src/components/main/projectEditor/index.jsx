@@ -277,8 +277,10 @@ const ProjectEditor = () => {
   const handleCreateBackup = async () => {
     try {
       await createProjectBackup(projectId, user.user.username);
+      // eslint-disable-next-line no-alert
       alert('Backup created successfully');
     } catch (err) {
+      // eslint-disable-next-line no-alert
       alert('Failed to create backup');
       throw new Error(`Failed to create backup ${err}`);
     }
@@ -315,9 +317,10 @@ const ProjectEditor = () => {
       setFileLanguages(languages);
       setFileMap(map);
       setActiveFile(files[0]?.name || '');
-
+      // eslint-disable-next-line no-alert
       alert('Project restored successfully');
     } catch (error) {
+      // eslint-disable-next-line no-alert
       alert('Failed to restore backup');
       throw new Error(`Failed to restore to backup ${error}`);
     }
