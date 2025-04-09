@@ -554,17 +554,16 @@ const ProjectEditor = () => {
     //     const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
     //     setVisibleLines({ start: first, end: last });
     //   }
-    console.log('editor mounted');
-  });
+    // });
 
     // Add context menu for adding comments
-    editorIn.onContextMenu(e => {
-      const { position } = e.target;
-      if (position) {
-        const { lineNumber } = position;
-        setCommentLine(lineNumber);
-      }
-    });
+    // editorIn.onContextMenu(e => {
+    //   const { position } = e.target;
+    //   if (position) {
+    //     const { lineNumber } = position;
+    //     setCommentLine(lineNumber);
+    //   }
+    // });
   };
 
   // Load comments when active file changes
