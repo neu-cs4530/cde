@@ -54,7 +54,6 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  // const [project, setProject] = useState([]);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -226,7 +225,24 @@ const ProjectEditor = () => {
 
     fetchProjectName();
   }, [projectId]);
-  
+
+  // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
+  // const [projectOwner, setProjectOwner] = useState('');
+  // if (projectOwner == user.user.username && {})
+  // useEffect(() => {
+  //   const fetchProjectOwner = async () => {
+  //     try {
+  //       const project = await getProjectById(projectId, user.user.username);
+  //       setProjectOwner(project.creator);
+  //     } catch (error) {
+  //       setProjectOwner('Unknown user');
+  //       throw new Error('Failed to load project user');
+  //     }
+  //   };
+
+  //   fetchProjectOwner();
+  // }, [projectId]);
+
   useEffect(() => {
     const handleFileDeleted = ({ fileId }) => {
       const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
