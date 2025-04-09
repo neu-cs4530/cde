@@ -555,7 +555,6 @@ const ProjectEditor = () => {
     //     setVisibleLines({ start: first, end: last });
     //   }
     // });
-
     // Add context menu for adding comments
     // editorIn.onContextMenu(e => {
     //   const { position } = e.target;
