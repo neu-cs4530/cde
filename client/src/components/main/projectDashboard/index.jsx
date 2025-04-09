@@ -79,10 +79,11 @@ const ProjectDashboard = () => {
   // handle choice on invite notification
   const handleNotificationAction = async (notifId, action) => {
     try {
+      console.log('HEREEEEE', notifId)
       await respondToInvite(username, notifId, action);
 
       // Remove notification from local state
-      setNotifications(prev => prev.filter(n => n._id !== notifId));
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
 
       // Refetch projects if accepted
       if (action === 'accept') {
@@ -189,7 +190,7 @@ const ProjectDashboard = () => {
   const handleDeleteNotification = async notifId => {
     try {
       await deleteNotification(username, notifId);
-      setNotifications(prev => prev.filter(n => n._id !== notifId));
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
     } catch (err) {
       throw new Error('Failed', err.error);
     }
@@ -349,13 +350,13 @@ const ProjectDashboard = () => {
                   <p className='text-muted'>No new notifications.</p>
                 ) : (
                   notifications.map(n => (
-                    <div key={n._id} className='border-bottom pb-2 mb-2 position-relative'>
+                    <div key={n.id} className='border-bottom pb-2 mb-2 position-relative'>
                       {/* 'X' button for DELETE notifications only */}
                       {n.type === 'DELETE' && (
                         <button
                           className='btn btn-sm btn-light position-absolute top-0 end-0'
                           style={{ border: 'none', fontSize: '1rem', padding: '0.25rem 0.5rem' }}
-                          onClick={() => handleDeleteNotification(n._id)}>
+                          onClick={() => handleDeleteNotification(n.id)}>
                           ×
                         </button>
                       )}
@@ -366,14 +367,14 @@ const ProjectDashboard = () => {
                         {n.actions.includes('Accept') && (
                           <button
                             className='btn btn-sm btn-success'
-                            onClick={() => handleNotificationAction(n._id, 'accept')}>
+                            onClick={() => handleNotificationAction(n.id, 'accept')}>
                             Accept
                           </button>
                         )}
                         {n.actions.includes('Decline') && (
                           <button
                             className='btn btn-sm btn-danger'
-                            onClick={() => handleNotificationAction(n._id, 'decline')}>
+                            onClick={() => handleNotificationAction(n.id, 'decline')}>
                             Decline
                           </button>
                         )}
