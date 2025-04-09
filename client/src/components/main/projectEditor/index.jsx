@@ -985,9 +985,6 @@ const ProjectEditor = () => {
             )}
             {/* ending of selecting backups */}
 
-            <button onClick={handleCreateBackup} className='btn btn-primary'>
-              Save Backup
-            </button>
             {(isOwner || isEditor) && (
               <button onClick={handleCreateBackup} className='btn btn-primary'>
                 Save Backup
