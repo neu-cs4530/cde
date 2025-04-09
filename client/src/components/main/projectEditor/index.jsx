@@ -56,36 +56,44 @@ const ProjectEditor = () => {
     if (fileName.endsWith('.java')) return 'java';
     return 'plaintext';
   };
-
-  // eslint-disable-next-line no-unused-vars
-  const isViewer = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'VIEWER';
-      }
+  const isOwner = () => {
+    // If the logged-in user is the creator of the project, they're the owner
+    if (user?.user?.username === project?.creator) {
+      return true;
+    }
+    // Otherwise check the collaborators list
+    if (project?.collaborators) {
+      const userCollab = project.collaborators.find(
+        c => c.userId?.toString() === user.user.username?.toString(),
+      );
+      return userCollab?.role === 'OWNER';
     }
     return false;
   };
   const isEditor = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'EDITOR';
-      }
+    // If user is the owner, they also have editor permissions
+    if (isOwner()) {
+      return true;
     }
-    return false;
-  };
-  const isOwner = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'OWNER';
-      }
+    // Check if user has explicit EDITOR role
+    if (project?.collaborators) {
+      const userCollab = project.collaborators.find(
+        c => c.userId?.toString() === user.user.username?.toString(),
+      );
+      return userCollab?.role === 'EDITOR';
     }
     return false;
   };
 
+  const isViewer = () => {
+    // If user's system role is 'viewer', they're always just a viewer
+    if (user?.user?.role === 'VIEWER') {
+      return true;
+    }
+
+    // If they're neither owner nor editor, they're a viewer by default
+    return !isOwner() && !isEditor();
+  };
   const getFileExtensionForLanguage = language => {
     switch (language) {
       case 'python':
