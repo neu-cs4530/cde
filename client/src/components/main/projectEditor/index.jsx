@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiCopy, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -11,8 +11,12 @@ import {
   createFile,
   deleteFileById,
   runProjectFile,
+  createProjectBackup,
+  getProjectById,
+  restoreStateById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
+import useUserContext from '../../../hooks/useUserContext';
 
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-light');
@@ -37,9 +41,13 @@ const ProjectEditor = () => {
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
   const user = useContext(UserContext);
+  const { user: userCon } = useUserContext();
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
   const [searchFile, setSearchFile] = useState('');
+  const [backups, setBackups] = useState([]);
+  const [loading, setLoading] = useState(false);
+  // const [project, setProject] = useState([]);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -261,6 +269,88 @@ const ProjectEditor = () => {
     );
   };
 
+  /**
+   * This function handles the api call to create a new backup for a project when the save backup button is pressed.
+   * @param {*} projectId - the id of the specific project that a backup will be created for.
+   * @param {*} userCon - the current user that is creating the backup
+   */
+  const handleCreateBackup = async () => {
+    try {
+      await createProjectBackup(projectId, user.user.username);
+      // eslint-disable-next-line no-alert
+      alert('Backup created successfully');
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert('Failed to create backup');
+      throw new Error(`Failed to create backup ${err}`);
+    }
+  };
+
+  // save state button that adds to the view backups
+  // /**
+  //  * useEffect for saving a project backup every minute
+  //  */
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     createProjectBackup(projectId, user);
+  //   }, 60000);
+  //   return () => clearInterval(interval);
+  // }, []);
+  const handleBackupSelection = async e => {
+    const selectedBackupId = e.target.value;
+    if (!selectedBackupId) return;
+    try {
+      await restoreStateById(projectId, selectedBackupId, user.user.username);
+
+      const files = await getFiles(projectId, user.user.username);
+      const contents = {};
+      const languages = {};
+      const map = {};
+
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+        map[file.name] = file;
+      });
+
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setFileMap(map);
+      setActiveFile(files[0]?.name || '');
+      // eslint-disable-next-line no-alert
+      alert('Project restored successfully');
+    } catch (error) {
+      // eslint-disable-next-line no-alert
+      alert('Failed to restore backup');
+      throw new Error(`Failed to restore to backup ${error}`);
+    }
+  };
+
+  const getFilesFromSavedStates = async () => {
+    const proj = await getProjectById(projectId, userCon.username);
+    const backup = [];
+
+    for (const state of proj.savedStates) {
+      backup.push(state);
+    }
+    return backup;
+  };
+  // when someone clicks on a new state current state should be updated to the one they clicked on -> restoreStateRoute
+  // objectids -> s#_dateTime
+  //
+  // change the editor view
+  const handleViewBackups = async () => {
+    setLoading(true);
+    try {
+      const files = await getFilesFromSavedStates();
+      setBackups(files);
+    } catch (error) {
+      throw new Error(`Failed to get backups ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddFile = async () => {
     if (!newFileName.trim()) {
       setConsoleOutput(prev => `${prev}Error: File name cannot be empty\n`);
@@ -473,6 +563,39 @@ const ProjectEditor = () => {
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
+            {/* beginning of selecting backups */}
+            <label htmlFor='backup-select'>Select Backup:</label>
+            {/* Dropdown */}
+            <select
+              id='backup-select'
+              disabled={loading}
+              onChange={handleBackupSelection}
+              defaultValue=''>
+              <option value='' disabled>
+                Select Backup
+              </option>
+              {backups.length > 0 ? (
+                backups.map((file, index) => (
+                  <option key={index} value={file}>
+                    {`s_${index + 1}`}
+                    {/* {file} */}
+                  </option>
+                ))
+              ) : (
+                <option value='' disabled>
+                  No backups found
+                </option>
+              )}
+            </select>
+
+            <button onClick={handleViewBackups} className='btn btn-primary'>
+              {loading ? 'Loading...' : 'Refresh Backups'}
+            </button>
+            {/* ending of selecting backups */}
+
+            <button onClick={handleCreateBackup} className='btn btn-primary'>
+              <FiSave /> Save Backup
+            </button>
             <button
               className='btn'
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
