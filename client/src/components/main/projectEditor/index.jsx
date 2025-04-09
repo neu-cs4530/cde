@@ -5,7 +5,7 @@ import Editor, { useMonaco } from '@monaco-editor/react';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { debounce } from 'lodash';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import DiffMatchPatch from 'diff-match-patch';
+// import DiffMatchPatch from 'diff-match-patch';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
@@ -497,60 +497,60 @@ const ProjectEditor = () => {
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
   // eslint-disable-next-line no-unused-vars
-  const handleEditorValidation = (value, language) => {
-    // some basic syntaxing rules
-    if (!monaco || !value) return;
-    const model = monaco.editor.getModels()[0];
-    const markers = [];
-    const lines = value.split('\n');
-    lines.forEach((line, index) => {
-      // py
-      if (language === 'python') {
-        if (line.includes('print(') && !line.includes(')')) {
-          markers.push({
-            // this is the structure monaco editor uses to display a syntax warning or error
-            severity: monaco.MarkerSeverity.Error,
-            message: 'Possible missing closing parenthesis in print statement',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-      }
-      // java
-      if (language === 'java') {
-        if (line.includes('public static void main') && !line.includes('{')) {
-          markers.push({
-            // monaco editor struct for errors
-            severity: monaco.MarkerSeverity.Warning,
-            message: 'main method may be missing opening brace',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-        if (
-          line.trim().endsWith(';') === false &&
-          line.trim() !== '' &&
-          !line.includes('{') &&
-          !line.includes('}')
-        ) {
-          markers.push({
-            // monaco editor struct for errors
-            severity: monaco.MarkerSeverity.Info,
-            message: 'Possible missing semicolon',
-            startLineNumber: index + 1,
-            endLineNumber: index + 1,
-            startColumn: 1,
-            endColumn: line.length + 1,
-          });
-        }
-      }
-    });
-    monaco.editor.setModelMarkers(model, 'owner', markers);
-  };
+  // const handleEditorValidation = (value, language) => {
+  //   // some basic syntaxing rules
+  //   if (!monaco || !value) return;
+  //   const model = monaco.editor.getModels()[0];
+  //   const markers = [];
+  //   const lines = value.split('\n');
+  //   lines.forEach((line, index) => {
+  //     // py
+  //     if (language === 'python') {
+  //       if (line.includes('print(') && !line.includes(')')) {
+  //         markers.push({
+  //           // this is the structure monaco editor uses to display a syntax warning or error
+  //           severity: monaco.MarkerSeverity.Error,
+  //           message: 'Possible missing closing parenthesis in print statement',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //     // java
+  //     if (language === 'java') {
+  //       if (line.includes('public static void main') && !line.includes('{')) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Warning,
+  //           message: 'main method may be missing opening brace',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //       if (
+  //         line.trim().endsWith(';') === false &&
+  //         line.trim() !== '' &&
+  //         !line.includes('{') &&
+  //         !line.includes('}')
+  //       ) {
+  //         markers.push({
+  //           // monaco editor struct for errors
+  //           severity: monaco.MarkerSeverity.Info,
+  //           message: 'Possible missing semicolon',
+  //           startLineNumber: index + 1,
+  //           endLineNumber: index + 1,
+  //           startColumn: 1,
+  //           endColumn: line.length + 1,
+  //         });
+  //       }
+  //     }
+  //   });
+  //   monaco.editor.setModelMarkers(model, 'owner', markers);
+  // };
   const handleEditorDidMount = (editor, monacoInstance) => {
     editorRef.current = editor;
     monacoRef.current = monacoInstance;
