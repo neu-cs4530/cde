@@ -67,7 +67,6 @@ const ProjectEditor = () => {
   const fileMapRef = useRef(fileMap);
   const activeFileRef = useRef(activeFile);
   const [remoteCursors, setRemoteCursors] = useState({});
-  const dmp = new DiffMatchPatch();
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -308,6 +307,7 @@ const ProjectEditor = () => {
     try {
       await updateFileById(projectId, fileId, user.user.username, { contents });
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error('Failed to save file', err);
     }
   }, 1000);
@@ -401,7 +401,7 @@ const ProjectEditor = () => {
     user.socket.on('remoteEdit', handleRemoteEdit);
     // eslint-disable-next-line consistent-return
     return () => user.socket.off('remoteEdit', handleRemoteEdit);
-  }, [user?.socket]);
+  }, [user?.socket, user?.user.username]);
 
   useEffect(() => {
     if (
@@ -496,6 +496,7 @@ const ProjectEditor = () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
+  // eslint-disable-next-line no-unused-vars
   const handleEditorValidation = (value, language) => {
     // some basic syntaxing rules
     if (!monaco || !value) return;
