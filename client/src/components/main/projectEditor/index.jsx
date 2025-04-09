@@ -539,21 +539,21 @@ const ProjectEditor = () => {
 
   // Handle editor mounting to get the editor instance
   const handleEditorDidMount = editorIn => {
-    setEditorInstance(editorIn);
-
-    // Set up scrolling event listener for comment syncing
-    const viewModel = editorIn.getViewModel();
-    const lineNumbersController = viewModel._viewLayout;
-
-    editorIn.onDidScrollChange(() => {
-      if (!lineNumbersController) return;
-
-      const visibleRanges = editorIn.getVisibleRanges();
-      if (visibleRanges.length > 0) {
-        const first = visibleRanges[0].startLineNumber;
-        const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
-        setVisibleLines({ start: first, end: last });
-      }
+    // setEditorInstance(editorIn);
+    //
+    // // Set up scrolling event listener for comment syncing
+    // const viewModel = editorIn.getViewModel();
+    // const lineNumbersController = viewModel._viewLayout;
+    //
+    // editorIn.onDidScrollChange(() => {
+    //   if (!lineNumbersController) return;
+    //
+    //   const visibleRanges = editorIn.getVisibleRanges();
+    //   if (visibleRanges.length > 0) {
+    //     const first = visibleRanges[0].startLineNumber;
+    //     const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
+    //     setVisibleLines({ start: first, end: last });
+    //   }
     });
 
     // Add context menu for adding comments
