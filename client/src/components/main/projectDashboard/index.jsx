@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiMail } from 'react-icons/fi';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
+import { FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiMail } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
@@ -80,15 +80,15 @@ const ProjectDashboard = () => {
         setProjects(updatedProjects);
       }
     } catch (err) {
-      console.error(`Failed to ${action} invite`, err);
+      throw new Error(err.error);
     }
   };
 
   // fetch project data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const allProj = await getProjectsByUser(userC.username);
     setProjects(allProj);
-  };
+  });
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -146,7 +146,7 @@ const ProjectDashboard = () => {
   };
 
   // fetch notifications
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const res = await getNotifsByUser(username);
 
@@ -166,9 +166,9 @@ const ProjectDashboard = () => {
 
       setNotifications(mapped);
     } catch (err) {
-      console.error('Failed to load notifications:', err);
+      throw new Error(err.error);
     }
-  };
+  });
 
   // delete a notification
   const handleDeleteNotification = async notifId => {
