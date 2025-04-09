@@ -52,9 +52,8 @@ import {
   CreateFileRequest,
   FileRequest,
   GetFileRequest,
-  // ProjectState,
   AddFileCommentRequest,
-  DeleteFileCommentByIdRequest,
+  FileCommentRequest,
 } from '../types/types';
 import ProjectModel from '../models/projects.model';
 
@@ -192,12 +191,12 @@ const projectController = (socket: FakeSOSocket) => {
     req.body.comment.commentDateTime !== undefined;
 
   /**
-   * Validates that the request contains all required fields for deleting file
+   * Validates that the request contains all required fields for accessing file
    * comment by ID.
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest):
+  const isFileCommentRequestValid = (req: FileCommentRequest):
     boolean =>
     req.body.actor !== undefined &&
     req.body.actor !== '';
@@ -1159,10 +1158,10 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns A promise resolving to void.
    */
   const deleteFileCommentByIdRoute = async (
-    req: DeleteFileCommentByIdRequest,
+    req: FileCommentRequest,
     res: Response,
   ): Promise<void> => {
-    if (!isDeleteFileCommentByIdRequestValid(req)) {
+    if (!isFileCommentRequestValid(req)) {
       res.status(400).send('Invalid delete file comment request');
       return;
     }
@@ -1190,7 +1189,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(deletedComment.error);
       }
 
-      const result: ProjectFileResponse = await removeCommentFromFile(projectId, commentId);
+      const result: ProjectFileResponse = await removeCommentFromFile(fileId, commentId);
       if ('error' in result) {
         throw new Error(result.error);
       }
@@ -1198,6 +1197,65 @@ const projectController = (socket: FakeSOSocket) => {
       res.status(200).json(deletedComment);
     } catch (error) {
       res.status(500).send(`Error when deleting file comment: ${error}`);
+    }
+  };
+
+  /**
+   * Retrieves a comment on a project file.
+   * @param req The request containing the project, file, and comment IDs
+   * as route parameters.
+   * @param The response, either confirming deletion or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getFileCommentRoute = async (
+    req: FileCommentRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!isFileCommentRequestValid(req)) {
+      res.status(400).send('Invalid delete file comment request');
+      return;
+    }
+
+    try {
+      const { projectId, fileId, commentId } = req.params;
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      if (!isProjectCollaborator(actor._id, project)) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const file: ProjectFileResponse = await getProjectFile(fileId);
+      if ('error' in file) {
+        throw new Error(file.error);
+      }
+
+      const validComment = file.comments.reduce(
+        (acc, id) => acc || commentId.toString() === id.toString(),
+        false,
+      ); 
+      if (!validComment) {
+        res.status(400).send('Requested comment is not part of the given file');
+        return;
+      }
+
+      const comment: ProjectFileCommentResponse = await getProjectFileComment(commentId);
+      if ('error' in comment) {
+        throw new Error(comment.error);
+      }
+
+      res.status(200).json(comment);
+    } catch (error) {
+      res.status(500).send(`Error when retrieving file comment: ${error}`);
     }
   };
 
@@ -1224,6 +1282,7 @@ const projectController = (socket: FakeSOSocket) => {
     '/:projectId/file/:fileId/deleteCommentById/:commentId',
     deleteFileCommentByIdRoute,
   );
+  router.get('/:projectId/file/:fileId/comment/:commentId', getFileCommentRoute);
 
   socket.on('connection', conn => {
     conn.on('joinProject', (projectId: string) => {

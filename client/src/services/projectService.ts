@@ -357,14 +357,13 @@ const addCommentToFile = async (
   actor: string,
   lineNumber: number,
 ): Promise<ProjectFileCommentResponse> => {
-  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
-    comment: {
-      text: commentContent,
-      commentBy: actor,
-      commentDateTime: new Date(),
-      lineNumber: lineNumber,
-    },
-  });
+  const comment: ProjectFileComment = {
+    text: commentContent,
+    commentBy: actor,
+    commentDateTime: new Date(),
+    lineNumber,
+  };
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, comment);
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
   }
