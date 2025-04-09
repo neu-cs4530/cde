@@ -17,8 +17,13 @@ import UserContext from '../../../contexts/UserContext';
 
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// import useUserSearch from '../../../hooks/useUserSearch';
-
+/**
+ *
+ * ProjectDashboard component allows users to view their existing projects, create new projects, and add collaborators.
+ *
+ *
+ * @returns A rendered component of the ProjectDashboard.
+ */
 const ProjectDashboard = () => {
   const { user: userC } = useUserContext();
   const context = useContext(UserContext);
@@ -36,9 +41,9 @@ const ProjectDashboard = () => {
   const [newProject, setNewProject] = useState({
     name: '',
     type: 'doc',
-    currentState: 'draft', // should all new projects have current/initial state being a draft?
+    currentState: 'draft',
     sharedUsers: [],
-    // starred: false,
+    starred: false,
   });
   const closeAndResetForm = () => {
     setNewProject({
@@ -49,6 +54,8 @@ const ProjectDashboard = () => {
     setSearchUsername('');
     setShowAddForm(false);
   };
+
+  // search users through the list of users, exlcuding the already added users.
   const handleInputChange = e => {
     const inputValue = e.target.value;
     setSearchUsername(inputValue);
@@ -62,6 +69,7 @@ const ProjectDashboard = () => {
     setFilteredUsers(filtered);
   };
 
+  // handle click for project navigation
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
   };
@@ -102,6 +110,7 @@ const ProjectDashboard = () => {
     }
   }, [showAddForm, allUsers.length]);
 
+  // use effect for showing the add project form
   useEffect(() => {
     if (showAddForm) {
       document.body.style.overflow = 'hidden';
@@ -205,6 +214,8 @@ const ProjectDashboard = () => {
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
   };
+
+  // adding a new project to the users dashboard
   const addProject = async () => {
     if (newProject.name.trim()) {
       const project = {
@@ -232,7 +243,6 @@ const ProjectDashboard = () => {
 
         const addedProject = await createProject(requestBody.name, requestBody.actor, []);
 
-        // console.log(addedProject);
         setProjects([addedProject, ...projects]);
         setNewProject({
           id: Date.now(),
@@ -254,13 +264,12 @@ const ProjectDashboard = () => {
       } catch (err) {
         throw new Error(`Error when adding project ${err}`);
       }
-      // setShowAddForm(false);
     }
   };
 
   // star or unstar a project
   const toggleStar = id => {
-    setProjects(projects.map(p => (p.id === id ? { ...p, starred: !p.starred } : p)));
+    setProjects(projects.map(p => (p._id === id ? { ...p, starred: !p.starred } : p)));
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
@@ -498,13 +507,6 @@ const ProjectDashboard = () => {
               Starred
             </button>
           </li>
-          {/* <li className='nav-item'>
-            <button
-              className={`nav-link ${activeTab === 'trash' ? 'active' : ''}`}
-              onClick={() => setActiveTab('trash')}>
-              Trash
-            </button>
-          </li> */}
         </ul>
 
         {/* All Projects */}
@@ -557,7 +559,6 @@ const ProjectDashboard = () => {
                     <span className='visually-hidden'>Star</span>
                   </th>
                   <th>Name</th>
-                  <th>Last Modified</th>
                   <th style={{ width: '80px' }}>
                     <span className='visually-hidden'>Actions</span>
                   </th>
@@ -575,7 +576,7 @@ const ProjectDashboard = () => {
                         <button
                           onClick={e => {
                             e.stopPropagation();
-                            toggleStar(project.id);
+                            toggleStar(project._id);
                           }}
                           className='btn btn-link p-0'>
                           <FiStar

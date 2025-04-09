@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiCopy } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -11,25 +11,30 @@ import {
   createFile,
   deleteFileById,
   runProjectFile,
+  createProjectBackup,
+  getProjectById,
+  restoreStateById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
+import useUserContext from '../../../hooks/useUserContext';
 
+/**
+ *
+ * ProjectEditor component allows users to edit the respective project, the files associated, and compile code written.
+ *
+ *
+ * @returns A rendered component of the ProjectEditor.
+ */
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
-  const [activeFile, setActiveFile] = useState('main.py');
   const [newFileName, setNewFileName] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [consoleOutput, setConsoleOutput] = useState('');
-  const [fileLanguages, setFileLanguages] = useState({
-    'main.py': 'python',
-    'utils.py': 'python',
-  });
-  const [fileContents, setFileContents] = useState({
-    'main.py': '# Start coding here...',
-    'utils.py': '# Start coding here...',
-  });
+  const [activeFile, setActiveFile] = useState('');
+  const [fileLanguages, setFileLanguages] = useState({});
+  const [fileContents, setFileContents] = useState({});
 
   const [sharedUsers, setSharedUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
@@ -37,9 +42,12 @@ const ProjectEditor = () => {
   const [allUsers, setAllUsers] = useState([]);
   const consoleRef = useRef(null);
   const user = useContext(UserContext);
+  const { user: userCon } = useUserContext();
   const { projectId } = useParams();
   const [fileMap, setFileMap] = useState({});
   const [searchFile, setSearchFile] = useState('');
+  const [backups, setBackups] = useState([]);
+  const [loading, setLoading] = useState(false);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -129,6 +137,7 @@ const ProjectEditor = () => {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
+
   useEffect(() => {
     const loadFiles = async () => {
       if (!projectId || !user?.user?.username) return;
@@ -147,7 +156,8 @@ const ProjectEditor = () => {
       setActiveFile(files[0]?.name || '');
     };
     loadFiles();
-  }, [projectId, user.user.username]);
+  }, [projectId, user]);
+
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -195,6 +205,40 @@ const ProjectEditor = () => {
       user?.socket.off('fileCreated', handleFileCreated);
     };
   }, [projectId, user?.socket]);
+
+  const [projectName, setProjectName] = useState('');
+
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      try {
+        const project = await getProjectById(projectId, user.user.username);
+        setProjectName(project.name);
+      } catch (error) {
+        setProjectName('Unknown Project');
+        throw new Error('Failed to load project name');
+      }
+    };
+
+    fetchProjectName();
+  }, [projectId, user]);
+
+  // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
+  // const [projectOwner, setProjectOwner] = useState('');
+  // if (projectOwner == user.user.username && {})
+  // useEffect(() => {
+  //   const fetchProjectOwner = async () => {
+  //     try {
+  //       const project = await getProjectById(projectId, user.user.username);
+  //       setProjectOwner(project.creator);
+  //     } catch (error) {
+  //       setProjectOwner('Unknown user');
+  //       throw new Error('Failed to load project user');
+  //     }
+  //   };
+
+  //   fetchProjectOwner();
+  // }, [projectId]);
+
   useEffect(() => {
     const handleFileDeleted = ({ fileId }) => {
       const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
@@ -261,6 +305,88 @@ const ProjectEditor = () => {
     );
   };
 
+  /**
+   * This function handles the api call to create a new backup for a project when the save backup button is pressed.
+   * @param {*} projectId - the id of the specific project that a backup will be created for.
+   * @param {*} userCon - the current user that is creating the backup
+   */
+  const handleCreateBackup = async () => {
+    try {
+      await createProjectBackup(projectId, user.user.username);
+      // eslint-disable-next-line no-alert
+      alert('Backup created successfully');
+    } catch (err) {
+      // eslint-disable-next-line no-alert
+      alert('Failed to create backup');
+      throw new Error(`Failed to create backup ${err}`);
+    }
+  };
+
+  // save state button that adds to the view backups
+  // /**
+  //  * useEffect for saving a project backup every minute
+  //  */
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     createProjectBackup(projectId, user);
+  //   }, 60000);
+  //   return () => clearInterval(interval);
+  // }, []);
+  const handleBackupSelection = async e => {
+    const selectedBackupId = e.target.value;
+    if (!selectedBackupId) return;
+    try {
+      await restoreStateById(projectId, selectedBackupId, user.user.username);
+
+      const files = await getFiles(projectId, user.user.username);
+      const contents = {};
+      const languages = {};
+      const map = {};
+
+      files.forEach(file => {
+        contents[file.name] = file.contents;
+        languages[file.name] = file.fileType.toLowerCase();
+        map[file.name] = file;
+      });
+
+      setFileContents(contents);
+      setFileLanguages(languages);
+      setFileMap(map);
+      setActiveFile(files[0]?.name || '');
+      // eslint-disable-next-line no-alert
+      alert('Project restored successfully');
+    } catch (error) {
+      // eslint-disable-next-line no-alert
+      alert('Failed to restore backup');
+      throw new Error(`Failed to restore to backup ${error}`);
+    }
+  };
+
+  const getFilesFromSavedStates = async () => {
+    const proj = await getProjectById(projectId, userCon.username);
+    const backup = [];
+
+    for (const state of proj.savedStates) {
+      backup.push(state);
+    }
+    return backup;
+  };
+  // when someone clicks on a new state current state should be updated to the one they clicked on -> restoreStateRoute
+  // objectids -> s#_dateTime
+  //
+  // change the editor view
+  const handleViewBackups = async () => {
+    setLoading(true);
+    try {
+      const files = await getFilesFromSavedStates();
+      setBackups(files);
+    } catch (error) {
+      throw new Error(`Failed to get backups ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddFile = async () => {
     if (!newFileName.trim()) {
       setConsoleOutput(prev => `${prev}Error: File name cannot be empty\n`);
@@ -305,25 +431,6 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}Error: Could not create file on server\n`);
     }
   };
-  const handleDuplicateFile = fileName => {
-    const baseName = fileName.replace(/\.[^/.]+$/, '');
-    const extension = fileName.slice(fileName.lastIndexOf('.'));
-    let duplicatedFileName = `${baseName}_copy${extension}`;
-    let counter = 1;
-    while (fileContents[duplicatedFileName]) {
-      duplicatedFileName = `${baseName}_copy_${counter}${extension}`;
-      counter++;
-    }
-    setFileContents(prev => ({
-      ...prev,
-      [duplicatedFileName]: prev[fileName],
-    }));
-    setFileLanguages(prev => ({
-      ...prev,
-      [duplicatedFileName]: prev[fileName],
-    }));
-    setActiveFile(duplicatedFileName);
-  };
   const runJavaScript = () => {
     try {
       // capture console.log output
@@ -359,7 +466,7 @@ const ProjectEditor = () => {
     <div className='editor-container'>
       {/* Sidebar */}
       <aside className='file-tree'>
-        <div className='file-tree-header'>Files</div>
+        <div className='file-tree-header'>{projectName}</div>
         {/* Search Bar */}
         <input
           type='text'
@@ -399,18 +506,6 @@ const ProjectEditor = () => {
                   }}>
                   {file}
                 </span>
-                <button
-                  onClick={() => handleDuplicateFile(file)}
-                  style={{
-                    flexShrink: 0,
-                    background: 'none',
-                    border: 'none',
-                    color: '#9ca3af',
-                    marginLeft: '0.5rem',
-                  }}
-                  title='Duplicate file'>
-                  <FiCopy size={16} />
-                </button>
                 <button
                   onClick={async () => {
                     if (Object.keys(fileContents).length === 1) {
@@ -473,6 +568,39 @@ const ProjectEditor = () => {
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
+            {/* beginning of selecting backups */}
+            <label htmlFor='backup-select'>Select Backup:</label>
+            {/* Dropdown */}
+            <select
+              id='backup-select'
+              disabled={loading}
+              onChange={handleBackupSelection}
+              defaultValue=''>
+              <option value='' disabled>
+                Select Backup
+              </option>
+              {backups.length > 0 ? (
+                backups.map((file, index) => (
+                  <option key={index} value={file}>
+                    {`s_${index + 1}`}
+                    {/* {file} */}
+                  </option>
+                ))
+              ) : (
+                <option value='' disabled>
+                  No backups found
+                </option>
+              )}
+            </select>
+
+            <button onClick={handleViewBackups} className='btn btn-primary'>
+              {loading ? 'Loading...' : 'Refresh Backups'}
+            </button>
+            {/* ending of selecting backups */}
+
+            <button onClick={handleCreateBackup} className='btn btn-primary'>
+              <FiSave /> Save Backup
+            </button>
             <button
               className='btn'
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
@@ -502,11 +630,19 @@ const ProjectEditor = () => {
           </div>
         </div>
         <div className='editor-wrapper'>
+          {!activeFile && (
+            <div className='no-file-message'>
+              <p style={{ padding: '1rem', color: 'black' }}>
+                No file selected. Please add a file to start coding.
+              </p>
+            </div>
+          )}
           <Editor
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
-            value={fileContents[activeFile]}
+            value={fileContents[activeFile] || ''}
             onChange={async newValue => {
+              if (!activeFile) return; // Prevent if no file is active
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
               const fileId = fileMap[activeFile]?._id;
               user?.socket.emit('editFile', {
@@ -523,6 +659,9 @@ const ProjectEditor = () => {
               }
             }}
             theme={theme}
+            options={{
+              readOnly: !activeFile, // option prop from monaco set to read only
+            }}
           />
           {/* Console output area */}
           <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>

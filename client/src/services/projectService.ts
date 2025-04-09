@@ -24,20 +24,14 @@ import { RespondToInviteRequest } from '@fake-stack-overflow/shared/types/user';
 
 import api from './config';
 
-// ** IMPORTANT: should get requests have the query in the form of
-// const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`);
-// where the query is at the end, rather than sending it like this?
-//  const data = { actor };
-//  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}`, { data });
-// ** isnt it the case that get reqs we can send a body?*/
-
-// project api url
+// projects api url
 const PROJECT_API_URL = `${process.env.REACT_APP_SERVER_URL}/projects`;
 
-// Create a new project.
 /**
- *
- * @returns
+ * Creates a new project in the dashboard of the given actors account, the specified collaborators, and the designated name.
+ * @param name - The name of the project title.
+ * @param actor - The user who is the owner of the project.
+ * @param collaborators - The specified collaborators of the project, if any.
  */
 const createProject = async (
   name: string,
@@ -57,11 +51,10 @@ const createProject = async (
 };
 
 /**
- *
- * @param id
- * @returns
+ * Deletes a project from the dashboard and from the database given a project ID.
+ * @param id - The ID of the project to be deleted.
+ * @param actor - The actor who is deleting the project.
  */
-// Delete a project by ID.
 const deleteProjectById = async (id: string, actor: string): Promise<DatabaseProject> => {
   const data = { actor };
   const res = await api.delete(`${PROJECT_API_URL}/deleteProjectById/${id}`, {
@@ -72,13 +65,14 @@ const deleteProjectById = async (id: string, actor: string): Promise<DatabasePro
   }
   return res.data;
 };
+
 /**
- *
- * @param id
- * @param projectData
- * @returns
+ * Updates a project based on the project ID.
+ * @param id - The ID of the project to be updated.
+ * @param actor - The username of the user who is updating the project.
+ * @param name - the name of the project.
+ * @param fileType - the specified file type.
  */
-// Update project by ID.
 const updateProjectById = async (
   projectId: string,
   actor: string,
@@ -97,11 +91,9 @@ const updateProjectById = async (
 };
 
 /**
- *
- * @param user
- * @returns
+ * Retrieve all projects for a specific user based on their username.
+ * @param username - the username of the user to get all all associated projects for.
  */
-// Retrieve all projects for a specific user based on their username.
 const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> => {
   const res = await api.get(`${PROJECT_API_URL}/getProjectsByUser/${username}`);
   if (res.status !== 200) {
@@ -109,6 +101,7 @@ const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> =
   }
   return res.data;
 };
+
 /**
  *
  * @param user
@@ -162,9 +155,9 @@ export const deleteNotification = async (username: string, notifId: string): Pro
 };
 
 /**
- *
- * @param projectId
- * @returns
+ * Gets the designated project by the given project ID.
+ * @param projectId - The project ID to be retrieved.
+ * @param actor - The username of the user initiating the retrieval.
  */
 const getProjectById = async (
   projectId: string,
@@ -178,10 +171,10 @@ const getProjectById = async (
 };
 
 /**
- *
- * @param user
- * @param projectId
- * @returns
+ * Adds a collaborator to an existing project.
+ * @param projectId - The project ID to add collaborators to.
+ * @param actor - The username of the user who is adding collaborators.
+ * @param collaborator - the username and specified role of the collaborator being added.
  */
 const addCollaboratorToProject = async (
   projectId: string,
@@ -198,15 +191,15 @@ const addCollaboratorToProject = async (
 };
 
 /**
- *
- * @param user
- * @param projectId
- * @returns
+ * Removes a specific collaborator from the project.
+ * @param projectId - The project ID to remove collaborators to.
+ * @param actor - The username of the user who is removing collaborators.
+ * @param username - the username of the collaborator being removed.
  */
 const removeCollaboratorFromProject = async (
   projectId: string,
-  actor: string, // person removing
-  username: string, // user to be removed
+  actor: string,
+  username: string,
 ): Promise<DatabaseProject> => {
   const res = await api.patch(`${PROJECT_API_URL}/${projectId}/removeCollaborator/${username}`, {
     actor,
@@ -218,11 +211,11 @@ const removeCollaboratorFromProject = async (
 };
 
 /**
- *
- * @param user
- * @param id
- * @param role
- * @returns
+ * Updates the role of a collaborator on a project.
+ * @param projectId - ID of the project to be updated.
+ * @param actor - The username of the user who is initiating changes.
+ * @param username - The username of the collaborator whose role is changing.
+ * @param role - The role the username will be updated to.
  */
 const updateCollaboratorRole = async (
   projectId: string,
@@ -244,9 +237,10 @@ const updateCollaboratorRole = async (
 };
 
 /**
- *
- * @param projectId
- * @returns
+ * Get all of the states of the project.
+ * @param projectId - The ID of the project to retreive states.
+ * @param stateId - The state ID to retrieve.
+ * @param actor - The user who's project it is.
  */
 const getProjectStates = async (
   projectId: string,
@@ -261,10 +255,9 @@ const getProjectStates = async (
 };
 
 /**
- *
- * @param id
- * @param projectId
- * @returns
+ * Creates a backup of an exisiting project.
+ * @param projectId - The ID of the project to make a backup of.
+ * @param actor - The actor initiating the backup.
  */
 const createProjectBackup = async (projectId: string, actor: string): Promise<DatabaseProject> => {
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/createBackup`, { actor });
@@ -275,10 +268,10 @@ const createProjectBackup = async (projectId: string, actor: string): Promise<Da
 };
 
 /**
- *
- * @param projectId
- * @param stateId
- * @returns
+ * Restores a project to a given state ID.
+ * @param projectId - The project ID to be restored.
+ * @param stateId - The state ID for the project to be reverted to.
+ * @param actor - The actor who is reverting changes.
  */
 const restoreStateById = async (
   projectId: string,
@@ -295,9 +288,9 @@ const restoreStateById = async (
 };
 
 /**
- *
- * @param projectId
- * @returns
+ * Gets all the files associated to a project
+ * @param projectId - The project ID to get all files from.
+ * @param actor - The actor who is getting all files.
  */
 const getFiles = async (projectId: string, actor: string): Promise<DatabaseProjectFile[]> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/getFiles?actor=${actor}`, {
@@ -310,10 +303,11 @@ const getFiles = async (projectId: string, actor: string): Promise<DatabaseProje
 };
 
 /**
- *
- * @param projectId
- * @param fileDetails
- * @returns
+ * Creates a file within a project
+ * @param projectId - The project ID for a file to be created in.
+ * @param actor - The owner of the project
+ * @param name - The name of the project.
+ * @param fileType - The type of file being added.
  */
 const createFile = async (
   projectId: string,
@@ -333,9 +327,10 @@ const createFile = async (
 };
 
 /**
- *
- * @param projectId
- * @param fileId
+ * Deletes a file within a projct by a fileID
+ * @param projectId - The project where the file will be deleted
+ * @param fileId - The file to be deleted
+ * @param actor - The actor in which this file is associated.
  * @returns
  */
 const deleteFileById = async (
@@ -354,10 +349,11 @@ const deleteFileById = async (
 };
 
 /**
- *
- * @param projectId
- * @param fileId
- * @param fileDetails
+ * Updates a file within a project by a project Id.
+ * @param projectId -  The project where the file will be updated.
+ * @param fileId - The file to be updated.
+ * @param actor - the actor in which this file is associated.
+ * @param updates - The changes being made to the file.
  * @returns
  */
 const updateFileById = async (
@@ -377,9 +373,10 @@ const updateFileById = async (
 };
 
 /**
- *
- * @param projectId
- * @param fileId
+ * Retrieves a file by a FileID.
+ * @param projectId - The project to get the file from.
+ * @param fileId - The file ID to be retrieved.
+ * @param actor - The user who is getting the file.
  * @returns
  */
 const getFileById = async (
@@ -391,7 +388,6 @@ const getFileById = async (
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`, {
     data,
   });
-  // const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}?actor=${actor}`); query instead?
   if (res.status !== 200) {
     throw new Error(`Error when getting file by id`);
   }
@@ -399,11 +395,12 @@ const getFileById = async (
 };
 
 /**
- *
- * @param projectId
- * @param fileId
- * @param lineNumber
- * @param commentContent
+ * Adds a comment to a File
+ * @param projectId - The project to add a comment to.
+ * @param fileId - The file that will have a comment left on it.
+ * @param actor - The user leaving a comment.
+ * @param lineNumber - The line number the comment will be left on.
+ * @param commentContent - The content of the comment left.
  * @returns
  */
 const addCommentToFile = async (
@@ -425,10 +422,11 @@ const addCommentToFile = async (
 };
 
 /**
- *
- * @param projectId
- * @param fileId
- * @returns
+ * Deletes a comment from a project
+ * @param projectId - The project where a comment will be deleted.
+ * @param fileId - The file where a comment will be deleted.
+ * @param actor - The user who is deleting a comment.
+ * @param lineNumber - The line number to be deleted.
  */
 const deleteCommentsByLine = async (
   projectId: string,
@@ -448,11 +446,11 @@ const deleteCommentsByLine = async (
 };
 
 /**
- *
- * @param fileId
- * @param projectId
- * @param commentId
- * @returns
+ * Deletes a comment by an ID.
+ * @param projectId - The project where a comment will be deleted.
+ * @param fileId - The file where a comment will be deleted.
+ * @param actor - The user who is deleting a comment.
+ * @param lineNumber - The line number to be deleted.
  */
 const deleteCommentById = async (
   projectId: string,
@@ -471,6 +469,10 @@ const deleteCommentById = async (
   return res.data;
 };
 
+/**
+ * Gets all the collaborators added to a project.
+ * @param projectId - The project to get all collaborators from.
+ */
 const getCollaborators = async (projectId: string): Promise<PopulatedCollaborator[]> => {
   const res = await api.get(`${PROJECT_API_URL}/${projectId}/collaborators`);
   if (res.status !== 200) {
@@ -479,6 +481,11 @@ const getCollaborators = async (projectId: string): Promise<PopulatedCollaborato
   return res.data;
 };
 
+/**
+ * Saves the state of the project at that time.
+ * @param projectId - The project of the state to save.
+ * @param actor - The user saving the state.
+ */
 const saveProjectState = async (
   projectId: string,
   actor: string,
@@ -490,36 +497,28 @@ const saveProjectState = async (
   return res.data;
 };
 
+/**
+ *  Runs a project's file.
+ * @param projectId - The project of the file to be ran
+ * @param fileId - The file to be ran.
+ * @param fileName - The name of the file to be ran.
+ * @param fileContent - The content of the file to be ran.
+ */
 const runProjectFile = async (
   projectId: string,
   fileId: string,
   fileName: string,
   fileContent: string,
-) => {
-  try {
-    const response = await fetch(`${PROJECT_API_URL}/${projectId}/run-file`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        // converts the js object w/ the file name and content into a JSON string
-        // data sent to server for processing
-        fileId,
-        fileName,
-        fileContent,
-      }),
-    });
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Failed to run file (${response.status})`);
-    }
-    return await response.json();
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error running project file:', error);
-    throw error;
+): Promise<{ output: string; error?: string }> => {
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/run-file`, {
+    fileId,
+    fileName,
+    fileContent,
+  });
+  if (res.status !== 200) {
+    throw new Error(`Error when running project file`);
   }
+  return res.data;
 };
 
 export {
