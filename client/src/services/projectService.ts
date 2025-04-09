@@ -226,7 +226,9 @@ const updateCollaboratorRole = async (
   const res = await api.patch(
     `${PROJECT_API_URL}/${projectId}/updateCollaboratorRole/${username}`,
     {
+      projectId,
       actor,
+      username,
       role,
     },
   );

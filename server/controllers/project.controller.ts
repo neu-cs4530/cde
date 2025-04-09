@@ -740,7 +740,7 @@ const projectController = (socket: FakeSOSocket) => {
     req: CollaboratorRequest,
     res: Response,
   ): Promise<void> => {
-    if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
+    if (req.body.role === undefined) {
       res.status(400).send('Invalid update collaborator role request');
       return;
     }
