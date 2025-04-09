@@ -22,18 +22,12 @@ const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isAddFileOpen, setIsAddFileOpen] = useState(false);
-  const [activeFile, setActiveFile] = useState('main.py');
   const [newFileName, setNewFileName] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('python');
   const [consoleOutput, setConsoleOutput] = useState('');
-  const [fileLanguages, setFileLanguages] = useState({
-    'main.py': 'python',
-    'utils.py': 'python',
-  });
-  const [fileContents, setFileContents] = useState({
-    'main.py': '# Start coding here...',
-    'utils.py': '# Start coding here...',
-  });
+  const [activeFile, setActiveFile] = useState('');
+  const [fileLanguages, setFileLanguages] = useState({});
+  const [fileContents, setFileContents] = useState({});
 
   const [sharedUsers, setSharedUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
