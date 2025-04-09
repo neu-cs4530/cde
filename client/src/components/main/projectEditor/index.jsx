@@ -371,9 +371,11 @@ const ProjectEditor = () => {
 
       const monacoEdits = edits.map(edit => ({
         range: new monacoRef.current.Range(
-          edit.range.startLineNumber,
+          Math.min(edit.range.startLineNumber,
+            edit.range.endLineNumber),
           edit.range.startColumn,
-          edit.range.endLineNumber,
+          Math.max(edit.range.startLineNumber,
+            edit.range.endLineNumber),
           edit.range.endColumn,
         ),
         text: edit.text,
