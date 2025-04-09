@@ -1,5 +1,6 @@
 import express, { Response } from 'express';
 import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 import {
   saveProject,
   deleteProjectById,
@@ -10,6 +11,7 @@ import {
   getProjectById,
   createProjectBackup,
   revertProjectToState,
+  getNotifById,
 } from '../services/project/project.service';
 import {
   getProjectStateById,
@@ -29,6 +31,11 @@ import {
   getProjectFileComment,
 } from '../services/project/projectFileComment.service';
 import { getUserByUsername } from '../services/user.service';
+import {
+  addNotificationToUser,
+  getUserByUsername,
+  removeNotificationFromUser,
+} from '../services/user.service';
 import {
   FakeSOSocket,
   UserResponse,
@@ -52,6 +59,11 @@ import {
   GetFileRequest,
   AddFileCommentRequest,
   FileCommentRequest,
+  DatabaseNotification,
+  NotificationResponse,
+  AddNotificationRequest,
+  CollaboratorRole,
+  RespondToInviteRequest,
 } from '../types/types';
 import ProjectModel from '../models/projects.model';
 
@@ -426,6 +438,130 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
+   * Retrieves all notifications a user has.
+   * @param req The request containing user's username as a route parameter.
+   * @param res The response, either containing the user's notifications or returning an error.
+   * @returns A promise resolving to void.
+   */
+  const getNotifsByUserRoute = async (req: UserByUsernameRequest, res: Response): Promise<void> => {
+    try {
+      // console.log('i am here');
+      const { username } = req.params;
+
+      const user = await getUserByUsername(username);
+      if ('error' in user) {
+        throw new Error(user.error);
+      }
+
+      const notifs = [];
+      const notifications =
+        user.notifications as unknown as Types.DocumentArray<DatabaseNotification>;
+      if (notifications !== undefined) {
+        const userNotifs: DatabaseNotification[] = await Promise.all(
+          notifications.map(async notif => {
+            const notifRes: NotificationResponse = await getNotifById(
+              user._id.toString(),
+              notif._id.toString(),
+            );
+            if ('error' in notifRes) {
+              throw new Error(notifRes.error);
+            }
+
+            return notif;
+          }),
+        );
+
+        notifs.push(...userNotifs);
+      }
+
+      res.status(200).json(notifs);
+    } catch (error) {
+      res.status(500).send(`Error when getting projects by username: ${error}`);
+    }
+  };
+
+  // handles route to respond to an invite
+  const respondToInviteRoute = async (
+    req: RespondToInviteRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!req.body) {
+      res.status(400).send('Invalid create project request');
+      return;
+    }
+    // console.log('do u even get here?');
+    try {
+      // console.log('here?');
+      const { username, notifId, action } = req.body;
+      // console.log('1');
+
+      // Get user
+      const user = await getUserByUsername(username);
+      if ('error' in user) {
+        throw new Error(user.error);
+      }
+
+      // console.log('2');
+      // Find notification
+      const notifications =
+        user.notifications as unknown as Types.DocumentArray<DatabaseNotification>;
+      const notif = notifications.id(notifId);
+      if (!notif) {
+        res.status(404).send('Notification not found');
+        return;
+      }
+
+      // console.log('3');
+      const projectId = notif.projectId.toString();
+      const { role } = notif;
+
+      // Accept: add user to project
+      if (action === 'accept') {
+        const result = await addProjectCollaborator(projectId, username, role as CollaboratorRole);
+        if ('error' in result) {
+          throw new Error(result.error);
+        }
+      }
+
+      // console.log('4');
+      // Remove the notification
+      const removal = await removeNotificationFromUser(username, notifId);
+      if ('error' in removal) {
+        throw new Error(removal.error);
+      }
+
+      // console.log('5');
+      res.status(200).json({ message: `${action}ed invite` });
+    } catch (error) {
+      res.status(500).send(`Error responding to invite: ${error}`);
+    }
+  };
+
+  // for deleting a notification from user
+  const deleteNotificationRoute = async (
+    req: UserByUsernameRequest,
+    res: Response,
+  ): Promise<void> => {
+    const { username, notifId } = req.params;
+
+    if (!username || !notifId) {
+      res.status(400).send('Missing username or notification ID');
+      return;
+    }
+
+    try {
+      const removal = await removeNotificationFromUser(username, notifId);
+      if ('error' in removal) {
+        throw new Error(removal.error);
+      }
+
+      res.status(200).json({ message: 'Notification deleted successfully' });
+    } catch (err) {
+      res.status(500).send(`Error deleting notification: ${err}`);
+    }
+  };
+
+  /**
    * Retrieves a project by its ID.
    * @param req The request containing the project's ID as a route parameter.
    * @param The response, either containing the project or returning an error.
@@ -450,10 +586,11 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      if (!isProjectCollaborator(actor._id, project)) {
-        res.status(403).send('Forbidden');
-        return;
-      }
+      // const validActor = isProjectCollaborator(actor._id, project);
+      // if (validActor === false) {
+      //   res.status(403).send('Forbidden');
+      //   return;
+      // }
 
       res.status(200).json(project);
     } catch (error) {
@@ -486,10 +623,11 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      if (!isProjectOwner(actor._id, project)) {
-        res.status(403).send('Forbidden');
-        return;
-      }
+      // const validActor = isProjectOwner(actor._id, project);
+      // if (validActor === false) {
+      //   res.status(403).send('Forbidden');
+      //   return;
+      // }
 
       const collabName = req.params.username;
       const collaborator: UserResponse = await getUserByUsername(collabName);
@@ -579,7 +717,7 @@ const projectController = (socket: FakeSOSocket) => {
     req: CollaboratorRequest,
     res: Response,
   ): Promise<void> => {
-    if (!isCollaboratorReqValid(req) || req.body.role === undefined) {
+    if (req.body.role === undefined) {
       res.status(400).send('Invalid update collaborator role request');
       return;
     }
@@ -1098,6 +1236,31 @@ const projectController = (socket: FakeSOSocket) => {
     }
   };
 
+  // adds a notification to user
+  const addNotificationToUserRoute = async (req: AddNotificationRequest, res: Response) => {
+    const { username } = req.params;
+    const { projectId, notifType, role, projectName } = req.body;
+
+    try {
+      const newNotification = {
+        _id: new Types.ObjectId(),
+        projectId: new Types.ObjectId(projectId),
+        notifType,
+        role,
+        projectName,
+      };
+
+      const notif: NotificationResponse = await addNotificationToUser(username, newNotification);
+      if (!notif) {
+        throw new Error('Error adding notification');
+      }
+
+      res.status(200).json({ message: 'Notification added', notification: newNotification });
+    } catch (error) {
+      res.status(500).json({ error: `Failed to add notification: ${error}` });
+    }
+  };
+
   /**
    * Adds a comment to a file in a project.
    * @param req The request containing the project and file IDs as route parameters,
@@ -1252,6 +1415,11 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   // Register the routes
+  // router.use((req, res, next) => {
+  //   console.log('🔥 Incoming:', req.method, req.originalUrl);
+  //   next();
+  // });
+
   router.post('/createProject', createProjectRoute);
   router.delete('/deleteProjectById/:projectId', deleteProjectRoute);
   router.patch('/updateProjectById/:projectId', updateProjectRoute);
@@ -1275,6 +1443,10 @@ const projectController = (socket: FakeSOSocket) => {
     deleteFileCommentByIdRoute,
   );
   router.get('/:projectId/file/:fileId/comment/:commentId', getFileCommentRoute);
+  router.get('/getNotifsByUser/:username', getNotifsByUserRoute);
+  router.post('/notifications/respond', respondToInviteRoute);
+  router.post('/notifications/:username', addNotificationToUserRoute);
+  router.delete('/notifications/:username/:notifId', deleteNotificationRoute);
 
   socket.on('connection', conn => {
     conn.on('joinProject', (projectId: string) => {

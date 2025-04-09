@@ -1,6 +1,9 @@
+import { Types } from 'mongoose';
 import UserModel from '../models/users.model';
 import {
   DatabaseUser,
+  NotificationResponse,
+  Notification,
   SafeDatabaseUser,
   User,
   UserCredentials,
@@ -175,5 +178,54 @@ export const addProjectToUser = async (
     return updatedUser;
   } catch (error) {
     return { error: `Error occurred when adding project to user: ${error}` };
+  }
+};
+
+// adds notif to user
+export const addNotificationToUser = async (
+  username: string,
+  notification: Notification,
+): Promise<NotificationResponse> => {
+  try {
+    const newNotifWithId = {
+      ...notification,
+      _id: new Types.ObjectId(),
+    };
+
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { username },
+      { $push: { notifications: newNotifWithId } },
+      { new: true },
+    ).select('notifications');
+
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+
+    return newNotifWithId;
+  } catch (error) {
+    return { error: `Failed to add notification: ${error}` };
+  }
+};
+
+// removes notification from user
+export const removeNotificationFromUser = async (
+  username: string,
+  notifId: string,
+): Promise<UserResponse> => {
+  try {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { username },
+      { $pull: { notifications: { _id: notifId } } },
+      { new: true },
+    ).select('-password');
+
+    if (!updatedUser) {
+      throw new Error('Failed to remove notification');
+    }
+
+    return updatedUser;
+  } catch (error) {
+    return { error: `Error removing notification: ${error}` };
   }
 };
