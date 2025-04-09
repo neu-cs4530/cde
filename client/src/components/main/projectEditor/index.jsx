@@ -549,101 +549,110 @@ const ProjectEditor = () => {
                   }}>
                   {file}
                 </span>
-                <button
-                  onClick={async () => {
-                    if (Object.keys(fileContents).length === 1) {
-                      // eslint-disable-next-line no-alert
-                      alert('You need at least one file in a project!!');
-                      return;
-                    }
-                    // eslint-disable-next-line no-alert
-                    const confirmed = window.confirm(`Are you sure you want to delete "${file}"?`);
-                    if (!confirmed) return;
-                    try {
-                      const fileId = fileMap[file]?._id;
-                      if (!fileId) throw new Error('Missing fileId');
-
-                      await deleteFileById(projectId, fileId, user.user.username);
-
-                      const updated = { ...fileContents };
-                      delete updated[file];
-                      setFileContents(updated);
-
-                      const updatedLanguages = { ...fileLanguages };
-                      delete updatedLanguages[file];
-                      setFileLanguages(updatedLanguages);
-
-                      const updatedMap = { ...fileMap };
-                      delete updatedMap[file];
-                      setFileMap(updatedMap);
-
-                      if (file === activeFile) {
-                        const nextFile = Object.keys(updated)[0];
-                        setActiveFile(nextFile || '');
+                {(isEditor() || isOwner()) && (
+                  <button
+                    onClick={async () => {
+                      if (Object.keys(fileContents).length === 1) {
+                        // eslint-disable-next-line no-alert
+                        alert('You need at least one file in a project!!');
+                        return;
                       }
-                    } catch (err) {
-                      setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
-                    }
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#9ca3af',
-                    marginLeft: '0.5rem',
-                  }}
-                  title='Delete file'>
-                  <FiTrash2 size={16} />
-                </button>
+                      // eslint-disable-next-line no-alert
+                      const confirmed = window.confirm(
+                        `Are you sure you want to delete "${file}"?`,
+                      );
+                      if (!confirmed) return;
+                      try {
+                        const fileId = fileMap[file]?._id;
+                        if (!fileId) throw new Error('Missing fileId');
+
+                        await deleteFileById(projectId, fileId, user.user.username);
+
+                        const updated = { ...fileContents };
+                        delete updated[file];
+                        setFileContents(updated);
+
+                        const updatedLanguages = { ...fileLanguages };
+                        delete updatedLanguages[file];
+                        setFileLanguages(updatedLanguages);
+
+                        const updatedMap = { ...fileMap };
+                        delete updatedMap[file];
+                        setFileMap(updatedMap);
+
+                        if (file === activeFile) {
+                          const nextFile = Object.keys(updated)[0];
+                          setActiveFile(nextFile || '');
+                        }
+                      } catch (err) {
+                        setConsoleOutput(prev => `${prev}Error: Could not delete file on server\n`);
+                      }
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#9ca3af',
+                      marginLeft: '0.5rem',
+                    }}
+                    title='Delete file'>
+                    <FiTrash2 size={16} />
+                  </button>
+                )}
               </li>
             ))}
         </ul>
 
         {/* Add file button */}
-        <button
-          onClick={() => setIsAddFileOpen(true)}
-          className='btn btn-primary'
-          style={{ marginTop: '1rem' }}>
-          <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
-        </button>
+        {(isEditor() || isOwner()) && (
+          <button onClick={() => setIsAddFileOpen(true)} className='btn btn-primary'>
+            <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
+          </button>
+        )}
       </aside>
       {/* Main editor */}
       <main className='code-editor'>
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
-            {/* beginning of selecting backups */}
-            <label htmlFor='backup-select'>Select Backup:</label>
-            {/* Dropdown */}
-            <select
-              id='backup-select'
-              disabled={loading}
-              onChange={handleBackupSelection}
-              defaultValue=''>
-              <option value='' disabled>
-                Select Backup
-              </option>
-              {backups.length > 0 ? (
-                backups.map((file, index) => (
-                  <option key={index} value={file}>
-                    {`s_${index + 1}`}
-                    {/* {file} */}
+            {isOwner() && (
+              <>
+                {/* beginning of selecting backups */}
+                <label htmlFor='backup-select'>Select Backup:</label>
+                {/* Dropdown */}
+                <select
+                  id='backup-select'
+                  disabled={loading}
+                  onChange={handleBackupSelection}
+                  defaultValue=''>
+                  <option value='' disabled>
+                    Select Backup
                   </option>
-                ))
-              ) : (
-                <option value='' disabled>
-                  No backups found
-                </option>
-              )}
-            </select>
+                  {backups.length > 0 ? (
+                    backups.map((file, index) => (
+                      <option key={index} value={file}>
+                        {`s_${index + 1}`}
+                        {/* {file} */}
+                      </option>
+                    ))
+                  ) : (
+                    <option value='' disabled>
+                      No backups found
+                    </option>
+                  )}
+                </select>
 
-            <button onClick={handleViewBackups} className='btn btn-primary'>
-              {loading ? 'Loading...' : 'Refresh Backups'}
-            </button>
+                <button onClick={handleViewBackups} className='btn btn-primary'>
+                  {loading ? 'Loading...' : 'Refresh Backups'}
+                </button>
+              </>
+            )}
             {/* ending of selecting backups */}
 
-            <button onClick={handleCreateBackup} className='btn btn-primary'>
-              <FiSave /> Save Backup
-            </button>
+            {(isOwner() || isEditor()) && (
+              <button onClick={handleCreateBackup} className='btn btn-primary'>
+                <FiSave /> Save Backup
+              </button>
+            )}
             <button
               className='btn'
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
@@ -687,7 +696,7 @@ const ProjectEditor = () => {
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
             onChange={async newValue => {
-              if (!activeFile) return; // Prevent if no file is active
+              if (!activeFile || isViewer()) return; // Prevent if no file is active or if viewer
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
               const fileId = fileMap[activeFile]?._id;
               user?.socket.emit('editFile', {
@@ -705,7 +714,7 @@ const ProjectEditor = () => {
             }}
             theme={theme}
             options={{
-              readOnly: !activeFile, // option prop from monaco set to read only
+              readOnly: isViewer() || !activeFile, // option prop from monaco set to read only
             }}
           />
           {/* Console output area */}
@@ -724,7 +733,7 @@ const ProjectEditor = () => {
       </main>
 
       {/* Add File Modal */}
-      {isAddFileOpen && (
+      {(isEditor() || isOwner()) && isAddFileOpen && (
         <div className='modal-overlay'>
           <div className='modal-content'>
             <div className='modal-header'>
