@@ -284,16 +284,6 @@ const ProjectEditor = () => {
     }
   };
 
-  // const handleRevertProject = async stateId => {
-  //   try {
-  //     await revertProjectToState(projectId, stateId);
-  //     alert('Reverted to the selected state');
-  //   } catch (err) {
-  //     alert('Failed to revert project');
-  //     throw new Error(`Failed to revert to selected backup ${err}`);
-  //   }
-  // };
-
   // save state button that adds to the view backups
   // /**
   //  * useEffect for saving a project backup every minute
