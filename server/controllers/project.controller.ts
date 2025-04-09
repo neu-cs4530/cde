@@ -1227,7 +1227,6 @@ const projectController = (socket: FakeSOSocket) => {
       });
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error in runProjectFileCode:', error);
       return res.status(500).json({
         success: false,
         error: `Server error: ${error instanceof Error ? error.message : String(error)}`,
@@ -1490,7 +1489,6 @@ const projectController = (socket: FakeSOSocket) => {
 
   socket.on('connection', conn => {
     conn.on('joinProject', (projectId: string) => {
-      console.log(`[SERVER] Socket ${conn.id} joined project ${projectId}`);
       conn.join(projectId);
       conn.data.projectId = projectId;
     });
@@ -1498,6 +1496,9 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('leaveProject', async (projectId: string) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
+        if (!project) {
+          throw new Error();
+        }
         conn.leave(projectId);
       } catch (error) {
         throw new Error('Unexpected error');
@@ -1508,7 +1509,6 @@ const projectController = (socket: FakeSOSocket) => {
       const { projectId } = conn.data;
       if (!projectId) return;
 
-      console.log(`[SERVER] editFile from ${username} → project ${projectId}`, edits);
       conn.to(projectId).emit('remoteEdit', {
         fileId,
         edits,
