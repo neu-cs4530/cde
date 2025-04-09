@@ -17,6 +17,9 @@ import {
   updateCollaboratorRole,
   sendNotificationToUser,
   removeCollaboratorFromProject,
+  addCommentToFile,
+  deleteCommentById,
+  getFileById,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -38,6 +41,15 @@ const ProjectEditor = () => {
   const [activeFile, setActiveFile] = useState('');
   const [fileLanguages, setFileLanguages] = useState({});
   const [fileContents, setFileContents] = useState({});
+
+  // File comment states
+  const [fileComments, setFileComments] = useState({}); // Store comments by fileId
+  const [isAddingComment, setIsAddingComment] = useState(false);
+  const [commentLine, setCommentLine] = useState(null);
+  const [commentText, setCommentText] = useState('');
+  const [showComments, setShowComments] = useState(true);
+  const [editorInstance, setEditorInstance] = useState(null);
+  const [visibleLines, setVisibleLines] = useState({ start: 0, end: 0 });
 
   const [sharedUsers, setSharedUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
@@ -525,6 +537,235 @@ const ProjectEditor = () => {
     setConsoleOutput('');
   };
 
+    // Handle editor mounting to get the editor instance
+  const handleEditorDidMount = (editor) => {
+    setEditorInstance(editor);
+    
+    // Set up scrolling event listener for comment syncing
+    const viewModel = editor.getViewModel();
+    const lineNumbersController = viewModel._viewLayout;
+    
+    editor.onDidScrollChange(() => {
+      if (!lineNumbersController) return;
+      
+      const visibleRanges = editor.getVisibleRanges();
+      if (visibleRanges.length > 0) {
+        const first = visibleRanges[0].startLineNumber;
+        const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
+        setVisibleLines({ start: first, end: last });
+      }
+    });
+    
+    // Add context menu for adding comments
+    editor.onContextMenu((e) => {
+      const position = e.target.position;
+      if (position) {
+        const lineNumber = position.lineNumber;
+        setCommentLine(lineNumber);
+      }
+    });
+  };
+
+  // Load comments when active file changes
+  useEffect(() => {
+    const loadFileComments = async () => {
+      if (!activeFile || !fileMap[activeFile] || !fileMap[activeFile]._id) return;
+      
+      try {
+        const fileId = fileMap[activeFile]._id;
+        const fileData = await getFileById(projectId, fileId, user.user.username);
+        
+        if (fileData && fileData.comments) {
+          setFileComments(prevComments => ({
+            ...prevComments,
+            [fileId]: fileData.comments || []
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to load comments", error);
+      }
+    };
+    
+    loadFileComments();
+  }, [activeFile, fileMap, projectId, user]);
+
+  // Add comment handler
+  const handleAddComment = async () => {
+    if (!commentLine || !commentText.trim() || !activeFile) return;
+    
+    try {
+      const fileId = fileMap[activeFile]._id;
+      
+      const newComment = await addCommentToFile(
+        projectId,
+        fileId,
+        commentText,
+        user.user.username,
+        commentLine
+      );
+      
+      // Update local state with the new comment
+      setFileComments(prevComments => {
+        const fileCommentsList = prevComments[fileId] || [];
+        return {
+          ...prevComments,
+          [fileId]: [...fileCommentsList, newComment]
+        };
+      });
+      
+      // Reset comment form
+      setCommentText('');
+      setIsAddingComment(false);
+      setCommentLine(null);
+    } catch (error) {
+      console.error("Failed to add comment", error);
+    }
+  };
+
+  // Delete comment handler
+  const handleDeleteComment = async (commentId) => {
+    if (!activeFile) return;
+    
+    try {
+      const fileId = fileMap[activeFile]._id;
+      
+      await deleteCommentById(
+        projectId,
+        fileId,
+        commentId,
+        user.user.username
+      );
+      
+      // Update local state by removing the deleted comment
+      setFileComments(prevComments => {
+        const fileCommentsList = prevComments[fileId] || [];
+        return {
+          ...prevComments,
+          [fileId]: fileCommentsList.filter(comment => comment._id !== commentId)
+        };
+      });
+    } catch (error) {
+      console.error("Failed to delete comment", error);
+    }
+  };
+
+  // Comment Panel Component
+  const CommentPanel = () => {
+    if (!activeFile || !fileMap[activeFile]) return null;
+    
+    const fileId = fileMap[activeFile]._id;
+    const comments = fileComments[fileId] || [];
+    
+    // Filter comments to only show those in visible range
+    const visibleComments = comments.filter(
+      comment => comment.lineNumber >= visibleLines.start && comment.lineNumber <= visibleLines.end
+    );
+    
+    return (
+      <div className="comments-panel">
+        <div className="comments-header">
+          <h4>Comments</h4>
+          <button 
+            className="btn btn-sm" 
+            onClick={() => setShowComments(!showComments)}
+          >
+            {showComments ? 'Hide' : 'Show'}
+          </button>
+          <button 
+            className="btn btn-sm btn-primary" 
+            onClick={() => {
+              setIsAddingComment(true);
+              setCommentLine(editorInstance?.getPosition()?.lineNumber || 1);
+            }}
+          >
+            <FiMessageSquare /> Add Comment
+          </button>
+        </div>
+        
+        {showComments && (
+          <div className="comments-list" ref={commentsRef}>
+            {visibleComments.length === 0 ? (
+              <p className="empty-comments">No comments in visible lines</p>
+            ) : (
+              visibleComments.map(comment => (
+                <div 
+                  key={comment._id} 
+                  className="comment-item"
+                  style={{
+                    position: 'relative',
+                    top: `${calculateCommentPosition(comment.lineNumber)}px`
+                  }}
+                >
+                  <div className="comment-header">
+                    <span className="comment-line">Line {comment.lineNumber}</span>
+                    <span className="comment-author">{comment.commentBy}</span>
+                    <span className="comment-date">
+                      {new Date(comment.commentDateTime).toLocaleString()}
+                    </span>
+                    {user.user.username === comment.commentBy && (
+                      <button
+                        className="btn btn-sm text-danger"
+                        onClick={() => handleDeleteComment(comment._id)}
+                      >
+                        <FiTrash2 />
+                      </button>
+                    )}
+                  </div>
+                  <div className="comment-text">{comment.text}</div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+        
+        {isAddingComment && (
+          <div className="add-comment-form">
+            <h5>Add Comment for Line {commentLine}</h5>
+            <textarea
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Type your comment here..."
+              className="comment-textarea"
+            />
+            <div className="comment-actions">
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => {
+                  setIsAddingComment(false);
+                  setCommentText('');
+                }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleAddComment}
+              >
+                Submit
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Helper function to calculate comment position
+  const calculateCommentPosition = (commentLineNumber) => {
+    if (!editorInstance) return 0;
+    
+    // Get the current scrolled position
+    const scrollTop = editorInstance.getScrollTop();
+    
+    // Get line height (Monaco typical line height is around 18-20px)
+    const lineHeight = editorInstance.getOption(monaco.editor.EditorOption.lineHeight) || 20;
+    
+    // Calculate the offset
+    const commentPosition = (commentLineNumber - visibleLines.start) * lineHeight;
+    
+    return commentPosition;
+  };
+
   return (
     <div className='editor-container'>
       {/* Sidebar */}
@@ -626,14 +867,14 @@ const ProjectEditor = () => {
           <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
         </button>
       </aside>
-      {/* Main editor */}
+      
+      {/* Main editor - modified to include comments panel */}
       <main className='code-editor'>
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
-            {/* beginning of selecting backups */}
+            {/* All your existing buttons */}
             <label htmlFor='backup-select'>Select Backup:</label>
-            {/* Dropdown */}
             <select
               id='backup-select'
               disabled={loading}
@@ -646,7 +887,6 @@ const ProjectEditor = () => {
                 backups.map((file, index) => (
                   <option key={index} value={file}>
                     {`s_${index + 1}`}
-                    {/* {file} */}
                   </option>
                 ))
               ) : (
@@ -659,7 +899,6 @@ const ProjectEditor = () => {
             <button onClick={handleViewBackups} className='btn btn-primary'>
               {loading ? 'Loading...' : 'Refresh Backups'}
             </button>
-            {/* ending of selecting backups */}
 
             <button onClick={handleCreateBackup} className='btn btn-primary'>
               <FiSave /> Save Backup
@@ -677,19 +916,23 @@ const ProjectEditor = () => {
               }}>
               Share
             </button>
-            {/* Run button for JavaScript files */}
+            {/* New button to toggle comments */}
+            <button
+              className='btn'
+              onClick={() => setShowComments(!showComments)}>
+              <FiMessageSquare /> {showComments ? 'Hide Comments' : 'Show Comments'}
+            </button>
+            {/* Run buttons for different languages */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
                 Run
               </button>
             )}
-            {/* Run button for Python files */}
             {fileLanguages[activeFile] === 'python' && (
               <button className='btn' onClick={runPythonFile}>
                 Run
               </button>
             )}
-            {/* Run button for Java files */}
             {fileLanguages[activeFile] === 'java' && (
               <button className='btn' onClick={runJavaFile}>
                 Run
@@ -697,52 +940,69 @@ const ProjectEditor = () => {
             )}
           </div>
         </div>
-        <div className='editor-wrapper'>
-          {!activeFile && (
-            <div className='no-file-message'>
-              <p style={{ padding: '1rem', color: 'black' }}>
-                No file selected. Please add a file to start coding.
-              </p>
-            </div>
-          )}
-          <Editor
-            height='60%'
-            language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
-            value={fileContents[activeFile] || ''}
-            onChange={async newValue => {
-              if (!activeFile) return; // Prevent if no file is active
-              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              const fileId = fileMap[activeFile]?._id;
-              user?.socket.emit('editFile', {
-                fileId,
-                content: newValue,
-              });
-              try {
-                if (!fileId) throw new Error('Missing fileId');
-                await updateFileById(projectId, fileId, user.user.username, {
-                  contents: newValue,
+        
+        {/* Editor with Comments Panel */}
+        <div className='editor-with-comments'>
+          <div className='editor-wrapper' style={{ width: showComments ? '70%' : '100%' }}>
+            {!activeFile && (
+              <div className='no-file-message'>
+                <p style={{ padding: '1rem', color: 'black' }}>
+                  No file selected. Please add a file to start coding.
+                </p>
+              </div>
+            )}
+            <Editor
+              height='60%'
+              language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
+              value={fileContents[activeFile] || ''}
+              onChange={async newValue => {
+                if (!activeFile) return; // Prevent if no file is active
+                setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+                const fileId = fileMap[activeFile]?._id;
+                user?.socket.emit('editFile', {
+                  fileId,
+                  content: newValue,
                 });
-              } catch (err) {
-                throw new Error('Failed to save file');
-              }
-            }}
-            theme={theme}
-            options={{
-              readOnly: !activeFile, // option prop from monaco set to read only
-            }}
-          />
-          {/* Console output area */}
-          <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
-            <div className='console-header'>
-              <span>Console</span>
-              <button onClick={clearConsole} className='console-clear'>
-                Clear
-              </button>
-            </div>
-            <div className='console-output' ref={consoleRef}>
-              {consoleOutput || '> Console output will appear here...'}
+                try {
+                  if (!fileId) throw new Error('Missing fileId');
+                  await updateFileById(projectId, fileId, user.user.username, {
+                    contents: newValue,
+                  });
+                } catch (err) {
+                  throw new Error('Failed to save file');
+                }
+              }}
+              theme={theme}
+              options={{
+                readOnly: !activeFile,
+                lineNumbers: 'on',
+                scrollBeyondLastLine: false,
+                minimap: { enabled: false },
+                contextmenu: true,
+              }}
+              onMount={handleEditorDidMount}
+            />
+            
+            {/* Console output area */}
+            <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
+              <div className='console-header'>
+                <span>Console</span>
+                <button onClick={clearConsole} className='console-clear'>
+                  Clear
+                </button>
+              </div>
+              <div className='console-output' ref={consoleRef}>
+                {consoleOutput || '> Console output will appear here...'}
+              </div>
             </div>
           </div>
+          
+          {/* Comments panel */}
+          {showComments && activeFile && (
+            <div className='comments-wrapper' style={{ width: '30%' }}>
+              <CommentPanel />
+            </div>
+          )}
         </div>
       </main>
 
