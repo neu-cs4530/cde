@@ -65,7 +65,6 @@ const ProjectEditor = () => {
   const [comments, setComments] = useState([]); // fetched comments
   const [newCommentLine, setNewCommentLine] = useState('');
   const [newCommentText, setNewCommentText] = useState('');
-  const monaco = useMonaco();
   const editorRef = useRef(null);
   const monacoRef = useRef(null);
   const previousContentRef = useRef('');
