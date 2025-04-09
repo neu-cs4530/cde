@@ -444,7 +444,7 @@ const ProjectDashboard = () => {
                 {/* Shared Users List */}
                 {newProject.sharedUsers.length > 0 && (
                   <div className='mb-3'>
-                    <label className='form-label'>Shared Users</label>
+                    <label className='form-label'>Invite Users</label>
                     {newProject.sharedUsers.map(user => (
                       <div
                         key={user._id}
