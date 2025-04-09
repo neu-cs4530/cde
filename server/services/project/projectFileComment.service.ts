@@ -55,23 +55,51 @@ export const deleteProjectFileCommentById = async (
 
 /**
  * Adds an existing comment to a project file.
- * @param {string} fileId - The ID of the comment being added to a project file.
- * @param {DatabaseProjectFileComment} comment - The object containing all of the comment data.
- * @returns {Promise<ProjectFileResponse>} - Resolves with the added project file comment object or an errro message.
+ * @param {string} fileId - The ID of the file.
+ * @param {DatabaseProjectFileComment} commentId - The ID of the comment.
+ * @returns {Promise<ProjectFileResponse>} - Resolves with the updated project file object or an error message.
  */
 export const addCommentToFile = async (
   fileId: string,
-  comment: DatabaseProjectFileComment,
+  commentId: string,
 ): Promise<ProjectFileResponse> => {
   try {
     const updatedProjectFile: DatabaseProjectFile | null = await ProjectFileModel.findOneAndUpdate(
       { _id: fileId },
-      { $push: { comments: comment } },
+      { $push: { comments: commentId } },
       { new: true },
     );
 
     if (!updatedProjectFile) {
       throw Error('Error updating file');
+    }
+
+    return updatedProjectFile;
+  } catch (error) {
+    return { error: `Error occurred when updating file: ${error}` };
+  }
+};
+
+
+/**
+ * Removes a comment from a project file by ID.
+ * @param {string} fileId - The ID of the file.
+ * @param {string} commentId - The ID of the comment to remove.
+ * @returns {Promise<ProjectFileResponse>} - Resolves with the updated project file object or an error message.
+ */
+export const removeCommentFromFile = async (
+  fileId: string,
+  commentId: string,
+): Promise<ProjectFileResponse> => {
+  try {
+    const updatedProjectFile: DatabaseProjectFile | null = await ProjectFileModel.findOneAndUpdate(
+      { _id: fileId },
+      { $pull: { comments: commentId } },
+      { new: true },
+    );
+
+    if (!updatedProjectFile) {
+      throw new Error('Error updating file');
     }
 
     return updatedProjectFile;

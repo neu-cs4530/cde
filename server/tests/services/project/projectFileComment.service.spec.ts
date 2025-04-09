@@ -108,7 +108,7 @@ describe('Project File Comment Service', () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockResolvedValue(fakeDatabaseFile);
       const result: ProjectFileResponse = await addCommentToFile(
         fakeDatabaseFile._id.toHexString(),
-        fakeDatabaseComment,
+        fakeDatabaseComment._id.toString(),
       );
       expect(result).toEqual(fakeDatabaseFile);
     });
@@ -117,7 +117,7 @@ describe('Project File Comment Service', () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockResolvedValue(null);
       const result: ProjectFileResponse = await addCommentToFile(
         fakeDatabaseFile._id.toHexString(),
-        fakeDatabaseComment,
+        fakeDatabaseComment._id.toString(),
       );
       expect('error' in result).toBe(true);
     });
@@ -126,9 +126,11 @@ describe('Project File Comment Service', () => {
       (ProjectFileModel.findOneAndUpdate as jest.Mock).mockRejectedValue(new Error('update error'));
       const result: ProjectFileResponse = await addCommentToFile(
         fakeDatabaseFile._id.toHexString(),
-        fakeDatabaseComment,
+        fakeDatabaseComment._id.toString(),
       );
       expect('error' in result).toBe(true);
     });
   });
+
+  // TODO: removeCommentFromFile
 });

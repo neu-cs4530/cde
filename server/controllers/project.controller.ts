@@ -21,9 +21,13 @@ import {
   getProjectFile,
   executeProjectFile,
 } from '../services/project/projectFile.service';
-// import {
-//
-// } from '../services/project/projectFileComment.service';
+import {
+  saveProjectFileComment,
+  deleteProjectFileCommentById,
+  addCommentToFile,
+  removeCommentFromFile,
+  getProjectFileComment,
+} from '../services/project/projectFileComment.service';
 import { getUserByUsername } from '../services/user.service';
 import {
   FakeSOSocket,
@@ -36,7 +40,9 @@ import {
   ProjectFile,
   DatabaseProjectFile,
   ProjectFileResponse,
-  // ProjectFileComment,
+  ProjectFileComment,
+  DatabaseProjectFileComment,
+  ProjectFileCommentResponse,
   CreateProjectRequest,
   ProjectRequest,
   GetProjectRequest,
@@ -47,9 +53,8 @@ import {
   FileRequest,
   GetFileRequest,
   // ProjectState,
-  // AddFileCommentRequest,
-  // DeleteFileCommentsByLineRequest,
-  // DeleteFileCommentByIdRequest,
+  AddFileCommentRequest,
+  DeleteFileCommentByIdRequest,
 } from '../types/types';
 import ProjectModel from '../models/projects.model';
 
@@ -126,8 +131,8 @@ const projectController = (socket: FakeSOSocket) => {
     req.body !== undefined &&
     req.body.actor !== undefined &&
     req.body.actor !== '' &&
-    (req.body.role ? req.query.role !== undefined : true) &&
-    (req.body.role ? isCollaboratorRoleValid(req.query.role as string) : true);
+    (req.body.role ? req.body.role !== undefined : true) &&
+    (req.body.role ? isCollaboratorRoleValid(req.body.role as string) : true);
 
   /**
    * Validates that the request contains all required fields for a project state.
@@ -178,29 +183,13 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project and file IDs, and comment data.
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
-  // const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
-  //   req.body !== undefined &&
-  //   req.body.comment !== undefined &&
-  //   req.body.comment.text !== undefined &&
-  //   req.body.comment.commentBy !== undefined &&
-  //   req.body.comment.commentBy !== '' &&
-  //   req.body.comment.commentDateTime !== undefined;
-
-  /**
-   * Validates that the request contains all required fields for deleting file
-   * comments by line.
-   * @param req The incoming request containing project and file IDs, and line number.
-   * @returns `true` if the request contains valid params; otherwise, `false`.
-   */
-  // const isDeleteFileCommentsByLineRequestValid = (req: DeleteFileCommentsByLineRequest):
-  //   boolean =>
-  //   req.params !== undefined &&
-  //   req.params.projectId !== undefined &&
-  //   req.params.projectId !== '' &&
-  //   req.params.fileId !== undefined &&
-  //   req.params.fileId !== '' &&
-  //   req.params.lineNumber !== undefined &&
-  //   req.params.lineNumber >= 0;
+  const isAddFileCommentRequestValid = (req: AddFileCommentRequest): boolean =>
+    req.body !== undefined &&
+    req.body.comment !== undefined &&
+    req.body.comment.text !== undefined &&
+    req.body.comment.commentBy !== undefined &&
+    req.body.comment.commentBy !== '' &&
+    req.body.comment.commentDateTime !== undefined;
 
   /**
    * Validates that the request contains all required fields for deleting file
@@ -208,15 +197,10 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  // const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest):
-  //   boolean =>
-  //   req.params !== undefined &&
-  //   req.params.projectId !== undefined &&
-  //   req.params.projectId !== '' &&
-  //   req.params.fileId !== undefined &&
-  //   req.params.fileId !== '' &&
-  //   req.params.commentId !== undefined &&
-  //   req.params.commentId !== '';
+  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest):
+    boolean =>
+    req.body.actor !== undefined &&
+    req.body.actor !== '';
 
   /**
    * Validates that a given user is a collaborator on a given project.
@@ -349,8 +333,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -391,8 +374,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -473,8 +455,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -510,8 +491,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -565,8 +545,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -714,8 +693,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -756,8 +734,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -809,8 +786,7 @@ const projectController = (socket: FakeSOSocket) => {
       if ('error' in actor) {
         throw new Error(actor.error);
       }
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -863,8 +839,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -926,8 +901,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectOwner(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectOwner(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -991,8 +965,7 @@ const projectController = (socket: FakeSOSocket) => {
         throw new Error(actor.error);
       }
 
-      const validActor = isProjectCollaborator(actor._id, project);
-      if (validActor === false) {
+      if (!isProjectCollaborator(actor._id, project)) {
         res.status(403).send('Forbidden');
         return;
       }
@@ -1131,43 +1104,102 @@ const projectController = (socket: FakeSOSocket) => {
   };
 
   /**
-   * TODO: Adds a comment to a file in a project.
+   * Adds a comment to a file in a project.
    * @param req The request containing the project and file IDs as route parameters,
    * and the comment data.
    * @param The response, either containing the created comment or returning an error.
    * @returns A promise resolving to void.
    */
-  // const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
-  //   res.status(500).send('Unimplemented');
-  // };
+  const addFileCommentRoute = async (req: AddFileCommentRequest, res: Response): Promise<void> => {
+    if (!isAddFileCommentRequestValid(req)) {
+      res.status(400).send('Invalid add file comment request');
+      return;
+    }
+
+    try {
+      const { projectId, fileId } = req.params;
+      const { comment } = req.body;
+
+      const actor: UserResponse = await getUserByUsername(comment.commentBy);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      if (!isProjectCollaborator(actor._id, project)) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const savedComment: ProjectFileCommentResponse = await saveProjectFileComment(comment);
+      if ('error' in savedComment) {
+        throw new Error(savedComment.error);
+      }
+      
+      const result = await addCommentToFile(fileId, savedComment._id.toString());
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+
+      res.status(200).json(savedComment);
+    } catch (error) {
+      res.status(500).send(`Error adding comment to file: ${error}`);
+    }
+  };
 
   /**
-   * TODO: Deletes all comments on a line in a file.
-   * @param req The request containing the project and file IDs, and line number
-   * as route parameters.
-   * @param The response, either confirming deletion or returning an error.
-   * @returns A promise resolving to void.
-   */
-  // const deleteFileCommentsByLineRoute = async (
-  //   req: DeleteFileCommentsByLineRequest,
-  //   res: Response,
-  // ): Promise<void> => {
-  //   res.status(500).send('Unimplemented');
-  // };
-
-  /**
-   * TODO: Deletes a comment on a project file.
+   * Deletes a comment on a project file.
    * @param req The request containing the project, file, and comment IDs
    * as route parameters.
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  // const deleteFileCommentByIdRoute = async (
-  //   req: DeleteFileCommentByIdRequest,
-  //   res: Response,
-  // ): Promise<void> => {
-  //   res.status(500).send('Unimplemented');
-  // };
+  const deleteFileCommentByIdRoute = async (
+    req: DeleteFileCommentByIdRequest,
+    res: Response,
+  ): Promise<void> => {
+    if (!isDeleteFileCommentByIdRequestValid(req)) {
+      res.status(400).send('Invalid delete file comment request');
+      return;
+    }
+
+    try {
+      const { projectId, fileId, commentId } = req.params;
+
+      const actor: UserResponse = await getUserByUsername(req.body.actor);
+      if ('error' in actor) {
+        throw new Error(actor.error);
+      }
+
+      const project: ProjectResponse = await getProjectById(projectId);
+      if ('error' in project) {
+        throw new Error(project.error);
+      }
+
+      if (!isProjectCollaborator(actor._id, project)) {
+        res.status(403).send('Forbidden');
+        return;
+      }
+
+      const deletedComment: ProjectFileCommentResponse = await deleteProjectFileCommentById(commentId);  
+      if ('error' in deletedComment) {
+        throw new Error(deletedComment.error);
+      }
+
+      const result: ProjectFileResponse = await removeCommentFromFile(projectId, commentId);
+      if ('error' in result) {
+        throw new Error(result.error);
+      }
+      
+      res.status(200).json(deletedComment);
+    } catch (error) {
+      res.status(500).send(`Error when deleting file comment: ${error}`);
+    }
+  };
 
   // Register the routes
   router.post('/createProject', createProjectRoute);
@@ -1175,7 +1207,6 @@ const projectController = (socket: FakeSOSocket) => {
   router.patch('/updateProjectById/:projectId', updateProjectRoute);
   router.get('/getProjectsByUser/:username', getProjectsByUserRoute);
   router.get('/:projectId', getProjectRoute);
-  // TODO: Change addCollaborator to inviteCollaborator
   router.post('/:projectId/addCollaborator/:username', addCollaboratorRoute);
   router.patch('/:projectId/removeCollaborator/:username', removeCollaboratorRoute);
   router.patch('/:projectId/updateCollaboratorRole/:username', updateCollaboratorRoleRoute);
@@ -1188,16 +1219,11 @@ const projectController = (socket: FakeSOSocket) => {
   router.patch('/:projectId/updateFileById/:fileId', updateFileRoute);
   router.get('/:projectId/file/:fileId', getFileRoute);
   router.post('/:projectId/run-file', runProjectFileCode);
-  // router.post('/project-files/:fileId/run', runProjectFileCode);
-  // router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
-  // router.delete(
-  //   '/:projectId/file/:fileId/deleteCommentsByLine/:lineNumber',
-  //   deleteFileCommentsByLineRoute,
-  // );
-  // router.delete(
-  //   '/:projectId/file/:fileId/deleteCommentById/:commentId',
-  //   deleteFileCommentByIdRoute,
-  // );
+  router.post('/:projectId/file/:fileId/addComment', addFileCommentRoute);
+  router.delete(
+    '/:projectId/file/:fileId/deleteCommentById/:commentId',
+    deleteFileCommentByIdRoute,
+  );
 
   socket.on('connection', conn => {
     conn.on('joinProject', (projectId: string) => {
@@ -1208,9 +1234,6 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('leaveProject', async (projectId: string) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
-        if (project) {
-          await saveProject(project);
-        }
         conn.leave(projectId);
       } catch (error) {
         throw new Error('Unexpected error');
