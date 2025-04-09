@@ -350,7 +350,7 @@ const ProjectEditor = () => {
         text: changedText,
       },
     ];
-  };  
+  };
 
   // USE EFFECTS
   useEffect(() => {
@@ -362,13 +362,16 @@ const ProjectEditor = () => {
   }, [activeFile]);
 
   useEffect(() => {
+    // eslint-disable-next-line consistent-return
     if (!user?.socket) return;
 
     const handleRemoteEdit = ({ fileId, edits, username }) => {
+      // eslint-disable-next-line consistent-return
       if (username === user.user.username) return;
 
       const model = editorRef.current?.getModel();
       const currentFileId = fileMapRef.current[activeFileRef.current]?._id;
+      // eslint-disable-next-line consistent-return
       if (!model || !monacoRef.current || fileId !== currentFileId) return;
 
       const monacoEdits = edits.map(edit => ({
@@ -406,7 +409,7 @@ const ProjectEditor = () => {
       !fileMap[activeFile]?._id ||
       Object.keys(remoteCursors).length === 0
     ) {
-      //eslint-disable-next-line consistent-return
+      // eslint-disable-next-line consistent-return
       return;
     }
 
@@ -427,14 +430,14 @@ const ProjectEditor = () => {
 
   useEffect(() => {
     const handleRemoteCursorMove = ({ fileId, username, position }) => {
-      //eslint-disable-next-line consistent-return
+      // eslint-disable-next-line consistent-return
       if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return;
       setRemoteCursors(prev => ({
         ...prev,
         [username]: position,
       }));
     };
- 
+
     user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
     return () => user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
   }, [activeFile, fileMap, user?.socket]);
