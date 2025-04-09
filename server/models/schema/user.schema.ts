@@ -27,6 +27,21 @@ const userSchema: Schema = new Schema(
       default: '',
     },
     projects: [{ type: Schema.Types.ObjectId, ref: 'Project' }],
+    notifications: {
+      type: [
+        new Schema(
+          {
+            projectId: { type: Schema.Types.ObjectId, ref: 'Project' },
+            notifType: { type: String },
+            role: { type: String, required: false },
+            projectName: { type: String, required: false },
+          },
+          { _id: true },
+        ),
+      ],
+      default: [],
+      required: false,
+    },
   },
   { collection: 'User' },
 );

@@ -12,6 +12,47 @@ export interface UserCredentials {
 }
 
 /**
+ * Represents a user's notifications.
+ * - `projectId`: The projectId associated with the notification.
+ * - `notifType`: The type of notification either 'DELETE' or 'INVITE'
+ * - `role`: The user's role in the project
+ */
+export interface Notification {
+  projectId: ObjectId;
+  notifType: string;
+  role?: string;
+  projectName?: string;
+}
+
+export interface DatabaseNotification extends Notification {
+  _id: ObjectId;
+}
+
+export type NotificationResponse = DatabaseNotification | { error: string };
+
+// add notif to user request type
+export interface AddNotificationRequest extends Request {
+  params: {
+    username: string;
+  };
+  body: {
+    projectId: string;
+    notifType: string;
+    role?: string;
+    projectName?: string;
+  };
+}
+
+// respond to invite request type
+export interface RespondToInviteRequest extends Request {
+  body: {
+    username: string;
+    notifId: string;
+    action: 'accept' | 'decline';
+  };
+}
+
+/**
  * Represents a user document, including user credentials and additional details.
  * - `username`: The unique username of the user.
  * - `password`: The user's password.
@@ -26,6 +67,7 @@ export interface User extends UserCredentials {
   biography?: string;
   email?: string;
   projects?: ObjectId[];
+  notifications?: Notification[];
 }
 
 /**
@@ -64,6 +106,7 @@ export interface UserRequest extends Request {
 export interface UserByUsernameRequest extends Request {
   params: {
     username: string;
+    notifId?: string;
   };
 }
 

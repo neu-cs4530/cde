@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
@@ -14,6 +14,9 @@ import {
   createProjectBackup,
   getProjectById,
   restoreStateById,
+  updateCollaboratorRole,
+  sendNotificationToUser,
+  removeCollaboratorFromProject,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -49,6 +52,9 @@ const ProjectEditor = () => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [project, setProject] = useState({});
+  const [collaborators, setCollaborators] = useState([]);
+  const [selectedPermission] = useState('EDITOR'); // editor default
+  const [projectName, setProjectName] = useState('');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -160,6 +166,29 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+  const fetchCollaborators = useCallback(async () => {
+    try {
+      const project = await getProjectById(projectId, user.user.username);
+      const users = await getUsers();
+
+      const mapped = project.collaborators
+        .filter(c => c.userId !== user.user._id)
+        .map(c => {
+          const matchedUser = users.find(u => u._id === c.userId);
+          return {
+            username: matchedUser?.username || 'Unknown',
+            userId: c.userId,
+            role: c.role,
+          };
+        });
+
+      setCollaborators(mapped);
+      setProjectName(project.name);
+    } catch (error) {
+      setProjectName('Unknown Project');
+      throw new Error(error);
+    }
+  }, [projectId, user.user.username, user.user._id]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,12 +206,16 @@ const ProjectEditor = () => {
   useEffect(() => {
     getUsers()
       .then(data => {
-        setAllUsers(data);
-        setFilteredUsers(data);
+        const filtered = data.filter(
+          userC => userC.username.toLowerCase() !== user.user.username.toLowerCase(),
+        );
+        setAllUsers(filtered);
+        setFilteredUsers(filtered);
       })
-      // eslint-disable-next-line no-console
-      .catch(err => console.error('Error loading users', err));
-  }, []);
+      .catch(err => {
+        throw new Error(err.error);
+      });
+  }, [user.user.username]);
   useEffect(() => {
     if (consoleRef.current) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
@@ -257,21 +290,11 @@ const ProjectEditor = () => {
     };
   }, [projectId, user?.socket]);
 
-  const [projectName, setProjectName] = useState('');
-
   useEffect(() => {
-    const fetchProjectName = async () => {
-      try {
-        const fetchedProject = await getProjectById(projectId, user.user.username);
-        setProjectName(fetchedProject.name);
-      } catch (error) {
-        setProjectName('Unknown Project');
-        throw new Error('Failed to load project name');
-      }
-    };
-
-    fetchProjectName();
-  }, [projectId, user]);
+    if (projectId && user?.user?.username) {
+      fetchCollaborators();
+    }
+  }, [projectId, user, fetchCollaborators]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
@@ -329,31 +352,71 @@ const ProjectEditor = () => {
   const handleUserSearch = e => {
     const input = e.target.value;
     setSearchUsername(input);
+
     const filtered = allUsers.filter(
       userC =>
         userC.username.toLowerCase().includes(input.toLowerCase()) &&
-        !sharedUsers.some(u => u.id === userC.id),
+        !sharedUsers.some(u => u._id === userC._id) &&
+        !collaborators.some(c => c.username === userC.username), // 👈 exclude current collaborators
     );
+
     setFilteredUsers(filtered);
   };
   const handleAddUser = userC => {
-    setSharedUsers([...sharedUsers, { ...userC, permissions: 'viewer' }]);
-    setFilteredUsers(prev => prev.filter(u => u.id !== userC.id));
+    setSharedUsers(prev => [...prev, { ...userC, permissions: selectedPermission.toLowerCase() }]);
+    setFilteredUsers(prev => prev.filter(u => u._id !== userC._id));
     setSearchUsername('');
   };
 
+  const handleConfirmInvites = async () => {
+    try {
+      await Promise.all(
+        sharedUsers.map(userC =>
+          sendNotificationToUser(userC.username, {
+            notifType: 'INVITE',
+            projectId,
+            role: userC.permissions.toUpperCase(),
+            projectName: projectName || 'Unknown',
+          }),
+        ),
+      );
+      setSharedUsers([]);
+    } catch (err) {
+      throw new Error(err);
+    }
+  };
+
+  const handleCancelInvites = () => {
+    setSharedUsers([]);
+    setSearchUsername('');
+    setFilteredUsers(allUsers);
+  };
+
   const handleRemoveUser = userId => {
-    const removed = sharedUsers.find(u => u.id === userId);
-    setSharedUsers(sharedUsers.filter(u => u.id !== userId));
+    const removed = sharedUsers.find(u => u._id === userId);
+    setSharedUsers(sharedUsers.filter(u => u._id !== userId));
     setFilteredUsers(prev => [...prev, removed]);
   };
 
   const handleUpdatePermission = (userId, permission) => {
     setSharedUsers(
       sharedUsers.map(userC =>
-        userC.id === userId ? { ...userC, permissions: permission } : userC,
+        userC._id === userId ? { ...userC, permissions: permission } : userC,
       ),
     );
+  };
+
+  const handleRoleChange = async (usernameToUpdate, newRole) => {
+    try {
+      await updateCollaboratorRole(projectId, user.user.username, usernameToUpdate, newRole);
+      setCollaborators(prev =>
+        prev.map(collab =>
+          collab.username === usernameToUpdate ? { ...collab, role: newRole } : collab,
+        ),
+      );
+    } catch (err) {
+      throw new Error(err);
+    }
   };
 
   /**
@@ -667,10 +730,16 @@ const ProjectEditor = () => {
               Switch Mode
             </button>
             {isOwner() && (
-              <button className='btn' onClick={() => setIsShareOpen(true)}>
+              <button
+                className='btn'
+                onClick={async () => {
+                  await fetchCollaborators();
+                  setIsShareOpen(true);
+                }}>
                 Share
               </button>
             )}
+
             {/* Run button for JavaScript files */}
             {fileLanguages[activeFile] === 'javascript' && (
               <button className='btn' onClick={runJavaScript}>
@@ -796,26 +865,48 @@ const ProjectEditor = () => {
 
             <div className='form-group'>
               <label className='form-label'>Shared With</label>
-              {sharedUsers.map(userC => (
-                <div key={userC.id} className='flex items-center justify-between mb-2'>
-                  <div className='flex items-center'>
-                    <FiUser className='mr-2' />
-                    <span>{userC.username}</span>
+              {collaborators.length === 0 ? (
+                <p className='text-muted'>No collaborators</p>
+              ) : (
+                collaborators.map(collab => (
+                  <div
+                    key={collab.userId}
+                    className='d-flex align-items-center justify-content-between mb-2'>
+                    <div className='d-flex align-items-center'>
+                      <FiUser className='me-3' />
+                      <span>{collab.username}</span>
+                    </div>
+                    <div className='d-flex align-items-center'>
+                      <select
+                        value={collab.role}
+                        onChange={e => handleRoleChange(collab.username, e.target.value)}
+                        className='form-select form-select-sm me-2'
+                        style={{ minWidth: '100px' }}>
+                        <option value='EDITOR'>Editor</option>
+                        <option value='VIEWER'>Viewer</option>
+                      </select>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await removeCollaboratorFromProject(
+                              projectId,
+                              user.user.username,
+                              collab.username,
+                            );
+                            setCollaborators(prev =>
+                              prev.filter(existing => existing.username !== collab.username),
+                            );
+                          } catch (err) {
+                            throw new Error(err.error);
+                          }
+                        }}
+                        className='btn btn-sm text-danger'>
+                        <FiTrash2 />
+                      </button>
+                    </div>
                   </div>
-                  <div className='flex items-center'>
-                    <select
-                      value={userC.permissions}
-                      onChange={e => handleUpdatePermission(userC.id, e.target.value)}
-                      className='form-select mr-2'>
-                      <option value='viewer'>Viewer</option>
-                      <option value='editor'>Editor</option>
-                    </select>
-                    <button onClick={() => handleRemoveUser(userC.id)} className='text-red-500'>
-                      <FiTrash2 />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             <div className='form-group'>
@@ -826,15 +917,79 @@ const ProjectEditor = () => {
                 onChange={handleUserSearch}
                 className='form-input'
                 placeholder='Search username to share'
+                style={{ marginBottom: '1rem' }}
               />
-              {filteredUsers.map(userC => (
-                <div key={userC.id} className='flex items-center justify-between mb-2'>
-                  <span>{userC.username}</span>
-                  <button onClick={() => handleAddUser(userC)} className='btn btn-primary'>
-                    Add
-                  </button>
+
+              {searchUsername.trim() !== '' && filteredUsers.length > 0 && (
+                <div className='mb-3'>
+                  {filteredUsers.map(userA => (
+                    <div
+                      key={userA._id}
+                      className='d-flex align-items-center justify-content-between mb-2'>
+                      <div className='d-flex align-items-center'>
+                        <FiUser className='me-2' />
+                        <span>{userA.username}</span>
+                      </div>
+                      <button
+                        onClick={() => handleAddUser(userA)}
+                        className='btn btn-sm btn-primary'>
+                        Add
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {sharedUsers.length > 0 && (
+                <div className='mb-3'>
+                  <label className='form-label'>Invited Users</label>
+                  {sharedUsers.map(userA => (
+                    <div
+                      key={userA._id}
+                      className='d-flex align-items-center justify-content-between mb-2'>
+                      <div className='d-flex align-items-center'>
+                        <FiUser className='me-2' />
+                        <span>{userA.username}</span>
+                      </div>
+                      <div className='d-flex align-items-center'>
+                        <select
+                          value={userA.permissions}
+                          onChange={e => handleUpdatePermission(userA._id, e.target.value)}
+                          className='form-select form-select-sm me-2'
+                          style={{ minWidth: '90px' }}>
+                          <option value='viewer'>Viewer</option>
+                          <option value='editor'>Editor</option>
+                        </select>
+                        <button
+                          onClick={() => handleRemoveUser(userA._id)}
+                          className='btn btn-sm text-danger'>
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className='d-flex justify-content-end gap-2 mt-3'>
+                <button
+                  onClick={() => {
+                    handleCancelInvites();
+                    setIsShareOpen(false);
+                  }}
+                  className='btn btn-secondary'>
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleConfirmInvites();
+                    setIsShareOpen(false);
+                  }}
+                  className='btn btn-primary'
+                  disabled={sharedUsers.length === 0}>
+                  Share
+                </button>
+              </div>
             </div>
           </div>
         </div>
