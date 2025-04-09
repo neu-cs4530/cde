@@ -365,7 +365,7 @@ const ProjectEditor = () => {
       userC =>
         userC.username.toLowerCase().includes(input.toLowerCase()) &&
         !sharedUsers.some(u => u._id === userC._id) &&
-        !collaborators.some(c => c.username === userC.username), // 👈 exclude current collaborators
+        !collaborators.some(c => c.username === userC.username), // exclude current collaborators
     );
 
     setFilteredUsers(filtered);
