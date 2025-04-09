@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser } from 'react-icons/fi';
+import { FiSearch, FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiMail } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
@@ -7,6 +7,10 @@ import {
   createProject,
   getProjectsByUser,
   deleteProjectById,
+  getNotifsByUser,
+  sendNotificationToUser,
+  respondToInvite,
+  deleteNotification,
 } from '../../../services/projectService';
 import useUserContext from '../../../hooks/useUserContext';
 import UserContext from '../../../contexts/UserContext';
@@ -26,9 +30,8 @@ const ProjectDashboard = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [searchUsername, setSearchUsername] = useState('');
-  // const { pid } = useParams();
-  // const [textErr, setTextErr] = useState('');
-  // const [projectID, setprojectID] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const [newProject, setNewProject] = useState({
     name: '',
@@ -61,6 +64,30 @@ const ProjectDashboard = () => {
 
   const handleClick = project => {
     navigate(`/projects/${project._id}`);
+  };
+
+  // handle choice on invite notification
+  const handleNotificationAction = async (notifId, action) => {
+    try {
+      await respondToInvite(username, notifId, action);
+
+      // Remove notification from local state
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
+
+      // Refetch projects if accepted
+      if (action === 'accept') {
+        const updatedProjects = await getProjectsByUser(username);
+        setProjects(updatedProjects);
+      }
+    } catch (err) {
+      console.error(`Failed to ${action} invite`, err);
+    }
+  };
+
+  // fetch project data
+  const fetchData = async () => {
+    const allProj = await getProjectsByUser(userC.username);
+    setProjects(allProj);
   };
 
   useEffect(() => {
@@ -96,10 +123,6 @@ const ProjectDashboard = () => {
   // get all projects by user use effect
   useEffect(() => {
     if (!userC || !userC.username) return;
-    const fetchData = async () => {
-      const allProj = await getProjectsByUser(userC.username);
-      setProjects(allProj);
-    };
     fetchData();
   }, [userC]);
 
@@ -121,6 +144,47 @@ const ProjectDashboard = () => {
       ),
     });
   };
+
+  // fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      const res = await getNotifsByUser(username);
+
+      const mapped = await Promise.all(
+        res.map(async notif => ({
+          id: notif._id,
+          type: notif.notifType,
+          message:
+            notif.notifType === 'INVITE'
+              ? `You were invited to '${notif.projectName}' as a ${notif.role?.toLowerCase() || 'collaborator'}`
+              : `The project '${notif.projectName}' was deleted`,
+          projectId: notif.projectId,
+          role: notif.role,
+          actions: notif.notifType === 'INVITE' ? ['Accept', 'Decline'] : [],
+        })),
+      );
+
+      setNotifications(mapped);
+    } catch (err) {
+      console.error('Failed to load notifications:', err);
+    }
+  };
+
+  // delete a notification
+  const handleDeleteNotification = async notifId => {
+    try {
+      await deleteNotification(username, notifId);
+      setNotifications(prev => prev.filter(n => n.id !== notifId));
+    } catch (err) {
+      console.error('Failed to delete notification', err);
+    }
+  };
+  // get user notifications
+  useEffect(() => {
+    if (!username) return;
+
+    fetchNotifications();
+  }, [username]);
 
   // useEffect(() => {
   //   if (!pid) {
@@ -154,7 +218,7 @@ const ProjectDashboard = () => {
         type: 'doc',
         sharedUsers: newProject.sharedUsers.map(user => ({
           username: user.username,
-          role: user.role || 'EDITOR', // or default role
+          role: user.permissions?.toUpperCase() || 'EDITOR',
         })),
       };
       try {
@@ -166,11 +230,7 @@ const ProjectDashboard = () => {
 
         // console.log('Creating project with request body:', requestBody);
 
-        const addedProject = await createProject(
-          requestBody.name,
-          requestBody.actor,
-          requestBody.collaborators,
-        );
+        const addedProject = await createProject(requestBody.name, requestBody.actor, []);
 
         // console.log(addedProject);
         setProjects([addedProject, ...projects]);
@@ -180,6 +240,16 @@ const ProjectDashboard = () => {
           type: 'doc',
           sharedUsers: [],
         });
+        await Promise.all(
+          requestBody.collaborators.map(sharedUser =>
+            sendNotificationToUser(sharedUser.username, {
+              projectId: addedProject._id,
+              notifType: 'INVITE',
+              role: sharedUser.role || 'EDITOR',
+              projectName: addedProject.name,
+            }),
+          ),
+        );
         closeAndResetForm();
       } catch (err) {
         throw new Error(`Error when adding project ${err}`);
@@ -226,25 +296,79 @@ const ProjectDashboard = () => {
           </div>
           {/* Search Bar */}
           <div className='d-flex justify-content-center align-items-center'>
-            <div className='position-relative align-items-right'>
-              <input
-                type='text'
-                placeholder='Search projects'
-                className='form-control ps-5 align-items-right'
-              />
-              <FiSearch
-                className='position-absolute'
-                style={{
-                  left: '0.75rem',
-                  top: '0.625rem',
-                  width: '1.25rem',
-                  height: '1.25rem',
-                  color: '#6c757d',
-                }}
-              />
-            </div>
+            <div className='position-relative align-items-right'></div>
           </div>
           <div className='ms-3'></div>
+          <div className='position-relative ms-3'>
+            <button
+              className='btn btn-primary d-flex align-items-center justify-content-center p-2'
+              style={{
+                borderRadius: '0.375rem', // Rounded like Bootstrap buttons, but square-ish
+                width: '40px',
+                height: '40px',
+              }}
+              onClick={async () => {
+                setShowNotifications(prev => {
+                  const next = !prev;
+                  if (next) {
+                    fetchNotifications();
+                  }
+                  return next;
+                });
+                if (userC) fetchData();
+              }}>
+              <FiMail size={18} />
+            </button>
+
+            {showNotifications && (
+              <div
+                className='position-absolute bg-white shadow rounded p-3'
+                style={{
+                  top: '2.75rem',
+                  right: 0,
+                  width: '300px',
+                  zIndex: 10,
+                }}>
+                <h6 className='mb-2'>Notifications</h6>
+                {notifications.length === 0 ? (
+                  <p className='text-muted'>No new notifications.</p>
+                ) : (
+                  notifications.map(n => (
+                    <div key={n.id} className='border-bottom pb-2 mb-2 position-relative'>
+                      {/* 'X' button for DELETE notifications only */}
+                      {n.type === 'DELETE' && (
+                        <button
+                          className='btn btn-sm btn-light position-absolute top-0 end-0'
+                          style={{ border: 'none', fontSize: '1rem', padding: '0.25rem 0.5rem' }}
+                          onClick={() => handleDeleteNotification(n.id)}>
+                          ×
+                        </button>
+                      )}
+
+                      <p className='mb-1 pe-3'>{n.message}</p>
+
+                      <div className='d-flex gap-2'>
+                        {n.actions.includes('Accept') && (
+                          <button
+                            className='btn btn-sm btn-success'
+                            onClick={() => handleNotificationAction(n.id, 'accept')}>
+                            Accept
+                          </button>
+                        )}
+                        {n.actions.includes('Decline') && (
+                          <button
+                            className='btn btn-sm btn-danger'
+                            onClick={() => handleNotificationAction(n.id, 'decline')}>
+                            Decline
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

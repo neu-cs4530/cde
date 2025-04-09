@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb';
+import { Types } from 'mongoose';
 import ProjectModel from '../../models/projects.model';
 import ProjectStateModel from '../../models/projectStates.model';
 import ProjectFileModel from '../../models/projectFiles.model';
@@ -14,6 +15,8 @@ import {
   ProjectFile,
   DatabaseProjectFile,
   UserResponse,
+  NotificationResponse,
+  DatabaseNotification,
 } from '../../types/types';
 import { addProjectToUser } from '../user.service';
 
@@ -51,24 +54,6 @@ export const saveProject = async (project: Project): Promise<ProjectResponse> =>
       throw new Error('Failed to add project to user');
     }
 
-    const collabs: (User | null)[] = await Promise.all(
-      project.collaborators.map(c => UserModel.findById(c.userId)),
-    );
-
-    if (collabs.filter(c => c === null).length > 0) {
-      throw new Error('Failed to retrieve collaborator');
-    }
-
-    const updatedCollabs: UserResponse[] = await Promise.all(
-      collabs.map(u =>
-        u === null ? { error: 'User not found' } : addProjectToUser(u.username, projectToAdd),
-      ),
-    );
-
-    if (updatedCollabs.filter(c => 'error' in c).length > 0) {
-      throw new Error('Failed to retrieve collaborator');
-    }
-
     return result;
   } catch (error) {
     return { error: `Error occurred when saving project: ${error}` };
@@ -103,11 +88,22 @@ export const deleteProjectById = async (projectId: string): Promise<ProjectRespo
 
       await ProjectStateModel.deleteMany({ _id: { $in: stateIds } });
 
-      // 4. Remove projectId from all collaborators' user documents
+      // Remove projectId from all collaborators' user documents
+      // add notification to collaborators' notification array
       const collaboratorIds = project.collaborators.map(c => c.userId);
       await UserModel.updateMany(
         { _id: { $in: collaboratorIds } },
-        { $pull: { projects: project._id } },
+        {
+          $pull: { projects: project._id },
+          $push: {
+            notifications: {
+              _id: new Types.ObjectId(),
+              projectId: project._id,
+              projectName: project.name,
+              notifType: 'DELETE',
+            },
+          },
+        },
       );
 
       const deletedProject: DatabaseProject | null = await ProjectModel.findOneAndDelete({
@@ -330,6 +326,36 @@ export const getProjectById = async (projectId: string): Promise<ProjectResponse
     return project;
   } catch (error) {
     return { error: `Error occurred when finding project: ${error}` };
+  }
+};
+
+/**
+ * Retrieves a notification by its ID.
+ * @param {string} notifId - The ID of the notification being retrieved.
+ * @returns {Promise<NotificationResponse>} - Resolves with the desired notification object or an error message.
+ */
+export const getNotifById = async (
+  userId: string,
+  notifId: string,
+): Promise<NotificationResponse> => {
+  try {
+    const user: SafeDatabaseUser | null = await UserModel.findById({ _id: userId });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const notifications =
+      user.notifications as unknown as Types.DocumentArray<DatabaseNotification>;
+    const notif = notifications.id(notifId);
+
+    if (!notif) {
+      return { error: 'Notification not found' };
+    }
+
+    return notif;
+  } catch (error) {
+    return { error: `Error occurred when finding notification: ${error}` };
   }
 };
 

@@ -20,6 +20,7 @@ import {
   ProjectStateResponse,
   PopulatedDatabaseProjectState,
 } from '@fake-stack-overflow/shared/types/projectState';
+import { RespondToInviteRequest } from '@fake-stack-overflow/shared/types/user';
 
 import api from './config';
 
@@ -108,6 +109,58 @@ const getProjectsByUser = async (username: string): Promise<DatabaseProject[]> =
   }
   return res.data;
 };
+/**
+ *
+ * @param user
+ * @returns
+ */
+// Retrieve all notifs for a specific user based on their username.
+const getNotifsByUser = async (username: string): Promise<DatabaseProject[]> => {
+  const res = await api.get(`${PROJECT_API_URL}/getNotifsByUser/${username}`);
+  if (res.status !== 200) {
+    throw new Error(`Error when getting notifs by user`);
+  }
+  return res.data;
+};
+
+// sends a notification to a user
+export const sendNotificationToUser = async (
+  username: string,
+  notif: { projectId: string; notifType: string; role?: string; projectName?: string },
+): Promise<void> => {
+  const res = await api.post(`${PROJECT_API_URL}/notifications/${username}`, notif);
+  if (res.status !== 200) {
+    throw new Error(`Failed to send notification to ${username}`);
+  }
+};
+
+// respond to an invite to a project
+export const respondToInvite = async (
+  username: string,
+  notifId: string,
+  action: 'accept' | 'decline',
+): Promise<void> => {
+  const requestBody: RespondToInviteRequest['body'] = {
+    username,
+    notifId,
+    action,
+  };
+
+  const res = await api.post(`${PROJECT_API_URL}/notifications/respond`, requestBody);
+
+  if (res.status !== 200) {
+    throw new Error(`Error when responding to invite`);
+  }
+};
+
+// delete a notification
+export const deleteNotification = async (username: string, notifId: string): Promise<void> => {
+  const res = await api.delete(`${PROJECT_API_URL}/notifications/${username}/${notifId}`);
+  if (res.status !== 200) {
+    throw new Error(`Failed to delete notification`);
+  }
+};
+
 /**
  *
  * @param projectId
@@ -492,4 +545,5 @@ export {
   getCollaborators,
   saveProjectState,
   runProjectFile,
+  getNotifsByUser,
 };
