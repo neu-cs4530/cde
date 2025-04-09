@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiSave, FiMessageSquare } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -537,30 +537,30 @@ const ProjectEditor = () => {
     setConsoleOutput('');
   };
 
-    // Handle editor mounting to get the editor instance
-  const handleEditorDidMount = (editor) => {
-    setEditorInstance(editor);
-    
+  // Handle editor mounting to get the editor instance
+  const handleEditorDidMount = editorIn => {
+    setEditorInstance(editorIn);
+
     // Set up scrolling event listener for comment syncing
-    const viewModel = editor.getViewModel();
+    const viewModel = editorIn.getViewModel();
     const lineNumbersController = viewModel._viewLayout;
-    
-    editor.onDidScrollChange(() => {
+
+    editorIn.onDidScrollChange(() => {
       if (!lineNumbersController) return;
-      
-      const visibleRanges = editor.getVisibleRanges();
+
+      const visibleRanges = editorIn.getVisibleRanges();
       if (visibleRanges.length > 0) {
         const first = visibleRanges[0].startLineNumber;
         const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
         setVisibleLines({ start: first, end: last });
       }
     });
-    
+
     // Add context menu for adding comments
-    editor.onContextMenu((e) => {
-      const position = e.target.position;
+    editorIn.onContextMenu(e => {
+      const { position } = e.target;
       if (position) {
-        const lineNumber = position.lineNumber;
+        const { lineNumber } = position;
         setCommentLine(lineNumber);
       }
     });
@@ -570,177 +570,179 @@ const ProjectEditor = () => {
   useEffect(() => {
     const loadFileComments = async () => {
       if (!activeFile || !fileMap[activeFile] || !fileMap[activeFile]._id) return;
-      
+
       try {
         const fileId = fileMap[activeFile]._id;
         const fileData = await getFileById(projectId, fileId, user.user.username);
-        
+
         if (fileData && fileData.comments) {
           setFileComments(prevComments => ({
             ...prevComments,
-            [fileId]: fileData.comments || []
+            [fileId]: fileData.comments || [],
           }));
         }
       } catch (error) {
-        console.error("Failed to load comments", error);
+        console.error('Failed to load comments', error);
       }
     };
-    
+
     loadFileComments();
   }, [activeFile, fileMap, projectId, user]);
 
   // Add comment handler
   const handleAddComment = async () => {
     if (!commentLine || !commentText.trim() || !activeFile) return;
-    
+
     try {
       const fileId = fileMap[activeFile]._id;
-      
+
       const newComment = await addCommentToFile(
         projectId,
         fileId,
         commentText,
         user.user.username,
-        commentLine
+        commentLine,
       );
-      
+
       // Update local state with the new comment
       setFileComments(prevComments => {
         const fileCommentsList = prevComments[fileId] || [];
         return {
           ...prevComments,
-          [fileId]: [...fileCommentsList, newComment]
+          [fileId]: [...fileCommentsList, newComment],
         };
       });
-      
+
       // Reset comment form
       setCommentText('');
       setIsAddingComment(false);
       setCommentLine(null);
     } catch (error) {
-      console.error("Failed to add comment", error);
+      console.error('Failed to add comment', error);
     }
   };
 
   // Delete comment handler
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async commentId => {
     if (!activeFile) return;
-    
+
     try {
       const fileId = fileMap[activeFile]._id;
-      
-      await deleteCommentById(
-        projectId,
-        fileId,
-        commentId,
-        user.user.username
-      );
-      
+
+      await deleteCommentById(projectId, fileId, commentId, user.user.username);
+
       // Update local state by removing the deleted comment
       setFileComments(prevComments => {
         const fileCommentsList = prevComments[fileId] || [];
         return {
           ...prevComments,
-          [fileId]: fileCommentsList.filter(comment => comment._id !== commentId)
+          [fileId]: fileCommentsList.filter(comment => comment._id !== commentId),
         };
       });
     } catch (error) {
-      console.error("Failed to delete comment", error);
+      console.error('Failed to delete comment', error);
     }
+  };
+
+  // Helper function to calculate comment position
+  const calculateCommentPosition = commentLineNumber => {
+    if (!editorInstance) return 0;
+
+    // Get the current scrolled position
+    const scrollTop = editorInstance.getScrollTop();
+
+    // Get line height (Monaco typical line height is around 18-20px)
+    // eslint-disable-next-line no-undef
+    const lineHeight = editorInstance.getOption(monaco.editor.EditorOption.lineHeight) || 20;
+
+    // Calculate the offset
+    const commentPosition = (commentLineNumber - visibleLines.start) * lineHeight;
+
+    return commentPosition;
   };
 
   // Comment Panel Component
   const CommentPanel = () => {
     if (!activeFile || !fileMap[activeFile]) return null;
-    
+
     const fileId = fileMap[activeFile]._id;
     const comments = fileComments[fileId] || [];
-    
+
     // Filter comments to only show those in visible range
     const visibleComments = comments.filter(
-      comment => comment.lineNumber >= visibleLines.start && comment.lineNumber <= visibleLines.end
+      comment => comment.lineNumber >= visibleLines.start && comment.lineNumber <= visibleLines.end,
     );
-    
+
     return (
-      <div className="comments-panel">
-        <div className="comments-header">
+      <div className='comments-panel'>
+        <div className='comments-header'>
           <h4>Comments</h4>
-          <button 
-            className="btn btn-sm" 
-            onClick={() => setShowComments(!showComments)}
-          >
+          <button className='btn btn-sm' onClick={() => setShowComments(!showComments)}>
             {showComments ? 'Hide' : 'Show'}
           </button>
-          <button 
-            className="btn btn-sm btn-primary" 
+          <button
+            className='btn btn-sm btn-primary'
             onClick={() => {
               setIsAddingComment(true);
               setCommentLine(editorInstance?.getPosition()?.lineNumber || 1);
-            }}
-          >
+            }}>
             <FiMessageSquare /> Add Comment
           </button>
         </div>
-        
+
         {showComments && (
-          <div className="comments-list" ref={commentsRef}>
+          <div className='comments-list' ref={consoleRef}>
             {visibleComments.length === 0 ? (
-              <p className="empty-comments">No comments in visible lines</p>
+              <p className='empty-comments'>No comments in visible lines</p>
             ) : (
               visibleComments.map(comment => (
-                <div 
-                  key={comment._id} 
-                  className="comment-item"
+                <div
+                  key={comment._id}
+                  className='comment-item'
                   style={{
                     position: 'relative',
-                    top: `${calculateCommentPosition(comment.lineNumber)}px`
-                  }}
-                >
-                  <div className="comment-header">
-                    <span className="comment-line">Line {comment.lineNumber}</span>
-                    <span className="comment-author">{comment.commentBy}</span>
-                    <span className="comment-date">
+                    top: `${calculateCommentPosition(comment.lineNumber)}px`,
+                  }}>
+                  <div className='comment-header'>
+                    <span className='comment-line'>Line {comment.lineNumber}</span>
+                    <span className='comment-author'>{comment.commentBy}</span>
+                    <span className='comment-date'>
                       {new Date(comment.commentDateTime).toLocaleString()}
                     </span>
                     {user.user.username === comment.commentBy && (
                       <button
-                        className="btn btn-sm text-danger"
-                        onClick={() => handleDeleteComment(comment._id)}
-                      >
+                        className='btn btn-sm text-danger'
+                        onClick={() => handleDeleteComment(comment._id)}>
                         <FiTrash2 />
                       </button>
                     )}
                   </div>
-                  <div className="comment-text">{comment.text}</div>
+                  <div className='comment-text'>{comment.text}</div>
                 </div>
               ))
             )}
           </div>
         )}
-        
+
         {isAddingComment && (
-          <div className="add-comment-form">
+          <div className='add-comment-form'>
             <h5>Add Comment for Line {commentLine}</h5>
             <textarea
               value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Type your comment here..."
-              className="comment-textarea"
+              onChange={e => setCommentText(e.target.value)}
+              placeholder='Type your comment here...'
+              className='comment-textarea'
             />
-            <div className="comment-actions">
-              <button 
-                className="btn btn-secondary" 
+            <div className='comment-actions'>
+              <button
+                className='btn btn-secondary'
                 onClick={() => {
                   setIsAddingComment(false);
                   setCommentText('');
-                }}
-              >
+                }}>
                 Cancel
               </button>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleAddComment}
-              >
+              <button className='btn btn-primary' onClick={handleAddComment}>
                 Submit
               </button>
             </div>
@@ -748,22 +750,6 @@ const ProjectEditor = () => {
         )}
       </div>
     );
-  };
-
-  // Helper function to calculate comment position
-  const calculateCommentPosition = (commentLineNumber) => {
-    if (!editorInstance) return 0;
-    
-    // Get the current scrolled position
-    const scrollTop = editorInstance.getScrollTop();
-    
-    // Get line height (Monaco typical line height is around 18-20px)
-    const lineHeight = editorInstance.getOption(monaco.editor.EditorOption.lineHeight) || 20;
-    
-    // Calculate the offset
-    const commentPosition = (commentLineNumber - visibleLines.start) * lineHeight;
-    
-    return commentPosition;
   };
 
   return (
@@ -867,7 +853,7 @@ const ProjectEditor = () => {
           <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
         </button>
       </aside>
-      
+
       {/* Main editor - modified to include comments panel */}
       <main className='code-editor'>
         <div className='editor-header'>
@@ -917,9 +903,7 @@ const ProjectEditor = () => {
               Share
             </button>
             {/* New button to toggle comments */}
-            <button
-              className='btn'
-              onClick={() => setShowComments(!showComments)}>
+            <button className='btn' onClick={() => setShowComments(!showComments)}>
               <FiMessageSquare /> {showComments ? 'Hide Comments' : 'Show Comments'}
             </button>
             {/* Run buttons for different languages */}
@@ -940,7 +924,6 @@ const ProjectEditor = () => {
             )}
           </div>
         </div>
-        
         {/* Editor with Comments Panel */}
         <div className='editor-with-comments'>
           <div className='editor-wrapper' style={{ width: showComments ? '70%' : '100%' }}>
@@ -982,9 +965,9 @@ const ProjectEditor = () => {
               }}
               onMount={handleEditorDidMount}
             />
-            
             {/* Console output area */}
-            <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
+            <div
+              className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
               <div className='console-header'>
                 <span>Console</span>
                 <button onClick={clearConsole} className='console-clear'>
@@ -996,7 +979,6 @@ const ProjectEditor = () => {
               </div>
             </div>
           </div>
-          
           {/* Comments panel */}
           {showComments && activeFile && (
             <div className='comments-wrapper' style={{ width: '30%' }}>
