@@ -181,6 +181,6 @@ export interface ServerToClientEvents {
   remoteCursorMove: (data: {
     fileId: string;
     username: string;
-    position: { lineNumber: number; column: number }; 
+    position: { lineNumber: number; column: number };
   }) => void;
 }
