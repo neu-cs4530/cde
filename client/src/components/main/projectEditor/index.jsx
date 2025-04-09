@@ -57,33 +57,33 @@ const ProjectEditor = () => {
     return 'plaintext';
   };
 
-  const isViewer = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'VIEWER';
-      }
-    }
-    return false;
-  };
-  const isEditor = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'EDITOR';
-      }
-    }
-    return false;
-  };
-  const isOwner = () => {
-    if (project) {
-      const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
-      if (userCollab) {
-        return userCollab.role === 'OWNER';
-      }
-    }
-    return false;
-  };
+  // const isViewer = () => {
+  //   if (project) {
+  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+  //     if (userCollab) {
+  //       return userCollab.role === 'VIEWER';
+  //     }
+  //   }
+  //   return false;
+  // };
+  // const isEditor = () => {
+  //   if (project) {
+  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+  //     if (userCollab) {
+  //       return userCollab.role === 'EDITOR';
+  //     }
+  //   }
+  //   return false;
+  // };
+  // const isOwner = () => {
+  //   if (project) {
+  //     const userCollab = project.collaborators.find(c => c.userId === user.user.userId);
+  //     if (userCollab) {
+  //       return userCollab.role === 'OWNER';
+  //     }
+  //   }
+  //   return false;
+  // };
 
   const getFileExtensionForLanguage = language => {
     switch (language) {
