@@ -96,7 +96,7 @@ const ProjectDashboard = () => {
   const fetchData = useCallback(async () => {
     const allProj = await getProjectsByUser(userC.username);
     setProjects(allProj);
-  });
+  }, [userC?.username]);
 
   useEffect(() => {
     if (showAddForm && allUsers.length === 0) {
@@ -105,8 +105,9 @@ const ProjectDashboard = () => {
           setAllUsers(data);
           setFilteredUsers(data);
         })
-        // eslint-disable-next-line no-console
-        .catch(err => console.error('Failed to load users', err));
+        .catch(err => {
+          throw new Error(err.error);
+        });
     }
   }, [showAddForm, allUsers.length]);
 
@@ -133,7 +134,7 @@ const ProjectDashboard = () => {
   useEffect(() => {
     if (!userC || !userC.username) return;
     fetchData();
-  }, [userC]);
+  }, [userC, fetchData]);
 
   const handleAddSharedUser = user => {
     setNewProject({
@@ -177,7 +178,7 @@ const ProjectDashboard = () => {
     } catch (err) {
       throw new Error(err.error);
     }
-  });
+  }, [username]);
 
   // delete a notification
   const handleDeleteNotification = async notifId => {
@@ -185,7 +186,7 @@ const ProjectDashboard = () => {
       await deleteNotification(username, notifId);
       setNotifications(prev => prev.filter(n => n.id !== notifId));
     } catch (err) {
-      console.error('Failed to delete notification', err);
+      throw new Error('Failed', err.error);
     }
   };
   // get user notifications
@@ -193,7 +194,7 @@ const ProjectDashboard = () => {
     if (!username) return;
 
     fetchNotifications();
-  }, [username]);
+  }, [username, fetchNotifications]);
 
   // useEffect(() => {
   //   if (!pid) {
