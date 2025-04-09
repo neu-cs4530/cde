@@ -324,6 +324,7 @@ const ProjectEditor = () => {
       if (language === 'java') {
         if (line.includes('public static void main') && !line.includes('{')) {
           markers.push({
+            // monaco editor struct for errors
             severity: monaco.MarkerSeverity.Warning,
             message: 'main method may be missing opening brace',
             startLineNumber: index + 1,
@@ -339,6 +340,7 @@ const ProjectEditor = () => {
           !line.includes('}')
         ) {
           markers.push({
+            // monaco editor struct for errors
             severity: monaco.MarkerSeverity.Info,
             message: 'Possible missing semicolon',
             startLineNumber: index + 1,
