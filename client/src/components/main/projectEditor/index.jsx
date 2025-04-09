@@ -144,8 +144,6 @@ const ProjectEditor = () => {
     }
   }, [consoleOutput]);
 
-  const username = user?.user?.username;
-
   useEffect(() => {
     const loadFiles = async () => {
       if (!projectId || !user?.user?.username) return;
@@ -164,7 +162,7 @@ const ProjectEditor = () => {
       setActiveFile(files[0]?.name || '');
     };
     loadFiles();
-  }, [projectId, username]);
+  }, [projectId, user]);
 
   useEffect(() => {
     if (!projectId) return undefined;
@@ -228,7 +226,7 @@ const ProjectEditor = () => {
     };
 
     fetchProjectName();
-  }, [projectId]);
+  }, [projectId, user]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
