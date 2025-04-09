@@ -18,6 +18,13 @@ import {
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
 
+/**
+ *
+ * ProjectEditor component allows users to edit the respective project, the files associated, and compile code written.
+ *
+ *
+ * @returns A rendered component of the ProjectEditor.
+ */
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -47,7 +54,6 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  // const [project, setProject] = useState([]);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -137,6 +143,7 @@ const ProjectEditor = () => {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
     }
   }, [consoleOutput]);
+
   useEffect(() => {
     const loadFiles = async () => {
       if (!projectId || !user?.user?.username) return;
@@ -155,7 +162,8 @@ const ProjectEditor = () => {
       setActiveFile(files[0]?.name || '');
     };
     loadFiles();
-  }, [projectId, user.user.username]);
+  }, [projectId, user]);
+
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -203,6 +211,40 @@ const ProjectEditor = () => {
       user?.socket.off('fileCreated', handleFileCreated);
     };
   }, [projectId, user?.socket]);
+
+  const [projectName, setProjectName] = useState('');
+
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      try {
+        const project = await getProjectById(projectId, user.user.username);
+        setProjectName(project.name);
+      } catch (error) {
+        setProjectName('Unknown Project');
+        throw new Error('Failed to load project name');
+      }
+    };
+
+    fetchProjectName();
+  }, [projectId, user]);
+
+  // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
+  // const [projectOwner, setProjectOwner] = useState('');
+  // if (projectOwner == user.user.username && {})
+  // useEffect(() => {
+  //   const fetchProjectOwner = async () => {
+  //     try {
+  //       const project = await getProjectById(projectId, user.user.username);
+  //       setProjectOwner(project.creator);
+  //     } catch (error) {
+  //       setProjectOwner('Unknown user');
+  //       throw new Error('Failed to load project user');
+  //     }
+  //   };
+
+  //   fetchProjectOwner();
+  // }, [projectId]);
+
   useEffect(() => {
     const handleFileDeleted = ({ fileId }) => {
       const fileToDelete = Object.entries(fileMap).find(([name, file]) => file._id === fileId)?.[0];
@@ -449,7 +491,7 @@ const ProjectEditor = () => {
     <div className='editor-container'>
       {/* Sidebar */}
       <aside className='file-tree'>
-        <div className='file-tree-header'>Files</div>
+        <div className='file-tree-header'>{projectName}</div>
         {/* Search Bar */}
         <input
           type='text'
