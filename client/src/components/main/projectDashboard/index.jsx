@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { FiPlus, FiTrash2, FiFile, FiStar, FiUser, FiMail } from 'react-icons/fi';
-import { useNavigate } from 'react-router-dom';
+import { FiTrash2, FiUser, FiMail } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import ProjectCard from '../projectCard';
 import {
@@ -28,7 +27,6 @@ const ProjectDashboard = () => {
   const { user: userC } = useUserContext();
   const context = useContext(UserContext);
   const username = context?.user?.username;
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -69,11 +67,6 @@ const ProjectDashboard = () => {
         !newProject.sharedUsers.some(sharedUser => sharedUser._id === user._id),
     );
     setFilteredUsers(filtered);
-  };
-
-  // handle click for project navigation
-  const handleClick = project => {
-    navigate(`/projects/${project._id}`);
   };
 
   // handle choice on invite notification
@@ -269,11 +262,6 @@ const ProjectDashboard = () => {
         throw new Error(`Error when adding project ${err}`);
       }
     }
-  };
-
-  // star or unstar a project
-  const toggleStar = id => {
-    setProjects(projects.map(p => (p._id === id ? { ...p, starred: !p.starred } : p)));
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage
@@ -502,19 +490,13 @@ const ProjectDashboard = () => {
               All Projects
             </button>
           </li>
-          <li className='nav-item'>
-            <button
-              className={`nav-link ${activeTab === 'starred' ? 'active' : ''}`}
-              onClick={() => setActiveTab('starred')}>
-              Starred
-            </button>
-          </li>
+          <li className='nav-item'></li>
         </ul>
 
         {/* All Projects */}
         <div className='mb-5'>
           <div className='d-flex justify-content-between align-items-center mb-3'>
-            <h2 className='mb-0'>All Projects</h2>
+            <h2 className='mb-0'></h2>
             <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
               Add Project
             </button>
@@ -525,7 +507,7 @@ const ProjectDashboard = () => {
                 .filter(project => activeTab !== 'starred' || project.starred)
                 .map(project => (
                   <div className='col' key={project._id}>
-                    <ProjectCard project={project} />
+                    <ProjectCard project={project} onDelete={() => deleteProject(project._id)} />
                   </div>
                 ))}
             </div>
@@ -540,86 +522,6 @@ const ProjectDashboard = () => {
         </div>
 
         {/* Projects Table */}
-        <div>
-          <div className='d-flex justify-content-between align-items-center mb-3'>
-            <h2>
-              {activeTab === 'recent' && 'Recent Projects'}
-              {activeTab === 'starred' && 'Starred Projects'}
-              {activeTab === 'trash' && 'Trash'}
-            </h2>
-            <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
-              <FiPlus className='me-1' />
-              New Project
-            </button>
-          </div>
-
-          {projects.length > 0 ? (
-            <table className='table table-hover'>
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}>
-                    <span className='visually-hidden'>Star</span>
-                  </th>
-                  <th>Name</th>
-                  <th style={{ width: '80px' }}>
-                    <span className='visually-hidden'>Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects
-                  .filter(project => activeTab !== 'starred' || project.starred)
-                  .map(project => (
-                    <tr
-                      key={project._id}
-                      onClick={() => handleClick(project)}
-                      style={{ cursor: 'pointer' }}>
-                      <td>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            toggleStar(project._id);
-                          }}
-                          className='btn btn-link p-0'>
-                          <FiStar
-                            size={20}
-                            fill={project.starred ? 'currentColor' : 'none'}
-                            style={{ color: project.starred ? '#f59e0b' : '#d1d5db' }}
-                          />
-                        </button>
-                      </td>
-                      <td>
-                        <div className='d-flex align-items-center'>
-                          <FiFile size={20} className='text-primary me-2' />
-                          <span>{project.name}</span>
-                        </div>
-                      </td>
-                      <td className='text-muted'>{project.lastEdited}</td>
-                      <td>
-                        <button
-                          onClick={e => {
-                            e.stopPropagation();
-                            deleteProject(project._id);
-                          }}
-                          className='btn btn-link text-secondary p-1'>
-                          <FiTrash2 size={18} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className='text-center py-5 bg-light rounded'>
-              <FiFile size={32} className='text-primary mb-3' />
-              <h3>No projects yet</h3>
-              <p className='text-muted'>Add your first project here!</p>
-              <button onClick={() => setShowAddForm(true)} className='btn btn-primary'>
-                Add Project
-              </button>
-            </div>
-          )}
-        </div>
       </main>
     </div>
   );
