@@ -142,7 +142,7 @@ const ProjectEditor = () => {
       const commentList = await getCommentsForFile(projectId, fileId, user.user.username);
       setComments(commentList);
     } catch (err) {
-      console.error('Failed to load comments', err);
+      throw new Error();
     }
   }, [activeFile]);
   const fetchCollaborators = useCallback(async () => {
@@ -716,73 +716,73 @@ const ProjectEditor = () => {
                 Run
               </button>
             )}
-              <button
+            <button
               className='btn'
               onClick={() => setIsCommentsOpen(prev => !prev)}
               title='Toggle Comments'>
               <FiMessageCircle />
-              </button>
+            </button>
           </div>
         </div>
         <div className='editor-wrapper'>
-        {isCommentsOpen && (
-          <div className='comment-dropdown'>
-            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              {comments.length === 0 ? (
-                <p style={{ fontStyle: 'italic' }}>No comments yet</p>
-              ) : (
-                comments
-                  .sort((a, b) => a.lineNumber - b.lineNumber)
-                  .map(comment => (
-                    <div key={comment._id} style={{ marginBottom: '1rem' }}>
-                      <strong>Line {comment.lineNumber}</strong>
-                      <p>{comment.text}</p>
-                      <small>by {comment.commentBy}</small>
-                    </div>
-                  ))
-              )}
-            </div>
+          {isCommentsOpen && (
+            <div className='comment-dropdown'>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                {comments.length === 0 ? (
+                  <p style={{ fontStyle: 'italic' }}>No comments yet</p>
+                ) : (
+                  comments
+                    .sort((a, b) => a.lineNumber - b.lineNumber)
+                    .map(comment => (
+                      <div key={comment._id} style={{ marginBottom: '1rem' }}>
+                        <strong>Line {comment.lineNumber}</strong>
+                        <p>{comment.text}</p>
+                        <small>by {comment.commentBy}</small>
+                      </div>
+                    ))
+                )}
+              </div>
 
-            <div style={{ marginTop: '1rem' }}>
-              <h4>Add Comment</h4>
-              <input
-                type='number'
-                placeholder='Line number'
-                value={newCommentLine}
-                onChange={e => setNewCommentLine(e.target.value)}
-                style={{ width: '100%', marginBottom: '0.5rem' }}
-              />
-              <textarea
-                placeholder='Comment...'
-                value={newCommentText}
-                onChange={e => setNewCommentText(e.target.value)}
-                style={{ width: '100%', marginBottom: '0.5rem' }}
-              />
-              <button
-                className='btn btn-primary'
-                onClick={async () => {
-                  const fileId = fileMap[activeFile]?._id;
-                  if (!fileId || !newCommentLine || !newCommentText.trim()) return;
-                  try {
-                    await addCommentToFile(
-                      projectId,
-                      fileId,
-                      newCommentText,
-                      user.user.username,
-                      parseInt(newCommentLine),
-                    );
-                    setNewCommentLine('');
-                    setNewCommentText('');
-                    await loadComments();
-                  } catch (err) {
-                    alert('Failed to add comment');
-                  }
-                }}>
-                Add
-              </button>
+              <div style={{ marginTop: '1rem' }}>
+                <h4>Add Comment</h4>
+                <input
+                  type='number'
+                  placeholder='Line number'
+                  value={newCommentLine}
+                  onChange={e => setNewCommentLine(e.target.value)}
+                  style={{ width: '100%', marginBottom: '0.5rem' }}
+                />
+                <textarea
+                  placeholder='Comment...'
+                  value={newCommentText}
+                  onChange={e => setNewCommentText(e.target.value)}
+                  style={{ width: '100%', marginBottom: '0.5rem' }}
+                />
+                <button
+                  className='btn btn-primary'
+                  onClick={async () => {
+                    const fileId = fileMap[activeFile]?._id;
+                    if (!fileId || !newCommentLine || !newCommentText.trim()) return;
+                    try {
+                      await addCommentToFile(
+                        projectId,
+                        fileId,
+                        newCommentText,
+                        user.user.username,
+                        parseInt(newCommentLine, 10),
+                      );
+                      setNewCommentLine('');
+                      setNewCommentText('');
+                      await loadComments();
+                    } catch (err) {
+                      alert('Failed to add comment');
+                    }
+                  }}>
+                  Add
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
           {!activeFile && (
             <div className='no-file-message'>
               <p style={{ padding: '1rem', color: 'black' }}>

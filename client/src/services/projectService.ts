@@ -421,7 +421,7 @@ const addCommentToFile = async (
   };
   const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
     comment,
-  });  
+  });
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
   }
@@ -466,10 +466,9 @@ const getFileComment = async (
   actor: string,
 ): Promise<DatabaseProjectFileComment> => {
   const data = { actor };
-  const res = await api.get(
-    `${PROJECT_API_URL}/${projectId}/file/${fileId}/comment/${commentId}`,
-    { data },
-  );
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}/comment/${commentId}`, {
+    data,
+  });
   if (res.status !== 200) {
     throw new Error(`Error when getting comment by id`);
   }
