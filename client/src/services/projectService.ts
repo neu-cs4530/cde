@@ -400,49 +400,27 @@ const getFileById = async (
  * Adds a comment to a File
  * @param projectId - The project to add a comment to.
  * @param fileId - The file that will have a comment left on it.
+ * @param commentContent - The content of the comment left.
  * @param actor - The user leaving a comment.
  * @param lineNumber - The line number the comment will be left on.
- * @param commentContent - The content of the comment left.
  * @returns
  */
 const addCommentToFile = async (
   projectId: string,
   fileId: string,
+  commentContent: string,
   actor: string,
   lineNumber: number,
-  commentContent: ProjectFileComment,
 ): Promise<ProjectFileCommentResponse> => {
-  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
-    actor,
+  const comment: ProjectFileComment = {
+    text: commentContent,
+    commentBy: actor,
+    commentDateTime: new Date(),
     lineNumber,
-    commentContent,
-  });
+  };
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, comment);
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
-  }
-  return res.data;
-};
-
-/**
- * Deletes a comment from a project
- * @param projectId - The project where a comment will be deleted.
- * @param fileId - The file where a comment will be deleted.
- * @param actor - The user who is deleting a comment.
- * @param lineNumber - The line number to be deleted.
- */
-const deleteCommentsByLine = async (
-  projectId: string,
-  fileId: string,
-  actor: string,
-  lineNumber: number,
-): Promise<DatabaseProjectFile> => {
-  const data = { actor };
-  const res = await api.delete(
-    `${PROJECT_API_URL}/${projectId}/file/${fileId}/deleteCommentsByLine?lineNumber=${lineNumber}`,
-    { data },
-  );
-  if (res.status !== 200) {
-    throw new Error(`Error when deleting comments by line`);
   }
   return res.data;
 };
@@ -541,7 +519,6 @@ export {
   updateFileById,
   getFileById,
   addCommentToFile,
-  deleteCommentsByLine,
   deleteCommentById,
   getCollaborators,
   saveProjectState,

@@ -78,32 +78,21 @@ export interface AddFileCommentRequest extends Request {
 }
 
 /**
- * Express request for deleting a project file line's comments, containing
- * project and file IDs, and line number.
- * - `projectId`: The ID of the project provided as a route parameter.
- * - `fileId`: The ID of the file provided as a route parameter.
- * - `lineNumber`: The line number provided as a route parameter.
- */
-export interface DeleteFileCommentsByLineRequest extends Request {
-  params: {
-    projectId: string;
-    fileId: string;
-    lineNumber: number;
-  };
-}
-
-/**
- * Express request for deleting a project file comment, containing
+ * Express request for accessing a project file comment, containing
  * project, file, and comment IDs.
  * - `projectId`: The ID of the project provided as a route parameter.
  * - `fileId`: The ID of the file provided as a route parameter.
  * - `commentId`: The ID of the comment provided as a route parameter.
+ * - `actor`: The username of the actor, submitted in the request (body).
  */
-export interface DeleteFileCommentByIdRequest extends Request {
+export interface FileCommentRequest extends Request {
   params: {
     projectId: string;
     fileId: string;
     commentId: string;
+  };
+  body: {
+    actor: string;
   };
 }
 

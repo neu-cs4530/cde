@@ -4,7 +4,7 @@ import { app } from '../../../app';
 import * as projectService from '../../../services/project/project.service';
 import * as projectStateService from '../../../services/project/projectState.service';
 import * as projectFileService from '../../../services/project/projectFile.service';
-// import * as projectFileCommentService from '../../../services/project/projectFileComment.service';
+import * as projectFileCommentService from '../../../services/project/projectFileComment.service';
 import * as userService from '../../../services/user.service';
 import {
   Project,
@@ -13,8 +13,8 @@ import {
   DatabaseProjectState,
   ProjectFile,
   DatabaseProjectFile,
-  // ProjectFileComment,
-  // DatabaseProjectFileComment,
+  ProjectFileComment,
+  DatabaseProjectFileComment,
   Collaborator,
   SafeDatabaseUser,
 } from '../../../types/types';
@@ -58,12 +58,28 @@ const mockOutsiderUser: SafeDatabaseUser = {
   dateJoined: new Date('2025-03-26'),
 };
 
-// const mockProjectFileComment: ProjectFileComment = {
-//   text: 'phenomenal',
-//   commentBy: mockViewerUser.username,
-//   commentDateTime: new Date('2025-03-26'),
-//   lineNumber: 1,
-// };
+const mockComment: ProjectFileComment = {
+  text: 'phenomenal',
+  commentBy: mockViewerUser.username,
+  commentDateTime: new Date('2025-03-26'),
+  lineNumber: 1,
+};
+
+const mockDatabaseComment: DatabaseProjectFileComment = {
+  _id: new ObjectId(51),
+  text: 'phenomenal code',
+  commentBy: mockViewerUser.username,
+  commentDateTime: new Date('2025-03-26'),
+  lineNumber: 1,
+};
+
+const mockCommentJSONResponse = {
+  _id: mockDatabaseComment._id.toString(),
+  text: mockDatabaseComment.text,
+  commentBy: mockDatabaseComment.commentBy,
+  commentDateTime: mockDatabaseComment.commentDateTime.toISOString(),
+  lineNumber: mockDatabaseComment.lineNumber,
+};
 
 const mockProjectFile: ProjectFile = {
   name: 'hello.py',
@@ -151,15 +167,22 @@ const updateProjectCollaboratorRoleSpy = jest.spyOn(
 );
 const createProjectBackupSpy = jest.spyOn(projectService, 'createProjectBackup');
 const revertProjectToStateSpy = jest.spyOn(projectService, 'revertProjectToState');
-const saveProjectStateSpy = jest.spyOn(projectStateService, 'saveProjectState');
 const getProjectStateByIdSpy = jest.spyOn(projectStateService, 'getProjectStateById');
 const saveFileInStateSpy = jest.spyOn(projectStateService, 'saveFileInState');
 const deleteFileInStateSpy = jest.spyOn(projectStateService, 'deleteFileInState');
 const updateProjectFileSpy = jest.spyOn(projectFileService, 'updateProjectFile');
 const getProjectFileByIdSpy = jest.spyOn(projectFileService, 'getProjectFile');
+const saveFileCommentSpy = jest.spyOn(projectFileCommentService, 'saveProjectFileComment');
+const deleteFileCommentSpy = jest.spyOn(projectFileCommentService, 'deleteProjectFileCommentById');
+const addCommentToFileSpy = jest.spyOn(projectFileCommentService, 'addCommentToFile');
+const removeCommentFromFileSpy = jest.spyOn(projectFileCommentService, 'removeCommentFromFile');
 const getUserByUsernameSpy = jest.spyOn(userService, 'getUserByUsername');
 
 describe('Project Controller', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
   describe('POST /projects/createProject', () => {
     it('should create a new project successfully', async () => {
       const mockReqBody = {
@@ -258,7 +281,6 @@ describe('Project Controller', () => {
       };
 
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
-      saveProjectStateSpy.mockResolvedValueOnce(mockDatabaseProjectState);
       saveProjectSpy.mockResolvedValueOnce({ error: 'Error saving project' });
 
       const response = await supertest(app).post('/projects/createProject').send(mockReqBody);
@@ -1272,6 +1294,7 @@ describe('Project Controller', () => {
     it('should return 400 if file type is invalid', async () => {
       const mockReqBody = {
         actor: mockOwnerUser.username,
+        name: 'racket file',
         fileType: 'RACKET',
       };
 
@@ -1619,98 +1642,192 @@ describe('Project Controller', () => {
     });
   });
 
-  // TODO File comments!!
-  describe.skip('POST /projects/:projectId/:fileId/addComment', () => {
+  describe('POST /projects/:projectId/:fileId/addComment', () => {
     it('should successfully add comment to file', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        comment: mockComment,
+      };
+
+      getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      saveFileCommentSpy.mockResolvedValueOnce(mockDatabaseComment);
+      addCommentToFileSpy.mockResolvedValueOnce({
+        ...mockDatabaseProjectFile,
+        comments: [mockDatabaseComment._id],
+      });
+
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toBe(mockCommentJSONResponse);
     });
 
     it('should return 400 if commenter is not provided', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        comment: {
+          text: 'test comment',
+          // missing commentBy
+          commentDateTime: new Date(),
+          lineNumber: 1,
+        },
+      };
+
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 400 if comment body is not provided', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        comment: {
+          // missing text
+          commentBy: 'harry',
+          commentDateTime: new Date(),
+          lineNumber: 1,
+        },
+      };
+
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 400 if line number is not provided', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        comment: {
+          text: 'test comment',
+          commentBy: 'harry',
+          commentDateTime: new Date(),
+          // missing lineNumber
+        },
+      };
+
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 403 if commenter is not a project collaborator', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        comment: {
+          ...mockComment,
+          commentBy: mockOutsiderUser.username,
+        },
+      };
+
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(403);
     });
 
     it('should return 500 on service error', async () => {
-      expect(true).toBe(false);
-    });
+      const mockReqBody = {
+        comment: mockComment,
+      };
 
-    it('should return 404 if projectId not provided', async () => {
-      expect(true).toBe(false);
-    });
+      getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      saveFileCommentSpy.mockResolvedValueOnce({ error: 'error saving comment' });
 
-    it('should return 404 if fileId not provided', async () => {
-      expect(true).toBe(false);
-    });
-  });
+      const response = await supertest(app)
+        .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
+        .send(mockReqBody);
 
-  describe.skip('POST /projects/:projectId/:fileId/deleteCommentsByLine/:lineNumber', () => {
-    it('should successfully delete and return all comments from file on line', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 400 if no comments on specified line', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 403 if user is not a project collaborator', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 500 on service error', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 404 if projectId not provided', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 404 if fileId not provided', async () => {
-      expect(true).toBe(false);
-    });
-
-    it('should return 404 if lineNumber not provided', async () => {
-      expect(true).toBe(false);
+      expect(response.status).toBe(500);
     });
   });
 
-  describe.skip('POST /projects/:projectId/:fileId/deleteCommentById/:commentId', () => {
+  describe('DELETE /projects/:projectId/:fileId/deleteCommentById/:commentId', () => {
     it('should succesfully delete and return comment from file', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+      };
+
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      deleteFileCommentSpy.mockResolvedValueOnce(mockDatabaseComment);
+      removeCommentFromFileSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
+
+      const projId = mockDatabaseProject._id;
+      const fileId = mockDatabaseProjectFile._id;
+      const commentId = mockDatabaseComment._id;
+      const response = await supertest(app)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toBe(mockCommentJSONResponse);
     });
 
-    it('should return 403 if user is not owner or editor', async () => {
-      expect(true).toBe(false);
+    it('should return 400 for missing actor', async () => {
+      const projId = mockDatabaseProject._id;
+      const fileId = mockDatabaseProjectFile._id;
+      const commentId = mockDatabaseComment._id;
+      const response = await supertest(app).post(
+        `/projects/${projId}/${fileId}/deleteCommentById/${commentId}`,
+      );
+
+      expect(response.status).toBe(400);
     });
 
     it('should return 403 if user is not a project collaborator', async () => {
-      expect(true).toBe(false);
+      const mockReqBody = {
+        actor: mockOutsiderUser.username,
+      };
+
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOutsiderUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+
+      const projId = mockDatabaseProject._id;
+      const fileId = mockDatabaseProjectFile._id;
+      const commentId = mockDatabaseComment._id;
+      const response = await supertest(app)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(403);
     });
 
     it('should return 500 on service error', async () => {
-      expect(true).toBe(false);
-    });
+      const mockReqBody = {
+        actor: mockOwnerUser.username,
+      };
 
-    it('should return 404 if projectId not provided', async () => {
-      expect(true).toBe(false);
-    });
+      getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
+      getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
+      deleteFileCommentSpy.mockResolvedValueOnce({ error: 'error deleting file comment' });
 
-    it('should return 404 if fileId not provided', async () => {
-      expect(true).toBe(false);
+      const projId = mockDatabaseProject._id;
+      const fileId = mockDatabaseProjectFile._id;
+      const commentId = mockDatabaseComment._id;
+      const response = await supertest(app)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
+        .send(mockReqBody);
+
+      expect(response.status).toBe(500);
     });
 
     it('should return 404 if commentId not provided', async () => {
-      expect(true).toBe(false);
+      const projId = mockDatabaseProject._id;
+      const fileId = mockDatabaseProjectFile._id;
+      const response = await supertest(app).post(
+        `/projects/${projId}/${fileId}/deleteCommentById/`,
+      );
+
+      expect(response.status).toBe(404);
     });
   });
 });
