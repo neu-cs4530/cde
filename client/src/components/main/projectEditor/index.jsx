@@ -15,6 +15,8 @@ import {
   getProjectById,
   restoreStateById,
   updateCollaboratorRole,
+  sendNotificationToUser,
+  removeCollaboratorFromProject,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -50,6 +52,7 @@ const ProjectEditor = () => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
+  const [selectedPermission, setSelectedPermission] = useState('EDITOR'); // editor default
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -128,11 +131,15 @@ const ProjectEditor = () => {
   useEffect(() => {
     getUsers()
       .then(data => {
-        setAllUsers(data);
-        setFilteredUsers(data);
+        const filtered = data.filter(
+          userC => userC.username.toLowerCase() !== user.user.username.toLowerCase(),
+        );
+        setAllUsers(filtered);
+        setFilteredUsers(filtered);
       })
-      // eslint-disable-next-line no-console
-      .catch(err => console.error('Error loading users', err));
+      .catch(err => {
+        throw new Error(err.error);
+      });
   }, []);
   useEffect(() => {
     if (consoleRef.current) {
@@ -295,17 +302,45 @@ const ProjectEditor = () => {
   const handleUserSearch = e => {
     const input = e.target.value;
     setSearchUsername(input);
+
     const filtered = allUsers.filter(
       userC =>
         userC.username.toLowerCase().includes(input.toLowerCase()) &&
-        !sharedUsers.some(u => u._id === userC._id),
+        !sharedUsers.some(u => u._id === userC._id) &&
+        !collaborators.some(c => c.username === userC.username), // 👈 exclude current collaborators
     );
+
     setFilteredUsers(filtered);
   };
   const handleAddUser = userC => {
-    setSharedUsers([...sharedUsers, { ...userC, permissions: 'viewer' }]);
+    setSharedUsers(prev => [...prev, { ...userC, permissions: selectedPermission.toLowerCase() }]);
     setFilteredUsers(prev => prev.filter(u => u._id !== userC._id));
     setSearchUsername('');
+  };
+
+  const handleConfirmInvites = async () => {
+    try {
+      await Promise.all(
+        sharedUsers.map(userC =>
+          sendNotificationToUser(userC.username, {
+            notifType: 'INVITE',
+            projectId,
+            role: userC.permissions.toUpperCase(),
+            projectName: projectName || 'Unknown',
+          }),
+        ),
+      );
+      setSharedUsers([]);
+    } catch (err) {
+      console.error('Failed to send invites', err);
+      alert('Failed to send one or more invites');
+    }
+  };
+
+  const handleCancelInvites = () => {
+    setSharedUsers([]);
+    setSearchUsername('');
+    setFilteredUsers(allUsers);
   };
 
   const handleRemoveUser = userId => {
@@ -324,8 +359,6 @@ const ProjectEditor = () => {
 
   const handleRoleChange = async (usernameToUpdate, newRole) => {
     try {
-      console.log('projectid: ', projectId)
-      console.log('username to update: ', usernameToUpdate)
       await updateCollaboratorRole(projectId, user.user.username, usernameToUpdate, newRole);
       setCollaborators(prev =>
         prev.map(collab =>
@@ -770,19 +803,42 @@ const ProjectEditor = () => {
                 <p className='text-muted'>No collaborators</p>
               ) : (
                 collaborators.map(collab => (
-                  <div key={collab.userId} className='flex items-center justify-between mb-2'>
-                    <div className='flex items-center'>
-                      <FiUser className='mr-2' />
+                  <div
+                    key={collab.userId}
+                    className='d-flex align-items-center justify-content-between mb-2'>
+                    <div className='d-flex align-items-center'>
+                      <FiUser className='me-3' />
                       <span>{collab.username}</span>
                     </div>
-                    <select
-                      value={collab.role}
-                      onChange={e => handleRoleChange(collab.username, e.target.value)}
-                      className='form-select form-select-sm'
-                      style={{ width: '120px' }}>
-                      <option value='EDITOR'>Editor</option>
-                      <option value='VIEWER'>Viewer</option>
-                    </select>
+                    <div className='d-flex align-items-center'>
+                      <select
+                        value={collab.role}
+                        onChange={e => handleRoleChange(collab.username, e.target.value)}
+                        className='form-select form-select-sm me-2'
+                        style={{ minWidth: '100px' }}>
+                        <option value='EDITOR'>Editor</option>
+                        <option value='VIEWER'>Viewer</option>
+                      </select>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await removeCollaboratorFromProject(
+                              projectId,
+                              user.user.username,
+                              collab.username,
+                            );
+                            setCollaborators(prev =>
+                              prev.filter(existing => existing.username !== collab.username),
+                            );
+                          } catch (err) {
+                            alert('Failed to remove collaborator');
+                            throw new Error(err.error);
+                          }
+                        }}
+                        className='btn btn-sm text-danger'>
+                        <FiTrash2 />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -796,15 +852,79 @@ const ProjectEditor = () => {
                 onChange={handleUserSearch}
                 className='form-input'
                 placeholder='Search username to share'
+                style={{ marginBottom: '1rem' }}
               />
-              {filteredUsers.map(userC => (
-                <div key={userC._id} className='flex items-center justify-between mb-2'>
-                  <span>{userC.username}</span>
-                  <button onClick={() => handleAddUser(userC)} className='btn btn-primary'>
-                    Add
-                  </button>
+
+              {searchUsername.trim() !== '' && filteredUsers.length > 0 && (
+                <div className='mb-3'>
+                  {filteredUsers.map(userA => (
+                    <div
+                      key={userA._id}
+                      className='d-flex align-items-center justify-content-between mb-2'>
+                      <div className='d-flex align-items-center'>
+                        <FiUser className='me-2' />
+                        <span>{userA.username}</span>
+                      </div>
+                      <button
+                        onClick={() => handleAddUser(userA)}
+                        className='btn btn-sm btn-primary'>
+                        Add
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {sharedUsers.length > 0 && (
+                <div className='mb-3'>
+                  <label className='form-label'>Invited Users</label>
+                  {sharedUsers.map(userA => (
+                    <div
+                      key={userA._id}
+                      className='d-flex align-items-center justify-content-between mb-2'>
+                      <div className='d-flex align-items-center'>
+                        <FiUser className='me-2' />
+                        <span>{userA.username}</span>
+                      </div>
+                      <div className='d-flex align-items-center'>
+                        <select
+                          value={userA.permissions}
+                          onChange={e => handleUpdatePermission(userA._id, e.target.value)}
+                          className='form-select form-select-sm me-2'
+                          style={{ minWidth: '90px' }}>
+                          <option value='viewer'>Viewer</option>
+                          <option value='editor'>Editor</option>
+                        </select>
+                        <button
+                          onClick={() => handleRemoveUser(userA._id)}
+                          className='btn btn-sm text-danger'>
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className='d-flex justify-content-end gap-2 mt-3'>
+                <button
+                  onClick={() => {
+                    handleCancelInvites();
+                    setIsShareOpen(false);
+                  }}
+                  className='btn btn-secondary'>
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleConfirmInvites();
+                    setIsShareOpen(false);
+                  }}
+                  className='btn btn-primary'
+                  disabled={sharedUsers.length === 0}>
+                  Share
+                </button>
+              </div>
             </div>
           </div>
         </div>
