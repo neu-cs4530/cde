@@ -465,7 +465,6 @@ export {
   updateFileById,
   getFileById,
   addCommentToFile,
-  deleteCommentsByLine,
   deleteCommentById,
   getCollaborators,
   saveProjectState,
