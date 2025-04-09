@@ -167,14 +167,13 @@ const updateProjectCollaboratorRoleSpy = jest.spyOn(
 );
 const createProjectBackupSpy = jest.spyOn(projectService, 'createProjectBackup');
 const revertProjectToStateSpy = jest.spyOn(projectService, 'revertProjectToState');
-const saveProjectStateSpy = jest.spyOn(projectStateService, 'saveProjectState');
 const getProjectStateByIdSpy = jest.spyOn(projectStateService, 'getProjectStateById');
 const saveFileInStateSpy = jest.spyOn(projectStateService, 'saveFileInState');
 const deleteFileInStateSpy = jest.spyOn(projectStateService, 'deleteFileInState');
 const updateProjectFileSpy = jest.spyOn(projectFileService, 'updateProjectFile');
 const getProjectFileByIdSpy = jest.spyOn(projectFileService, 'getProjectFile');
 const saveFileCommentSpy = jest.spyOn(projectFileCommentService, 'saveProjectFileComment');
-const deleteFileCommentSpy = jest.spyOn(projectFileCommentService, 'deleteProjectFileCommentById'); 
+const deleteFileCommentSpy = jest.spyOn(projectFileCommentService, 'deleteProjectFileCommentById');
 const addCommentToFileSpy = jest.spyOn(projectFileCommentService, 'addCommentToFile');
 const removeCommentFromFileSpy = jest.spyOn(projectFileCommentService, 'removeCommentFromFile');
 const getUserByUsernameSpy = jest.spyOn(userService, 'getUserByUsername');
@@ -1656,7 +1655,7 @@ describe('Project Controller', () => {
         ...mockDatabaseProjectFile,
         comments: [mockDatabaseComment._id],
       });
-      
+
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
         .send(mockReqBody);
@@ -1742,7 +1741,7 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockViewerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       saveFileCommentSpy.mockResolvedValueOnce({ error: 'error saving comment' });
-      
+
       const response = await supertest(app)
         .post(`/projects/${mockDatabaseProject._id}/${mockDatabaseProjectFile._id}/addComment`)
         .send(mockReqBody);
@@ -1761,12 +1760,12 @@ describe('Project Controller', () => {
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       deleteFileCommentSpy.mockResolvedValueOnce(mockDatabaseComment);
       removeCommentFromFileSpy.mockResolvedValueOnce(mockDatabaseProjectFile);
-      
+
       const projId = mockDatabaseProject._id;
       const fileId = mockDatabaseProjectFile._id;
       const commentId = mockDatabaseComment._id;
       const response = await supertest(app)
-        .post(`/projects/${fileId}/${fileId}/deleteCommentById/${commentId}`)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
         .send(mockReqBody);
 
       expect(response.status).toBe(200);
@@ -1777,8 +1776,9 @@ describe('Project Controller', () => {
       const projId = mockDatabaseProject._id;
       const fileId = mockDatabaseProjectFile._id;
       const commentId = mockDatabaseComment._id;
-      const response = await supertest(app)
-        .post(`/projects/${fileId}/${fileId}/deleteCommentById/${commentId}`);
+      const response = await supertest(app).post(
+        `/projects/${projId}/${fileId}/deleteCommentById/${commentId}`,
+      );
 
       expect(response.status).toBe(400);
     });
@@ -1795,7 +1795,7 @@ describe('Project Controller', () => {
       const fileId = mockDatabaseProjectFile._id;
       const commentId = mockDatabaseComment._id;
       const response = await supertest(app)
-        .post(`/projects/${fileId}/${fileId}/deleteCommentById/${commentId}`)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
         .send(mockReqBody);
 
       expect(response.status).toBe(403);
@@ -1809,12 +1809,12 @@ describe('Project Controller', () => {
       getUserByUsernameSpy.mockResolvedValueOnce(mockOwnerUser);
       getProjectByIdSpy.mockResolvedValueOnce(mockDatabaseProject);
       deleteFileCommentSpy.mockResolvedValueOnce({ error: 'error deleting file comment' });
-      
+
       const projId = mockDatabaseProject._id;
       const fileId = mockDatabaseProjectFile._id;
       const commentId = mockDatabaseComment._id;
       const response = await supertest(app)
-        .post(`/projects/${fileId}/${fileId}/deleteCommentById/${commentId}`)
+        .post(`/projects/${projId}/${fileId}/deleteCommentById/${commentId}`)
         .send(mockReqBody);
 
       expect(response.status).toBe(500);
@@ -1823,8 +1823,9 @@ describe('Project Controller', () => {
     it('should return 404 if commentId not provided', async () => {
       const projId = mockDatabaseProject._id;
       const fileId = mockDatabaseProjectFile._id;
-      const response = await supertest(app)
-        .post(`/projects/${fileId}/${fileId}/deleteCommentById/`);
+      const response = await supertest(app).post(
+        `/projects/${projId}/${fileId}/deleteCommentById/`,
+      );
 
       expect(response.status).toBe(404);
     });

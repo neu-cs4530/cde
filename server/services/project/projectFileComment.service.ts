@@ -80,7 +80,6 @@ export const addCommentToFile = async (
   }
 };
 
-
 /**
  * Removes a comment from a project file by ID.
  * @param {string} fileId - The ID of the file.

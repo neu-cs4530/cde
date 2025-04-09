@@ -40,8 +40,6 @@ import {
   ProjectFile,
   DatabaseProjectFile,
   ProjectFileResponse,
-  ProjectFileComment,
-  DatabaseProjectFileComment,
   ProjectFileCommentResponse,
   CreateProjectRequest,
   ProjectRequest,
@@ -196,10 +194,8 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  const isFileCommentRequestValid = (req: FileCommentRequest):
-    boolean =>
-    req.body.actor !== undefined &&
-    req.body.actor !== '';
+  const isFileCommentRequestValid = (req: FileCommentRequest): boolean =>
+    req.body.actor !== undefined && req.body.actor !== '';
 
   /**
    * Validates that a given user is a collaborator on a given project.
@@ -1206,10 +1202,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @param The response, either confirming deletion or returning an error.
    * @returns A promise resolving to void.
    */
-  const getFileCommentRoute = async (
-    req: FileCommentRequest,
-    res: Response,
-  ): Promise<void> => {
+  const getFileCommentRoute = async (req: FileCommentRequest, res: Response): Promise<void> => {
     if (!isFileCommentRequestValid(req)) {
       res.status(400).send('Invalid delete file comment request');
       return;
@@ -1241,7 +1234,7 @@ const projectController = (socket: FakeSOSocket) => {
       const validComment = file.comments.reduce(
         (acc, id) => acc || commentId.toString() === id.toString(),
         false,
-      ); 
+      );
       if (!validComment) {
         res.status(400).send('Requested comment is not part of the given file');
         return;
@@ -1292,6 +1285,9 @@ const projectController = (socket: FakeSOSocket) => {
     conn.on('leaveProject', async (projectId: string) => {
       try {
         const project: Project | null = await ProjectModel.findById(projectId);
+        if (!project) {
+          throw new Error('invalid project');
+        }
         conn.leave(projectId);
       } catch (error) {
         throw new Error('Unexpected error');
