@@ -691,7 +691,7 @@ const ProjectEditor = () => {
         </div>
 
         {showComments && (
-          <div className='comments-list' ref={consoleRef}>
+          <div className='comments-list' ref={comments}>
             {visibleComments.length === 0 ? (
               <p className='empty-comments'>No comments in visible lines</p>
             ) : (
