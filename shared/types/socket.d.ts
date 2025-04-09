@@ -126,7 +126,14 @@ export interface ClientToServerEvents {
       column: number;
     };
   }) => void;
-  cursorMove: (data: { fileId: string; username: string; position: { lineNumber: number; column: number } }) => void;
+  cursorMove: (data: {
+    fileId: string;
+    username: string;
+    position: {
+      lineNumber: number;
+      column: number;
+    }
+  }) => void;
 }
 
 /**
@@ -167,12 +174,13 @@ export interface ServerToClientEvents {
       text: string;
     }[];
     username: string;
-    position: {
-      lineNumber: number;
-      column: number;
-    };
+    position: { lineNumber: number; column: number };
   }) => void;
   fileCreated: (payload: { file: DatabaseProjectFile }) => void;
   fileDeleted: (payload: { fileId: string }) => void;
-  remoteCursorMove: (data: { fileId: string; username: string; position: { lineNumber: number; column: number } }) => void;
+  remoteCursorMove: (data: {
+    fileId: string;
+    username: string;
+    position: { lineNumber: number; column: number }; 
+  }) => void;
 }
