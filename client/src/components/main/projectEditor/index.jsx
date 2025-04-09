@@ -312,50 +312,43 @@ const ProjectEditor = () => {
     }
   }, 1000);  
   const computePatch = (model, oldText, newText) => {
-    const diffs = dmp.diff_main(oldText, newText);
-    dmp.diff_cleanupEfficiency(diffs); // optional: makes diffs cleaner
+    if (oldText === newText) return [];
 
-    let cursor = 0;
-    const edits = [];
-
-    for (const [op, data] of diffs) {
-      const length = data.length;
-
-      if (op === 0) {
-        // EQUAL
-        cursor += length;
-      } else if (op === -1) {
-        // DELETE
-        const startPos = model.getPositionAt(cursor);
-        const endPos = model.getPositionAt(cursor + length);
-        edits.push({
-          range: {
-            startLineNumber: startPos.lineNumber,
-            startColumn: startPos.column,
-            endLineNumber: endPos.lineNumber,
-            endColumn: endPos.column,
-          },
-          text: '',
-        });
-        cursor += length;
-      } else if (op === 1) {
-        // INSERT
-        const startPos = model.getPositionAt(cursor);
-        edits.push({
-          range: {
-            startLineNumber: startPos.lineNumber,
-            startColumn: startPos.column,
-            endLineNumber: startPos.lineNumber,
-            endColumn: startPos.column,
-          },
-          text: data,
-        });
-        // Note: don't move the cursor on insert
-      }
+    let startOffset = 0;
+    while (
+      startOffset < oldText.length &&
+      startOffset < newText.length &&
+      oldText[startOffset] === newText[startOffset]
+    ) {
+      startOffset++;
     }
 
-    return edits;
-  };
+    let endOffsetOld = oldText.length;
+    let endOffsetNew = newText.length;
+
+    while (
+      endOffsetOld > startOffset &&
+      endOffsetNew > startOffset &&
+      oldText[endOffsetOld - 1] === newText[endOffsetNew - 1]
+    ) {
+      endOffsetOld--;
+      endOffsetNew--;
+    }
+
+    const startPos = model.getPositionAt(startOffset);
+    const endPos = model.getPositionAt(endOffsetOld);
+    const changedText = newText.slice(startOffset, endOffsetNew);
+
+    return [{
+      range: {
+        startLineNumber: startPos.lineNumber,
+        startColumn: startPos.column,
+        endLineNumber: endPos.lineNumber,
+        endColumn: endPos.column,
+      },
+      text: changedText,
+    }];
+  };  
 
   // USE EFFECTS
   useEffect(() => {
