@@ -165,7 +165,7 @@ const ProjectEditor = () => {
       }
     };
     fetchData();
-  }, []);
+  }, [projectId, user]);
   useEffect(() => {
     getUsers()
       .then(data => {
