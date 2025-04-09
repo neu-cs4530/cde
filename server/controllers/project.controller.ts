@@ -197,10 +197,8 @@ const projectController = (socket: FakeSOSocket) => {
    * @param req The incoming request containing project, file, and comment IDs.
    * @returns `true` if the request contains valid params; otherwise, `false`.
    */
-  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest):
-    boolean =>
-    req.body.actor !== undefined &&
-    req.body.actor !== '';
+  const isDeleteFileCommentByIdRequestValid = (req: DeleteFileCommentByIdRequest): boolean =>
+    req.body.actor !== undefined && req.body.actor !== '';
 
   /**
    * Validates that a given user is a collaborator on a given project.
@@ -1139,7 +1137,6 @@ const projectController = (socket: FakeSOSocket) => {
       if ('error' in savedComment) {
         throw new Error(savedComment.error);
       }
-      
       const result = await addCommentToFile(fileId, savedComment._id.toString());
       if ('error' in result) {
         throw new Error(result.error);
@@ -1185,7 +1182,8 @@ const projectController = (socket: FakeSOSocket) => {
         return;
       }
 
-      const deletedComment: ProjectFileCommentResponse = await deleteProjectFileCommentById(commentId);  
+      const deletedComment: ProjectFileCommentResponse =
+        await deleteProjectFileCommentById(commentId);
       if ('error' in deletedComment) {
         throw new Error(deletedComment.error);
       }
@@ -1194,7 +1192,6 @@ const projectController = (socket: FakeSOSocket) => {
       if ('error' in result) {
         throw new Error(result.error);
       }
-      
       res.status(200).json(deletedComment);
     } catch (error) {
       res.status(500).send(`Error when deleting file comment: ${error}`);

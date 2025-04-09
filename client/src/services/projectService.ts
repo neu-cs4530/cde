@@ -362,7 +362,7 @@ const addCommentToFile = async (
       text: commentContent,
       commentBy: actor,
       commentDateTime: new Date(),
-      lineNumber: lineNumber,
+      lineNumber,
     },
   });
   if (res.status !== 200) {
