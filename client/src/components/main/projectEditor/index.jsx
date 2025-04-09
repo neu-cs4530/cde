@@ -48,7 +48,7 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [project, setProject] = useState({});
+  // const [project, setProject] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -152,19 +152,19 @@ const ProjectEditor = () => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const result = await getProjectById(projectId, user.user.username);
-        setProject(result);
-      } catch (error) {
-        setConsoleOutput(
-          prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
-        );
-      }
-    };
-    fetchData();
-  }, []);
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const result = await getProjectById(projectId, user.user.username);
+  //       setProject(result);
+  //     } catch (error) {
+  //       setConsoleOutput(
+  //         prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
+  //       );
+  //     }
+  //   };
+  //   fetchData();
+  // }, [projectId, user]);
   useEffect(() => {
     getUsers()
       .then(data => {
