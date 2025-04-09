@@ -257,7 +257,7 @@ export const removeProjectCollaborator = async (
 
     const updatedProject = await ProjectModel.findOneAndUpdate(
       { _id: projectId },
-      { $pull: { collaborators: { user: user._id } } },
+      { $pull: { collaborators: { userId: user._id } } },
       { new: true },
     );
 
