@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
@@ -52,7 +52,8 @@ const ProjectEditor = () => {
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [collaborators, setCollaborators] = useState([]);
-  const [selectedPermission, setSelectedPermission] = useState('EDITOR'); // editor default
+  const [selectedPermission] = useState('EDITOR'); // editor default
+  const [projectName, setProjectName] = useState('');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -127,6 +128,29 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+  const fetchCollaborators = useCallback(async () => {
+    try {
+      const project = await getProjectById(projectId, user.user.username);
+      const users = await getUsers();
+
+      const mapped = project.collaborators
+        .filter(c => c.userId !== user.user._id)
+        .map(c => {
+          const matchedUser = users.find(u => u._id === c.userId);
+          return {
+            username: matchedUser?.username || 'Unknown',
+            userId: c.userId,
+            role: c.role,
+          };
+        });
+
+      setCollaborators(mapped);
+      setProjectName(project.name);
+    } catch (error) {
+      setProjectName('Unknown Project');
+      throw new Error(error);
+    }
+  }, [projectId, user.user.user]);
 
   useEffect(() => {
     getUsers()
@@ -140,7 +164,7 @@ const ProjectEditor = () => {
       .catch(err => {
         throw new Error(err.error);
       });
-  }, []);
+  }, [user.user.username]);
   useEffect(() => {
     if (consoleRef.current) {
       consoleRef.current.scrollTop = consoleRef.current.scrollHeight;
@@ -215,36 +239,11 @@ const ProjectEditor = () => {
     };
   }, [projectId, user?.socket]);
 
-  const [projectName, setProjectName] = useState('');
-
   useEffect(() => {
-    const fetchProjectName = async () => {
-      try {
-        const project = await getProjectById(projectId, user.user.username);
-        setProjectName(project.name);
-
-        console.log(project.collaborators);
-        const users = await getUsers(); // get all users
-        const mapped = project.collaborators
-          .filter(c => c.userId !== user.user._id) // exclude current user
-          .map(c => {
-            const matchedUser = users.find(u => u._id === c.userId);
-            return {
-              username: matchedUser?.username || 'Unknown',
-              userId: c.userId,
-              role: c.role,
-            };
-          });
-
-        setCollaborators(mapped);
-      } catch (error) {
-        setProjectName('Unknown Project');
-        throw new Error('Failed to load project name or collaborators');
-      }
-    };
-
-    fetchProjectName();
-  }, [projectId, user]);
+    if (projectId && user?.user?.username) {
+      fetchCollaborators();
+    }
+  }, [projectId, user, fetchCollaborators]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
@@ -332,8 +331,7 @@ const ProjectEditor = () => {
       );
       setSharedUsers([]);
     } catch (err) {
-      console.error('Failed to send invites', err);
-      alert('Failed to send one or more invites');
+      throw new Error(err);
     }
   };
 
@@ -366,7 +364,7 @@ const ProjectEditor = () => {
         ),
       );
     } catch (err) {
-      alert('Failed to update role');
+      throw new Error(err);
     }
   };
 
@@ -831,7 +829,6 @@ const ProjectEditor = () => {
                               prev.filter(existing => existing.username !== collab.username),
                             );
                           } catch (err) {
-                            alert('Failed to remove collaborator');
                             throw new Error(err.error);
                           }
                         }}

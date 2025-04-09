@@ -114,7 +114,7 @@ const ProjectDashboard = () => {
           throw new Error(err.error);
         });
     }
-  }, [showAddForm, allUsers.length]);
+  }, [showAddForm, allUsers.length, username]);
 
   // use effect for showing the add project form
   useEffect(() => {
@@ -244,8 +244,6 @@ const ProjectDashboard = () => {
           actor: username,
           collaborators: project.sharedUsers,
         };
-
-        // console.log('Creating project with request body:', requestBody);
 
         const addedProject = await createProject(requestBody.name, requestBody.actor, []);
 
