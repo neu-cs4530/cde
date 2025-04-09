@@ -47,13 +47,47 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
-  // const [project, setProject] = useState([]);
+  const [project, setProject] = useState({});
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
     if (fileName.endsWith('.js')) return 'javascript';
     if (fileName.endsWith('.java')) return 'java';
     return 'plaintext';
+  };
+
+  const isViewer = () => {
+    if (project) {
+      const userCollab = project.collaborators.find(
+        c => c.userId === user.user.userId
+      );
+      if (userCollab) {
+        return userCollab.role === 'VIEWER';
+      }
+    }
+    return false;
+  };
+  const isEditor = => {
+    if (project) {
+      const userCollab = project.collaborators.find(
+        c => c.userId === user.user.userId
+      );
+      if (userCollab) {
+        return userCollab.role === 'EDITOR';
+      }
+    }
+    return false;
+  };
+  const isOwner = => {
+    if (project) {
+      const userCollab = project.collaborators.find(
+        c => c.userId === user.user.userId
+      );
+      if (userCollab) {
+        return userCollab.role === 'OWNER';
+      }
+    }
+    return false;
   };
 
   const getFileExtensionForLanguage = language => {
@@ -123,6 +157,17 @@ const ProjectEditor = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await getProjectById(projectId, user.user.username);
+        setProject(result);
+      } catch (error) {
+        setConsoleOutput(prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`);
+      }
+    };
+    fetchData();
+  }, []);
   useEffect(() => {
     getUsers()
       .then(data => {
