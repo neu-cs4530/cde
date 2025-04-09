@@ -135,7 +135,7 @@ const projectController = (socket: FakeSOSocket) => {
    * @returns `true` if the request contains valid params and body; otherwise, `false`.
    */
   const isProjectStateReqValid = (req: ProjectStateRequest): boolean =>
-    req.body !== undefined && req.query.actor !== undefined && req.query.actor !== '';
+    req.body !== undefined && req.body.actor !== undefined && req.body.actor !== '';
 
   /**
    * Validates that the request contains all required fields for file creation.
