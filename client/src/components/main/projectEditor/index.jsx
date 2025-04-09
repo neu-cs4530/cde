@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import Editor from '@monaco-editor/react';
+import Editor, { useMonaco } from '@monaco-editor/react';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
@@ -48,6 +48,8 @@ const ProjectEditor = () => {
   const [searchFile, setSearchFile] = useState('');
   const [backups, setBackups] = useState([]);
   const [loading, setLoading] = useState(false);
+  const monaco = useMonaco();
+  const editorRef = useRef(null);
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -274,6 +276,61 @@ const ProjectEditor = () => {
       user?.socket.off('fileDeleted', handleFileDeleted);
     };
   }, [fileMap, fileContents, activeFile, user?.socket]);
+  const handleEditorValidation = (value, language) => {
+    // some basic syntaxing rules
+    if (!monaco || !value) return;
+    const model = monaco.editor.getModels()[0];
+    const markers = [];
+    const lines = value.split('\n');
+    lines.forEach((line, index) => {
+      // py
+      if (language === 'python') {
+        if (line.includes('print(') && !line.includes(')')) {
+          markers.push({
+            // this is the structure monaco editor uses to display a syntax warning or error
+            severity: monaco.MarkerSeverity.Error,
+            message: 'Possible missing closing parenthesis in print statement',
+            startLineNumber: index + 1,
+            endLineNumber: index + 1,
+            startColumn: 1,
+            endColumn: line.length + 1,
+          });
+        }
+      }
+      // java
+      if (language === 'java') {
+        if (line.includes('public static void main') && !line.includes('{')) {
+          markers.push({
+            severity: monaco.MarkerSeverity.Warning,
+            message: 'main method may be missing opening brace',
+            startLineNumber: index + 1,
+            endLineNumber: index + 1,
+            startColumn: 1,
+            endColumn: line.length + 1,
+          });
+        }
+        if (
+          line.trim().endsWith(';') === false &&
+          line.trim() !== '' &&
+          !line.includes('{') &&
+          !line.includes('}')
+        ) {
+          markers.push({
+            severity: monaco.MarkerSeverity.Info,
+            message: 'Possible missing semicolon',
+            startLineNumber: index + 1,
+            endLineNumber: index + 1,
+            startColumn: 1,
+            endColumn: line.length + 1,
+          });
+        }
+      }
+    });
+    monaco.editor.setModelMarkers(model, 'owner', markers);
+  };
+  const handleEditorDidMount = (editor, monacoInstance) => {
+    editorRef.current = editor;
+  };
 
   const handleUserSearch = e => {
     const input = e.target.value;
@@ -641,9 +698,11 @@ const ProjectEditor = () => {
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
+            onMount={handleEditorDidMount}
             onChange={async newValue => {
               if (!activeFile) return; // Prevent if no file is active
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+              handleEditorValidation(newValue, fileLanguages[activeFile]);
               const fileId = fileMap[activeFile]?._id;
               user?.socket.emit('editFile', {
                 fileId,
