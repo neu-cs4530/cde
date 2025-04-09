@@ -333,40 +333,6 @@ export const getProjectById = async (projectId: string): Promise<ProjectResponse
   }
 };
 
-// GET /projects/:projectId/fileVersions/:fileName
-const getFileVersions = async (projectId: string, fileName: string) => {
-  try {
-    const project = await ProjectModel.findById(projectId);
-    if (!project) {
-      throw new Error('Project not found');
-    }
-    const stateIds = [project?.currentState, ...(<[]>project?.savedStates)];
-    if (!stateIds) {
-      throw new Error('stateIds not found');
-    }
-
-    const states = await ProjectStateModel.find({ _id: { $in: stateIds } });
-    if (!states) {
-      throw new Error('states not found');
-    }
-    const fileIds = states.flatMap(state => state.files);
-    if (!fileIds) {
-      throw new Error('file ids not found');
-    }
-    const matchingFiles = await ProjectFileModel.find({
-      _id: { $in: fileIds },
-      name: fileName,
-    });
-
-    if (!matchingFiles) {
-      throw new Error('matching files not found');
-    }
-    return matchingFiles;
-  } catch (error) {
-    return { error: `Failed to fetch all file versions ${error}` };
-  }
-};
-
 /**
  * Saves a backup of the current project state.
  * @param {string} projectId - The ID of the project being backed up.
