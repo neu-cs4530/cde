@@ -419,7 +419,9 @@ const addCommentToFile = async (
     commentDateTime: new Date(),
     lineNumber,
   };
-  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, comment);
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
+    comment,
+  });  
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
   }
@@ -526,6 +528,27 @@ const runProjectFile = async (
   return res.data;
 };
 
+/**
+ * Retrieves all comments for a file.
+ * @param projectId - The project containing the file.
+ * @param fileId - The file to retrieve comments from.
+ * @param actor - The user retrieving the comments.
+ * @returns A list of comments.
+ */
+const getCommentsForFile = async (
+  projectId: string,
+  fileId: string,
+  actor: string,
+): Promise<DatabaseProjectFileComment[]> => {
+  const res = await api.get(
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/comments?actor=${actor}`,
+  );
+  if (res.status !== 200) {
+    throw new Error(`Error when getting all comments for file`);
+  }
+  return res.data;
+};
+
 export {
   createProject,
   deleteProjectById,
@@ -549,4 +572,6 @@ export {
   saveProjectState,
   runProjectFile,
   getNotifsByUser,
+  getCommentsForFile,
+  getFileComment,
 };

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiSave, FiMessageCircle } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -17,6 +17,8 @@ import {
   updateCollaboratorRole,
   sendNotificationToUser,
   removeCollaboratorFromProject,
+  addCommentToFile,
+  getCommentsForFile,
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 import useUserContext from '../../../hooks/useUserContext';
@@ -54,6 +56,10 @@ const ProjectEditor = () => {
   const [collaborators, setCollaborators] = useState([]);
   const [selectedPermission] = useState('EDITOR'); // editor default
   const [projectName, setProjectName] = useState('');
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [comments, setComments] = useState([]); // fetched comments
+  const [newCommentLine, setNewCommentLine] = useState('');
+  const [newCommentText, setNewCommentText] = useState('');
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -128,6 +134,17 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}> Error running ${activeFile}: ${error.message}\n`);
     }
   };
+  const loadComments = useCallback(async () => {
+    const fileId = fileMap[activeFile]?._id;
+    if (!fileId) return;
+
+    try {
+      const commentList = await getCommentsForFile(projectId, fileId, user.user.username);
+      setComments(commentList);
+    } catch (err) {
+      console.error('Failed to load comments', err);
+    }
+  }, [activeFile]);
   const fetchCollaborators = useCallback(async () => {
     try {
       const project = await getProjectById(projectId, user.user.username);
@@ -244,6 +261,11 @@ const ProjectEditor = () => {
       fetchCollaborators();
     }
   }, [projectId, user, fetchCollaborators]);
+  useEffect(() => {
+    if (activeFile) {
+      loadComments();
+    }
+  }, [activeFile, loadComments]);
 
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
@@ -632,7 +654,6 @@ const ProjectEditor = () => {
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
             {/* beginning of selecting backups */}
-            <label htmlFor='backup-select'>Select Backup:</label>
             {/* Dropdown */}
             <select
               id='backup-select'
@@ -662,7 +683,7 @@ const ProjectEditor = () => {
             {/* ending of selecting backups */}
 
             <button onClick={handleCreateBackup} className='btn btn-primary'>
-              <FiSave /> Save Backup
+              Save Backup
             </button>
             <button
               className='btn'
@@ -695,9 +716,73 @@ const ProjectEditor = () => {
                 Run
               </button>
             )}
+              <button
+              className='btn'
+              onClick={() => setIsCommentsOpen(prev => !prev)}
+              title='Toggle Comments'>
+              <FiMessageCircle />
+              </button>
           </div>
         </div>
         <div className='editor-wrapper'>
+        {isCommentsOpen && (
+          <div className='comment-dropdown'>
+            <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {comments.length === 0 ? (
+                <p style={{ fontStyle: 'italic' }}>No comments yet</p>
+              ) : (
+                comments
+                  .sort((a, b) => a.lineNumber - b.lineNumber)
+                  .map(comment => (
+                    <div key={comment._id} style={{ marginBottom: '1rem' }}>
+                      <strong>Line {comment.lineNumber}</strong>
+                      <p>{comment.text}</p>
+                      <small>by {comment.commentBy}</small>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            <div style={{ marginTop: '1rem' }}>
+              <h4>Add Comment</h4>
+              <input
+                type='number'
+                placeholder='Line number'
+                value={newCommentLine}
+                onChange={e => setNewCommentLine(e.target.value)}
+                style={{ width: '100%', marginBottom: '0.5rem' }}
+              />
+              <textarea
+                placeholder='Comment...'
+                value={newCommentText}
+                onChange={e => setNewCommentText(e.target.value)}
+                style={{ width: '100%', marginBottom: '0.5rem' }}
+              />
+              <button
+                className='btn btn-primary'
+                onClick={async () => {
+                  const fileId = fileMap[activeFile]?._id;
+                  if (!fileId || !newCommentLine || !newCommentText.trim()) return;
+                  try {
+                    await addCommentToFile(
+                      projectId,
+                      fileId,
+                      newCommentText,
+                      user.user.username,
+                      parseInt(newCommentLine),
+                    );
+                    setNewCommentLine('');
+                    setNewCommentText('');
+                    await loadComments();
+                  } catch (err) {
+                    alert('Failed to add comment');
+                  }
+                }}>
+                Add
+              </button>
+            </div>
+          </div>
+        )}
           {!activeFile && (
             <div className='no-file-message'>
               <p style={{ padding: '1rem', color: 'black' }}>
