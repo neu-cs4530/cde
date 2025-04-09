@@ -625,11 +625,19 @@ const ProjectEditor = () => {
           </div>
         </div>
         <div className='editor-wrapper'>
+          {!activeFile && (
+            <div className='no-file-message'>
+              <p style={{ padding: '1rem', color: 'black' }}>
+                No file selected. Please add a file to start coding.
+              </p>
+            </div>
+          )}
           <Editor
             height='60%'
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
-            value={fileContents[activeFile]}
+            value={fileContents[activeFile] || ''}
             onChange={async newValue => {
+              if (!activeFile) return; // Prevent if no file is active
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
               const fileId = fileMap[activeFile]?._id;
               user?.socket.emit('editFile', {
@@ -646,6 +654,9 @@ const ProjectEditor = () => {
               }
             }}
             theme={theme}
+            options={{
+              readOnly: !activeFile, // option prop from monaco set to read only
+            }}
           />
           {/* Console output area */}
           <div className={`console-area ${theme === 'vs-dark' ? 'dark-console' : 'light-console'}`}>
