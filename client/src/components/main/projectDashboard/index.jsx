@@ -63,8 +63,10 @@ const ProjectDashboard = () => {
     const filtered = allUsers.filter(
       user =>
         user.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        // exclude self from search results
+        user.username.toLowerCase() !== username.toLowerCase() &&
         // Exclude already added users
-        !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
+        !newProject.sharedUsers.some(sharedUser => sharedUser._id === user._id),
     );
     setFilteredUsers(filtered);
   };
@@ -102,14 +104,17 @@ const ProjectDashboard = () => {
     if (showAddForm && allUsers.length === 0) {
       getUsers()
         .then(data => {
-          setAllUsers(data);
-          setFilteredUsers(data);
+          const filtered = data.filter(
+            user => user.username.toLowerCase() !== username.toLowerCase(),
+          );
+          setAllUsers(filtered);
+          setFilteredUsers(filtered);
         })
         .catch(err => {
           throw new Error(err.error);
         });
     }
-  }, [showAddForm, allUsers.length]);
+  }, [showAddForm, allUsers.length, username]);
 
   // use effect for showing the add project form
   useEffect(() => {
@@ -141,7 +146,7 @@ const ProjectDashboard = () => {
       ...newProject,
       sharedUsers: [...newProject.sharedUsers, { ...user, permissions: 'viewer' }],
     });
-    setFilteredUsers(prev => prev.filter(u => u.id !== user.id));
+    setFilteredUsers(prev => prev.filter(u => u._id !== user._id));
     setSearchUsername('');
   };
 
@@ -150,7 +155,7 @@ const ProjectDashboard = () => {
     setNewProject({
       ...newProject,
       sharedUsers: newProject.sharedUsers.map(user =>
-        user.id === userId ? { ...user, permissions } : user,
+        user._id === userId ? { ...user, permissions } : user,
       ),
     });
   };
@@ -207,10 +212,10 @@ const ProjectDashboard = () => {
 
   // remove a shared user
   const removeSharedUser = userId => {
-    const removedUser = newProject.sharedUsers.find(user => user.id === userId);
+    const removedUser = newProject.sharedUsers.find(user => user._id === userId);
     setNewProject({
       ...newProject,
-      sharedUsers: newProject.sharedUsers.filter(user => user.id !== userId),
+      sharedUsers: newProject.sharedUsers.filter(user => user._id !== userId),
     });
     // Add the removed user back to filteredUsers
     setFilteredUsers(prev => [...prev, removedUser]);
@@ -239,8 +244,6 @@ const ProjectDashboard = () => {
           actor: username,
           collaborators: project.sharedUsers,
         };
-
-        // console.log('Creating project with request body:', requestBody);
 
         const addedProject = await createProject(requestBody.name, requestBody.actor, []);
 
@@ -416,13 +419,11 @@ const ProjectDashboard = () => {
                     placeholder='Search username to share'
                   />
                 </div>
-
-                {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
+                {searchUsername.trim() !== '' && filteredUsers.length > 0 && (
                   <div className='mb-3'>
-                    <label className='form-label'>User Search Results</label>
                     {filteredUsers.map(user => (
                       <div
-                        key={user.id}
+                        key={user._id}
                         className='d-flex align-items-center justify-content-between mb-2'>
                         <div className='d-flex align-items-center'>
                           <FiUser className='me-2' />
@@ -441,10 +442,10 @@ const ProjectDashboard = () => {
                 {/* Shared Users List */}
                 {newProject.sharedUsers.length > 0 && (
                   <div className='mb-3'>
-                    <label className='form-label'>Shared Users</label>
+                    <label className='form-label'>Invite Users</label>
                     {newProject.sharedUsers.map(user => (
                       <div
-                        key={user.id}
+                        key={user._id}
                         className='d-flex align-items-center justify-content-between mb-2'>
                         <div className='d-flex align-items-center'>
                           <FiUser className='me-2' />
@@ -453,14 +454,14 @@ const ProjectDashboard = () => {
                         <div className='d-flex align-items-center'>
                           <select
                             value={user.permissions}
-                            onChange={e => updateUserPermissions(user.id, e.target.value)}
+                            onChange={e => updateUserPermissions(user._id, e.target.value)}
                             className='form-select form-select-sm me-2'
                             style={{ minWidth: '90px' }}>
                             <option value='viewer'>Viewer</option>
                             <option value='editor'>Editor</option>
                           </select>
                           <button
-                            onClick={() => removeSharedUser(user.id)}
+                            onClick={() => removeSharedUser(user._id)}
                             className='btn btn-sm text-danger'>
                             <FiTrash2 />
                           </button>
@@ -523,7 +524,7 @@ const ProjectDashboard = () => {
               {projects
                 .filter(project => activeTab !== 'starred' || project.starred)
                 .map(project => (
-                  <div className='col' key={project.id}>
+                  <div className='col' key={project._id}>
                     <ProjectCard project={project} />
                   </div>
                 ))}
@@ -570,7 +571,7 @@ const ProjectDashboard = () => {
                   .filter(project => activeTab !== 'starred' || project.starred)
                   .map(project => (
                     <tr
-                      key={project.id}
+                      key={project._id}
                       onClick={() => handleClick(project)}
                       style={{ cursor: 'pointer' }}>
                       <td>
