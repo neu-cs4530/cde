@@ -1038,6 +1038,21 @@ const ProjectEditor = () => {
         <div className='editor-wrapper'>
           {isCommentsOpen && (
             <div className='comment-dropdown'>
+              <div
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0 }}>Comments</h4>
+                <button
+                  onClick={() => setIsCommentsOpen(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#6b7280',
+                  }}
+                  title='Close comments'>
+                  <FiX size={18} />
+                </button>
+              </div>
               <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 {comments.length === 0 ? (
                   <p style={{ fontStyle: 'italic' }}>No comments yet</p>
@@ -1085,6 +1100,7 @@ const ProjectEditor = () => {
                       setNewCommentLine('');
                       setNewCommentText('');
                       await loadComments();
+                      setIsCommentsOpen(false);
                     } catch (err) {
                       throw new Error();
                     }
