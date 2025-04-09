@@ -15,6 +15,7 @@ import {
 import {
   ProjectFileComment,
   ProjectFileCommentResponse,
+  DatabaseProjectFileComment,
 } from '@fake-stack-overflow/shared/types/comment';
 import {
   ProjectStateResponse,
@@ -429,8 +430,8 @@ const addCommentToFile = async (
  * Deletes a comment by an ID.
  * @param projectId - The project where a comment will be deleted.
  * @param fileId - The file where a comment will be deleted.
+ * @param commentId - The ID of the comment to delete.
  * @param actor - The user who is deleting a comment.
- * @param lineNumber - The line number to be deleted.
  */
 const deleteCommentById = async (
   projectId: string,
@@ -445,6 +446,30 @@ const deleteCommentById = async (
   );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by id`);
+  }
+  return res.data;
+};
+
+/**
+ * Gets a comment by its ID.
+ * @param projectId - The project containing the comment.
+ * @param fileId - The file containing the comment.
+ * @param commentId - The ID of the comment.
+ * @param actor - The user who is getting the comment.
+ */
+const getFileComment = async (
+  projectId: string,
+  fileId: string,
+  commentId: string,
+  actor: string,
+): Promise<DatabaseProjectFileComment> => {
+  const data = { actor };
+  const res = await api.get(
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/comment/${commentId}`,
+    { data },
+  );
+  if (res.status !== 200) {
+    throw new Error(`Error when getting comment by id`);
   }
   return res.data;
 };
