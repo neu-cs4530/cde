@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
@@ -62,44 +62,7 @@ const ProjectEditor = () => {
     if (fileName.endsWith('.java')) return 'java';
     return 'plaintext';
   };
-  const isOwner = () => {
-    // If the logged-in user is the creator of the project, they're the owner
-    if (user?.user?.username === project?.creator) {
-      return true;
-    }
-    // Otherwise check the collaborators list
-    if (project?.collaborators) {
-      const userCollab = project.collaborators.find(
-        c => c.userId?.toString() === user.user.username?.toString(),
-      );
-      return userCollab?.role === 'OWNER';
-    }
-    return false;
-  };
-  const isEditor = () => {
-    // If user is the owner, they also have editor permissions
-    if (isOwner()) {
-      return true;
-    }
-    // Check if user has explicit EDITOR role
-    if (project?.collaborators) {
-      const userCollab = project.collaborators.find(
-        c => c.userId?.toString() === user.user.username?.toString(),
-      );
-      return userCollab?.role === 'EDITOR';
-    }
-    return false;
-  };
 
-  const isViewer = () => {
-    // If user's system role is 'viewer', they're always just a viewer
-    if (user?.user?.role === 'VIEWER') {
-      return true;
-    }
-
-    // If they're neither owner nor editor, they're a viewer by default
-    return !isOwner() && !isEditor();
-  };
   const getFileExtensionForLanguage = language => {
     switch (language) {
       case 'python':
@@ -168,10 +131,10 @@ const ProjectEditor = () => {
   };
   const fetchCollaborators = useCallback(async () => {
     try {
-      const project = await getProjectById(projectId, user.user.username);
+      const projectC = await getProjectById(projectId, user.user.username);
       const users = await getUsers();
 
-      const mapped = project.collaborators
+      const mapped = projectC.collaborators
         .filter(c => c.userId !== user.user._id)
         .map(c => {
           const matchedUser = users.find(u => u._id === c.userId);
@@ -183,12 +146,43 @@ const ProjectEditor = () => {
         });
 
       setCollaborators(mapped);
-      setProjectName(project.name);
+      setProjectName(projectC.name);
     } catch (error) {
       setProjectName('Unknown Project');
       throw new Error(error);
     }
   }, [projectId, user.user.username, user.user._id]);
+
+  // check user role once
+  const userRole = useMemo(() => {
+    if (!project || !user?.user) return 'VIEWER';
+
+    if (user.user.username === project.creator) {
+      return 'OWNER';
+    }
+
+    const userCollab = project.collaborators?.find(
+      c => c.userId?.toString() === user.user._id?.toString(),
+    );
+
+    if (userCollab?.role === 'OWNER') {
+      return 'OWNER';
+    }
+    if (userCollab?.role === 'EDITOR') {
+      return 'EDITOR';
+    }
+
+    if (user.user.role === 'VIEWER') {
+      return 'VIEWER';
+    }
+
+    // if not owner, editor, viewer, default to viewer
+    return 'VIEWER';
+  }, [project, user]);
+
+  const isOwner = userRole === 'OWNER';
+  const isEditor = userRole === 'EDITOR' || isOwner;
+  const isViewer = userRole === 'VIEWER';
 
   useEffect(() => {
     const fetchData = async () => {
@@ -620,7 +614,7 @@ const ProjectEditor = () => {
                   }}>
                   {file}
                 </span>
-                {(isEditor() || isOwner()) && (
+                {(isEditor || isOwner) && (
                   <button
                     onClick={async () => {
                       if (Object.keys(fileContents).length === 1) {
@@ -674,7 +668,7 @@ const ProjectEditor = () => {
         </ul>
 
         {/* Add file button */}
-        {(isEditor() || isOwner()) && (
+        {(isEditor || isOwner) && (
           <button onClick={() => setIsAddFileOpen(true)} className='btn btn-primary'>
             <FiPlus size={14} style={{ marginRight: '5px' }} /> Add File
           </button>
@@ -685,7 +679,7 @@ const ProjectEditor = () => {
         <div className='editor-header'>
           <span className='file-name'>{activeFile}</span>
           <div className='editor-actions'>
-            {isOwner() && (
+            {isOwner && (
               <>
                 {/* beginning of selecting backups */}
                 <label htmlFor='backup-select'>Select Backup:</label>
@@ -719,7 +713,7 @@ const ProjectEditor = () => {
             )}
             {/* ending of selecting backups */}
 
-            {(isOwner() || isEditor()) && (
+            {(isOwner || isEditor) && (
               <button onClick={handleCreateBackup} className='btn btn-primary'>
                 <FiSave /> Save Backup
               </button>
@@ -729,7 +723,7 @@ const ProjectEditor = () => {
               onClick={() => setTheme(prev => (prev === 'vs-dark' ? 'vs-light' : 'vs-dark'))}>
               Switch Mode
             </button>
-            {isOwner() && (
+            {isOwner && (
               <button
                 className='btn'
                 onClick={async () => {
@@ -773,7 +767,7 @@ const ProjectEditor = () => {
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
             onChange={async newValue => {
-              if (!activeFile || isViewer()) return; // Prevent if no file is active or if viewer
+              if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
               setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
               const fileId = fileMap[activeFile]?._id;
               user?.socket.emit('editFile', {
@@ -791,7 +785,7 @@ const ProjectEditor = () => {
             }}
             theme={theme}
             options={{
-              readOnly: isViewer() || !activeFile, // option prop from monaco set to read only
+              readOnly: isViewer || !activeFile, // option prop from monaco set to read only
             }}
           />
           {/* Console output area */}
@@ -810,7 +804,7 @@ const ProjectEditor = () => {
       </main>
 
       {/* Add File Modal */}
-      {(isEditor() || isOwner()) && isAddFileOpen && (
+      {(isEditor || isOwner) && isAddFileOpen && (
         <div className='modal-overlay'>
           <div className='modal-content'>
             <div className='modal-header'>
