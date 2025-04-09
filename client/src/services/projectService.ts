@@ -15,6 +15,7 @@ import {
 import {
   ProjectFileComment,
   ProjectFileCommentResponse,
+  DatabaseProjectFileComment,
 } from '@fake-stack-overflow/shared/types/comment';
 import {
   ProjectStateResponse,
@@ -418,7 +419,9 @@ const addCommentToFile = async (
     commentDateTime: new Date(),
     lineNumber,
   };
-  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, comment);
+  const res = await api.post(`${PROJECT_API_URL}/${projectId}/file/${fileId}/addComment`, {
+    comment,
+  });
   if (res.status !== 200) {
     throw new Error(`Error when adding comment to file`);
   }
@@ -429,8 +432,8 @@ const addCommentToFile = async (
  * Deletes a comment by an ID.
  * @param projectId - The project where a comment will be deleted.
  * @param fileId - The file where a comment will be deleted.
+ * @param commentId - The ID of the comment to delete.
  * @param actor - The user who is deleting a comment.
- * @param lineNumber - The line number to be deleted.
  */
 const deleteCommentById = async (
   projectId: string,
@@ -445,6 +448,29 @@ const deleteCommentById = async (
   );
   if (res.status !== 200) {
     throw new Error(`Error when deleting comments by id`);
+  }
+  return res.data;
+};
+
+/**
+ * Gets a comment by its ID.
+ * @param projectId - The project containing the comment.
+ * @param fileId - The file containing the comment.
+ * @param commentId - The ID of the comment.
+ * @param actor - The user who is getting the comment.
+ */
+const getFileComment = async (
+  projectId: string,
+  fileId: string,
+  commentId: string,
+  actor: string,
+): Promise<DatabaseProjectFileComment> => {
+  const data = { actor };
+  const res = await api.get(`${PROJECT_API_URL}/${projectId}/file/${fileId}/comment/${commentId}`, {
+    data,
+  });
+  if (res.status !== 200) {
+    throw new Error(`Error when getting comment by id`);
   }
   return res.data;
 };
@@ -501,6 +527,27 @@ const runProjectFile = async (
   return res.data;
 };
 
+/**
+ * Retrieves all comments for a file.
+ * @param projectId - The project containing the file.
+ * @param fileId - The file to retrieve comments from.
+ * @param actor - The user retrieving the comments.
+ * @returns A list of comments.
+ */
+const getCommentsForFile = async (
+  projectId: string,
+  fileId: string,
+  actor: string,
+): Promise<DatabaseProjectFileComment[]> => {
+  const res = await api.get(
+    `${PROJECT_API_URL}/${projectId}/file/${fileId}/comments?actor=${actor}`,
+  );
+  if (res.status !== 200) {
+    throw new Error(`Error when getting all comments for file`);
+  }
+  return res.data;
+};
+
 export {
   createProject,
   deleteProjectById,
@@ -524,4 +571,6 @@ export {
   saveProjectState,
   runProjectFile,
   getNotifsByUser,
+  getCommentsForFile,
+  getFileComment,
 };
