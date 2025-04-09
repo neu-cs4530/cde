@@ -28,7 +28,6 @@ const ProjectDashboard = () => {
   const { user: userC } = useUserContext();
   const context = useContext(UserContext);
   const username = context?.user?.username;
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('recent');
   const [projects, setProjects] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
