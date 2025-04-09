@@ -55,7 +55,6 @@ const ProjectEditor = () => {
   const [collaborators, setCollaborators] = useState([]);
   const [selectedPermission] = useState('EDITOR'); // editor default
   const [projectName, setProjectName] = useState('');
-  const monaco = useMonaco();
   const editorRef = useRef(null);
 
   const getDefaultLanguageFromFileName = fileName => {
