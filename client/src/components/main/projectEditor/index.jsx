@@ -50,7 +50,6 @@ const ProjectEditor = () => {
   const [loading, setLoading] = useState(false);
   const [project, setProject] = useState({});
 
-
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
     if (fileName.endsWith('.js')) return 'javascript';
@@ -159,7 +158,9 @@ const ProjectEditor = () => {
         const result = await getProjectById(projectId, user.user.username);
         setProject(result);
       } catch (error) {
-        setConsoleOutput(prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`);
+        setConsoleOutput(
+          prev => `${prev}> Error fetching project (id: ${projectId}): ${error.message}\n)`,
+        );
       }
     };
     fetchData();
@@ -252,8 +253,8 @@ const ProjectEditor = () => {
   useEffect(() => {
     const fetchProjectName = async () => {
       try {
-        const project = await getProjectById(projectId, user.user.username);
-        setProjectName(project.name);
+        const fetchedProject = await getProjectById(projectId, user.user.username);
+        setProjectName(fetchedProject.name);
       } catch (error) {
         setProjectName('Unknown Project');
         throw new Error('Failed to load project name');
