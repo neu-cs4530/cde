@@ -30,7 +30,6 @@ import {
   removeCommentFromFile,
   getProjectFileComment,
 } from '../services/project/projectFileComment.service';
-import { getUserByUsername } from '../services/user.service';
 import {
   addNotificationToUser,
   getUserByUsername,
