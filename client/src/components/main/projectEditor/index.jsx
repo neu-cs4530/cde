@@ -15,6 +15,13 @@ import {
 } from '../../../services/projectService';
 import UserContext from '../../../contexts/UserContext';
 
+/**
+ *
+ * ProjectEditor component allows users to edit the respective project, the files associated, and compile code written.
+ *
+ *
+ * @returns A rendered component of the ProjectEditor.
+ */
 const ProjectEditor = () => {
   const [theme, setTheme] = useState('vs-light');
   const [isShareOpen, setIsShareOpen] = useState(false);
