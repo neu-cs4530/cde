@@ -79,7 +79,6 @@ const ProjectDashboard = () => {
   // handle choice on invite notification
   const handleNotificationAction = async (notifId, action) => {
     try {
-      console.log('HEREEEEE', notifId)
       await respondToInvite(username, notifId, action);
 
       // Remove notification from local state
