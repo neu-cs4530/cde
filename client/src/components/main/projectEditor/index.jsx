@@ -2,6 +2,10 @@ import React, { useState, useEffect, useRef, useContext, useCallback, useMemo } 
 import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor, { useMonaco } from '@monaco-editor/react';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { debounce } from 'lodash';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import DiffMatchPatch from 'diff-match-patch';
 import './index.css';
 import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
@@ -57,6 +61,13 @@ const ProjectEditor = () => {
   const [projectName, setProjectName] = useState('');
   const monaco = useMonaco();
   const editorRef = useRef(null);
+  const monacoRef = useRef(null);
+  const previousContentRef = useRef('');
+  const isRemoteEditRef = useRef(false);
+  const fileMapRef = useRef(fileMap);
+  const activeFileRef = useRef(activeFile);
+  const [remoteCursors, setRemoteCursors] = useState({});
+  const dmp = new DiffMatchPatch();
 
   const getDefaultLanguageFromFileName = fileName => {
     if (fileName.endsWith('.py')) return 'python';
@@ -247,25 +258,25 @@ const ProjectEditor = () => {
       user?.socket.emit('leaveProject', projectId);
     };
   }, [projectId, user?.socket]);
-  useEffect(() => {
-    if (!activeFile) return undefined;
+  // useEffect(() => {
+  //   if (!activeFile) return undefined;
 
-    const handleRemoteEdit = ({ fileId, content }) => {
-      const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
-      if (!updatedFileName) return;
+  //   const handleRemoteEdit = ({ fileId, content }) => {
+  //     const updatedFileName = Object.keys(fileMap).find(name => fileMap[name]?._id === fileId);
+  //     if (!updatedFileName) return;
 
-      setFileContents(prev => ({
-        ...prev,
-        [updatedFileName]: content,
-      }));
-    };
+  //     setFileContents(prev => ({
+  //       ...prev,
+  //       [updatedFileName]: content,
+  //     }));
+  //   };
 
-    user?.socket.on('remoteEdit', handleRemoteEdit);
+  //   user?.socket.on('remoteEdit', handleRemoteEdit);
 
-    return () => {
-      user?.socket.off('remoteEdit', handleRemoteEdit);
-    };
-  }, [activeFile, fileMap, user?.socket]);
+  //   return () => {
+  //     user?.socket.off('remoteEdit', handleRemoteEdit);
+  //   };
+  // }, [activeFile, fileMap, user?.socket]);
   useEffect(() => {
     if (!projectId) return undefined;
 
@@ -292,6 +303,145 @@ const ProjectEditor = () => {
     }
   }, [projectId, user, fetchCollaborators]);
 
+  // new real time editing stuff
+  const saveContentToServer = debounce(async (fileId, contents) => {
+    try {
+      await updateFileById(projectId, fileId, user.user.username, { contents });
+    } catch (err) {
+      console.error('Failed to save file', err);
+    }
+  }, 1000);  
+  const computePatch = (model, oldText, newText) => {
+    const diffs = dmp.diff_main(oldText, newText);
+    dmp.diff_cleanupEfficiency(diffs); // optional: makes diffs cleaner
+
+    let cursor = 0;
+    const edits = [];
+
+    for (const [op, data] of diffs) {
+      const length = data.length;
+
+      if (op === 0) {
+        // EQUAL
+        cursor += length;
+      } else if (op === -1) {
+        // DELETE
+        const startPos = model.getPositionAt(cursor);
+        const endPos = model.getPositionAt(cursor + length);
+        edits.push({
+          range: {
+            startLineNumber: startPos.lineNumber,
+            startColumn: startPos.column,
+            endLineNumber: endPos.lineNumber,
+            endColumn: endPos.column,
+          },
+          text: '',
+        });
+        cursor += length;
+      } else if (op === 1) {
+        // INSERT
+        const startPos = model.getPositionAt(cursor);
+        edits.push({
+          range: {
+            startLineNumber: startPos.lineNumber,
+            startColumn: startPos.column,
+            endLineNumber: startPos.lineNumber,
+            endColumn: startPos.column,
+          },
+          text: data,
+        });
+        // Note: don't move the cursor on insert
+      }
+    }
+
+    return edits;
+  };
+
+  // USE EFFECTS
+  useEffect(() => {
+    fileMapRef.current = fileMap;
+  }, [fileMap]);
+
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+
+  useEffect(() => {
+    if (!user?.socket) return;
+
+    const handleRemoteEdit = ({ fileId, edits, username }) => {
+      if (username === user.user.username) return;
+
+      const model = editorRef.current?.getModel();
+      const currentFileId = fileMapRef.current[activeFileRef.current]?._id;
+      if (!model || !monacoRef.current || fileId !== currentFileId) return;
+
+      const monacoEdits = edits.map(edit => ({
+        range: new monacoRef.current.Range(
+          edit.range.startLineNumber,
+          edit.range.startColumn,
+          edit.range.endLineNumber,
+          edit.range.endColumn,
+        ),
+        text: edit.text,
+        forceMoveMarkers: true,
+      }));
+
+      isRemoteEditRef.current = true;
+      editorRef.current.executeEdits('remote', monacoEdits);
+      editorRef.current.pushUndoStop();
+      isRemoteEditRef.current = false;
+
+      const newContent = model.getValue();
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newContent,
+      }));
+      previousContentRef.current = newContent;
+    };
+
+    user.socket.on('remoteEdit', handleRemoteEdit);
+    return () => user.socket.off('remoteEdit', handleRemoteEdit);
+  }, [user?.socket]);
+
+  useEffect(() => {
+    if (
+      !editorRef.current ||
+      !monacoRef.current ||
+      !fileMap[activeFile]?._id ||
+      Object.keys(remoteCursors).length === 0
+    ) {
+      return;
+    }
+
+    const decorations = Object.entries(remoteCursors)
+      .filter(([username]) => username !== user?.user?.username)
+      .map(([username, pos]) => ({
+        range: new monacoRef.current.Range(pos.lineNumber, pos.column, pos.lineNumber, pos.column),
+        options: {
+          className: 'remote-cursor',
+          hoverMessage: { value: `**${username}**` },
+          stickiness: monacoRef.current.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+        },
+      }));
+
+    const ids = editorRef.current.deltaDecorations([], decorations);
+    return () => editorRef.current?.deltaDecorations(ids, []);
+  }, [remoteCursors, activeFile, fileMap, user?.user?.username]);
+
+  useEffect(() => {
+    const handleRemoteCursorMove = ({ fileId, username, position }) => {
+      if (!fileMap[activeFile] || fileMap[activeFile]._id !== fileId) return;
+      setRemoteCursors(prev => ({
+        ...prev,
+        [username]: position,
+      }));
+    };
+  
+    user?.socket.on('remoteCursorMove', handleRemoteCursorMove);
+    return () => user?.socket.off('remoteCursorMove', handleRemoteCursorMove);
+  }, [activeFile, fileMap, user?.socket]);
+  
   // determines if the owner of the project is the current user logged in, if yes then the selecting backup stuff goes away.
   // const [projectOwner, setProjectOwner] = useState('');
   // if (projectOwner == user.user.username && {})
@@ -400,6 +550,46 @@ const ProjectEditor = () => {
   };
   const handleEditorDidMount = (editor, monacoInstance) => {
     editorRef.current = editor;
+    monacoRef.current = monacoInstance;
+    const model = editor.getModel();
+
+    previousContentRef.current = model.getValue();
+
+    model.onDidChangeContent(() => {
+      if (isRemoteEditRef.current) return;
+
+      const newValue = model.getValue();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      if (!fileId) return;
+
+      const oldValue = previousContentRef.current;
+      const edits = computePatch(model, oldValue, newValue);
+
+      const position = editor.getPosition();
+      user?.socket.emit('editFile', {
+        fileId,
+        edits,
+        username: user.user.username,
+        position,
+      });
+
+      saveContentToServer(fileId, newValue);
+      previousContentRef.current = newValue;
+      setFileContents(prev => ({
+        ...prev,
+        [activeFileRef.current]: newValue,
+      }));
+    });
+
+    editor.onDidChangeCursorPosition(() => {
+      const position = editor.getPosition();
+      const fileId = fileMapRef.current[activeFileRef.current]?._id;
+      user?.socket.emit('cursorMove', {
+        fileId,
+        username: user.user.username,
+        position,
+      });
+    });
   };
 
   const handleUserSearch = e => {
@@ -826,24 +1016,23 @@ const ProjectEditor = () => {
             language={fileLanguages[activeFile] || getDefaultLanguageFromFileName(activeFile)}
             value={fileContents[activeFile] || ''}
             onMount={handleEditorDidMount}
-            onChange={async newValue => {
-              if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
-              setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
-              handleEditorValidation(newValue, fileLanguages[activeFile]);
-              const fileId = fileMap[activeFile]?._id;
-              user?.socket.emit('editFile', {
-                fileId,
-                content: newValue,
-              });
-              try {
-                if (!fileId) throw new Error('Missing fileId');
-                await updateFileById(projectId, fileId, user.user.username, {
-                  contents: newValue,
-                });
-              } catch (err) {
-                throw new Error('Failed to save file');
-              }
-            }}
+            // onChange={async newValue => {
+            //   if (!activeFile || isViewer) return; // Prevent if no file is active or if viewer
+            //   setFileContents(prev => ({ ...prev, [activeFile]: newValue }));
+            //   handleEditorValidation(newValue, fileLanguages[activeFile]);
+            //   const fileId = fileMap[activeFile]?._id;
+            //   user?.socket.emit('editFile', {
+            //     fileId,
+            //   });
+            //   try {
+            //     if (!fileId) throw new Error('Missing fileId');
+            //     await updateFileById(projectId, fileId, user.user.username, {
+            //       contents: newValue,
+            //     });
+            //   } catch (err) {
+            //     throw new Error('Failed to save file');
+            //   }
+            // }}
             theme={theme}
             options={{
               readOnly: isViewer || !activeFile, // option prop from monaco set to read only

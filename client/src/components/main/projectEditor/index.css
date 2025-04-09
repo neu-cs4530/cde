@@ -205,3 +205,12 @@
   gap: 10px;
   margin-top: 15px;
 }
+
+.remote-cursor {
+  border-left: 2px solid lightpink;
+  height: 100%;
+}
+
+.remote-cursor-glyph {
+  background-color: lightpink;
+}
