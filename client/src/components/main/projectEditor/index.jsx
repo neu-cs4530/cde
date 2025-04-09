@@ -554,7 +554,8 @@ const ProjectEditor = () => {
     //     const last = visibleRanges[visibleRanges.length - 1].endLineNumber;
     //     setVisibleLines({ start: first, end: last });
     //   }
-    });
+    console.log('editor mounted');
+  });
 
     // Add context menu for adding comments
     editorIn.onContextMenu(e => {
