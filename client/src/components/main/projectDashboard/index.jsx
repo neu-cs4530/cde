@@ -71,11 +71,6 @@ const ProjectDashboard = () => {
     setFilteredUsers(filtered);
   };
 
-  // handle click for project navigation
-  const handleClick = project => {
-    navigate(`/projects/${project._id}`);
-  };
-
   // handle choice on invite notification
   const handleNotificationAction = async (notifId, action) => {
     try {
@@ -269,11 +264,6 @@ const ProjectDashboard = () => {
         throw new Error(`Error when adding project ${err}`);
       }
     }
-  };
-
-  // star or unstar a project
-  const toggleStar = id => {
-    setProjects(projects.map(p => (p._id === id ? { ...p, starred: !p.starred } : p)));
   };
 
   // remove a project -> this needs to be changed to correctly move to trash. right now the projects who are removed do not go to garbage

@@ -22,6 +22,7 @@ const ProjectCard = ({ project, onDelete }: { project: DatabaseProject; onDelete
         title='Delete Project'
         onClick={e => {
           e.stopPropagation();
+          // eslint-disable-next-line no-alert
           const confirmed = window.confirm('Are you sure you want to delete this project?');
           if (confirmed) onDelete();
         }}>
