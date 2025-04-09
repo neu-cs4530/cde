@@ -63,6 +63,8 @@ const ProjectDashboard = () => {
     const filtered = allUsers.filter(
       user =>
         user.username.toLowerCase().includes(inputValue.toLowerCase()) &&
+        // exclude self from search results
+        user.username.toLowerCase() !== username.toLowerCase() &&
         // Exclude already added users
         !newProject.sharedUsers.some(sharedUser => sharedUser.id === user.id),
     );
@@ -102,8 +104,11 @@ const ProjectDashboard = () => {
     if (showAddForm && allUsers.length === 0) {
       getUsers()
         .then(data => {
-          setAllUsers(data);
-          setFilteredUsers(data);
+          const filtered = data.filter(
+            user => user.username.toLowerCase() !== username.toLowerCase(),
+          );
+          setAllUsers(filtered);
+          setFilteredUsers(filtered);
         })
         .catch(err => {
           throw new Error(err.error);
@@ -416,10 +421,8 @@ const ProjectDashboard = () => {
                     placeholder='Search username to share'
                   />
                 </div>
-
-                {Array.isArray(filteredUsers) && filteredUsers.length > 0 && (
+                {searchUsername.trim() !== '' && filteredUsers.length > 0 && (
                   <div className='mb-3'>
-                    <label className='form-label'>User Search Results</label>
                     {filteredUsers.map(user => (
                       <div
                         key={user.id}
