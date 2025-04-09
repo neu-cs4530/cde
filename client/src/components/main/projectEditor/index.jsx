@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import Editor from '@monaco-editor/react';
 import './index.css';
-import { FiUser, FiTrash2, FiX, FiPlus, FiCopy, FiSave } from 'react-icons/fi';
+import { FiUser, FiTrash2, FiX, FiPlus, FiSave } from 'react-icons/fi';
 import { getUsers } from '../../../services/userService';
 import {
   getFiles,
@@ -389,25 +389,6 @@ const ProjectEditor = () => {
       setConsoleOutput(prev => `${prev}Error: Could not create file on server\n`);
     }
   };
-  const handleDuplicateFile = fileName => {
-    const baseName = fileName.replace(/\.[^/.]+$/, '');
-    const extension = fileName.slice(fileName.lastIndexOf('.'));
-    let duplicatedFileName = `${baseName}_copy${extension}`;
-    let counter = 1;
-    while (fileContents[duplicatedFileName]) {
-      duplicatedFileName = `${baseName}_copy_${counter}${extension}`;
-      counter++;
-    }
-    setFileContents(prev => ({
-      ...prev,
-      [duplicatedFileName]: prev[fileName],
-    }));
-    setFileLanguages(prev => ({
-      ...prev,
-      [duplicatedFileName]: prev[fileName],
-    }));
-    setActiveFile(duplicatedFileName);
-  };
   const runJavaScript = () => {
     try {
       // capture console.log output
@@ -483,18 +464,6 @@ const ProjectEditor = () => {
                   }}>
                   {file}
                 </span>
-                <button
-                  onClick={() => handleDuplicateFile(file)}
-                  style={{
-                    flexShrink: 0,
-                    background: 'none',
-                    border: 'none',
-                    color: '#9ca3af',
-                    marginLeft: '0.5rem',
-                  }}
-                  title='Duplicate file'>
-                  <FiCopy size={16} />
-                </button>
                 <button
                   onClick={async () => {
                     if (Object.keys(fileContents).length === 1) {
