@@ -132,7 +132,7 @@ export interface ClientToServerEvents {
     position: {
       lineNumber: number;
       column: number;
-    }
+    };
   }) => void;
 }
 
