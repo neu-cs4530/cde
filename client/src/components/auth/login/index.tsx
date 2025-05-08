@@ -20,7 +20,13 @@ const Login = () => {
 
   return (
     <div className='container'>
-      <h2>Welcome to FakeStackOverflow!</h2>
+      <div className='cde-header'>
+        <h1 className='cde-logo-box'>
+          <span className='block c'>C</span>
+          <span className='block d'>D</span>
+          <span className='block e'>E</span>
+        </h1>
+      </div>
       <h3>Please login to continue.</h3>
       <form onSubmit={handleSubmit}>
         <h4>Please enter your username.</h4>
@@ -43,14 +49,17 @@ const Login = () => {
           className='input-text'
           id='password-input'
         />
-        <div className='show-password'>
+        <div className='show-password-toggle'>
           <input
             type='checkbox'
             id='showPasswordToggle'
             checked={showPassword}
             onChange={togglePasswordVisibility}
+            className='toggle-checkbox'
           />
-          <label htmlFor='showPasswordToggle'>Show Password</label>
+          <label htmlFor='showPasswordToggle' className='toggle-label'>
+            Show Password
+          </label>
         </div>
         <button type='submit' className='login-button'>
           Submit

@@ -3,7 +3,7 @@ import './index.css';
 import { NavLink, useLocation } from 'react-router-dom';
 
 /**
- * The SideBarNav component has four menu items: "Questions", "Tags", "Messaging", and "Users".
+ * The SideBarNav component has four menu items: "Questions", "Tags", "Messaging", "Users", "Games", and "Projects".
  * It highlights the currently selected item based on the active page and
  * triggers corresponding functions when the menu items are clicked.
  */
@@ -64,6 +64,12 @@ const SideBarNav = () => {
         id='menu_games'
         className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
         Games
+      </NavLink>
+      <NavLink
+        to='/projects'
+        id='menu_projects'
+        className={({ isActive }) => `menu_button ${isActive ? 'menu_selected' : ''}`}>
+        Projects
       </NavLink>
     </div>
   );

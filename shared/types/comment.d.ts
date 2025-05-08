@@ -14,6 +14,17 @@ export interface Comment {
 }
 
 /**
+ *  Represents a comment on a project file.
+ * - `text`: The content of the comment.
+ * - `commentBy`: The author of the comment.
+ * - `commentDateTime`: The timestamp when the comment was made.
+ * - `lineNumber`: The line number the comment is on.
+ */
+export interface ProjectFileComment extends Comment {
+  lineNumber: number;
+}
+
+/**
  * Represents a comment stored in the database.
  * - `_id`: Unique identifier for the comment.
  * - `text`: The content of the comment.
@@ -21,6 +32,18 @@ export interface Comment {
  * - `commentDateTime`: The timestamp when the comment was made.
  */
 export interface DatabaseComment extends Comment {
+  _id: ObjectId;
+}
+
+/**
+ * Represents a project file comment in the database.
+ * - `_id`: Unique identifier for the comment.
+ * - `text`: The content of the comment.
+ * - `commentBy`: The author of the comment.
+ * - `commentDateTime`: The timestamp when the comment was made.
+ * - `lineNumber`: The line number the comment is on.
+ */
+export interface DatabaseProjectFileComment extends ProjectFileComment {
   _id: ObjectId;
 }
 
@@ -39,7 +62,48 @@ export interface AddCommentRequest extends Request {
 }
 
 /**
+ * Express request for adding a comment to a project file.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `comment`: The project file comment object being added.
+ */
+export interface AddFileCommentRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+  };
+  body: {
+    comment: ProjectFileComment;
+  };
+}
+
+/**
+ * Express request for accessing a project file comment, containing
+ * project, file, and comment IDs.
+ * - `projectId`: The ID of the project provided as a route parameter.
+ * - `fileId`: The ID of the file provided as a route parameter.
+ * - `commentId`: The ID of the comment provided as a route parameter.
+ * - `actor`: The username of the actor, submitted in the request (body).
+ */
+export interface FileCommentRequest extends Request {
+  params: {
+    projectId: string;
+    fileId: string;
+    commentId: string;
+  };
+  body: {
+    actor: string;
+  };
+}
+
+/**
  * Type representing possible responses for a Comment-related operation.
  * - Either a `DatabaseComment` object or an error message.
  */
 export type CommentResponse = DatabaseComment | { error: string };
+
+/**
+ * Type representing possible responses for a ProjectFileComment-related operation.
+ * - Either a `DatabaseProjectFileComment` object or an error message.
+ */
+export type ProjectFileCommentResponse = DatabaseProjectFileComment | { error: string };

@@ -1,6 +1,9 @@
+import { Types } from 'mongoose';
 import UserModel from '../models/users.model';
 import {
   DatabaseUser,
+  NotificationResponse,
+  Notification,
   SafeDatabaseUser,
   User,
   UserCredentials,
@@ -147,5 +150,82 @@ export const updateUser = async (
     return updatedUser;
   } catch (error) {
     return { error: `Error occurred when updating user: ${error}` };
+  }
+};
+
+/**
+ * Adds project to user.
+ *
+ * @param {string} username - The username of the user to update.
+ * @param {Partial<User>} updates - An object containing the project(s) ids to add to the user.
+ * @returns {Promise<UserResponse>} - Resolves with the updated user object (without the password) or an error message.
+ */
+export const addProjectToUser = async (
+  username: string,
+  updates: Partial<User>,
+): Promise<UserResponse> => {
+  try {
+    const updatedUser: SafeDatabaseUser | null = await UserModel.findOneAndUpdate(
+      { username },
+      { $push: { projects: { $each: updates.projects ?? [] } } },
+      { new: true },
+    ).select('-password');
+
+    if (!updatedUser) {
+      throw Error('Error adding project to user');
+    }
+
+    return updatedUser;
+  } catch (error) {
+    return { error: `Error occurred when adding project to user: ${error}` };
+  }
+};
+
+// adds notif to user
+export const addNotificationToUser = async (
+  username: string,
+  notification: Notification,
+): Promise<NotificationResponse> => {
+  try {
+    const newNotifWithId = {
+      ...notification,
+      _id: new Types.ObjectId(),
+    };
+
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { username },
+      { $push: { notifications: newNotifWithId } },
+      { new: true },
+    ).select('notifications');
+
+    if (!updatedUser) {
+      throw new Error('User not found');
+    }
+
+    return newNotifWithId;
+  } catch (error) {
+    return { error: `Failed to add notification: ${error}` };
+  }
+};
+
+// removes notification from user
+export const removeNotificationFromUser = async (
+  username: string,
+  notifId: string,
+): Promise<UserResponse> => {
+  try {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { username },
+      { $pull: { notifications: { _id: notifId } } },
+      { new: true },
+    ).select('-password');
+
+    if (!updatedUser) {
+      throw new Error('Failed to remove notification');
+    }
+
+    return updatedUser;
+  } catch (error) {
+    return { error: `Error removing notification: ${error}` };
   }
 };

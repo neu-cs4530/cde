@@ -1,10 +1,25 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
   height: 10%;
   width: 100%;
   background: #dddddd;
+  padding: 0 20px; 
+}
+.header-left,
+.header-center,
+.header-right {
+  display: flex;
+  align-items: center;
+}
+.header-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.header-right {
+  gap: 10px;
 }
 
 .title {
@@ -12,31 +27,74 @@
   font-weight: 800;
 }
 
-.logout-button {
-  padding: 12px;
+.logout-button,
+.view-profile-button {
+  padding: 10px 16px;
   font-size: 16px;
   background-color: #007bff;
-  color: #fff;
+  color: white;
   border: none;
   border-radius: 5px;
   cursor: pointer;
   transition: background-color 0.3s;
+  margin-left: 10px;
 }
 
-.view-profile-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 15px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-left: 10px; /* Add spacing from Logout button */
-}
-
+.logout-button:hover,
 .view-profile-button:hover {
   background-color: #0056b3;
 }
 
+.logout-button:active,
 .view-profile-button:active {
   background-color: #003f7f;
+}
+
+.cde-logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.cde-logo {
+  font-size: 30px;
+  display: flex;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.cde-letter {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 800;
+  border-radius: 6px;
+  color: white;
+}
+
+.cde-c {
+  background-color: #797ff1;
+  color: #001f2f;
+}
+
+.cde-d {
+  background-color: #f869e0;
+  color: #2f001f;
+}
+
+.cde-e {
+  background-color: #31c553;
+  color: #1a2f00;
+}
+
+#searchBar {
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  width: 300px;
 }
